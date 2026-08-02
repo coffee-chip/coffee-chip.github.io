@@ -1,12 +1,13 @@
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 3;
+export const STORAGE_VERSION = 4;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
   settings: {
     theme: 'system',
     developer: {
-      autoUpdateOnLaunch: false
+      autoUpdateOnLaunch: false,
+      showOverlay: false
     },
     quiz: {
       defaultMode: 'select-all',
@@ -52,7 +53,8 @@ function normalizeSettings(value) {
   return {
     theme: validThemes.has(value.theme) ? value.theme : defaults.theme,
     developer: {
-      autoUpdateOnLaunch: developer.autoUpdateOnLaunch === true
+      autoUpdateOnLaunch: developer.autoUpdateOnLaunch === true,
+      showOverlay: developer.showOverlay === true
     },
     quiz: {
       defaultMode,
@@ -92,7 +94,7 @@ function migrateV1(raw) {
 
 function migrate(raw) {
   if (!isObject(raw)) return cloneDefaults();
-  if (raw.version === STORAGE_VERSION || raw.version === 2) {
+  if ([2, 3, STORAGE_VERSION].includes(raw.version)) {
     return {
       version: STORAGE_VERSION,
       settings: normalizeSettings(raw.settings),
