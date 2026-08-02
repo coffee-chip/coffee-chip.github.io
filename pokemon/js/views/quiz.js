@@ -21,12 +21,13 @@ function el(tag, options = {}) {
   return node;
 }
 
-function formatPercent(score) {
-  return `${Math.round(score * 100)}%`;
-}
+function formatPercent(score) { return `${Math.round(score * 100)}%`; }
 
 function createNextQuestion() {
-  state.quiz.question = createQuestionForMode(state.quiz.session.mode);
+  const modeSettings = getQuizModeSettings(state.quiz.session.mode);
+  state.quiz.question = createQuestionForMode(state.quiz.session.mode, {
+    mixDualTypes: modeSettings.mixDualTypes === true
+  });
   state.quiz.selectedAnswers = new Set();
   state.quiz.result = null;
   state.quiz.status = 'answering';
@@ -62,10 +63,7 @@ function renderFeedback(result, question) {
 
 function buildQuizSetup(refreshQuiz) {
   const panel = el('div', { className: 'panel' });
-  panel.append(el('p', {
-    text: 'Choose a practice preset and session length. Each preset remembers its own question count.'
-  }));
-
+  panel.append(el('p', { text: 'Choose a practice preset and session length. Each preset remembers its own setup.' }));
   const form = el('div', { className: 'quiz-setup' });
 
   const modeLabel = el('label');
@@ -86,7 +84,13 @@ function buildQuizSetup(refreshQuiz) {
   const lengthSelect = el('select');
   const lengths = [5, 10, 20, 0];
 
-  function populateLengthOptions() {
+  const dualLabel = el('label', { className: 'toggle-field quiz-dual-toggle' });
+  const dualCheckbox = document.createElement('input');
+  dualCheckbox.type = 'checkbox';
+  const dualText = el('span', { text: 'Mix in dual-type questions' });
+  dualLabel.append(dualCheckbox, dualText);
+
+  function populateModeOptions() {
     const modeSettings = getQuizModeSettings(state.quiz.mode);
     lengthSelect.replaceChildren();
     for (const length of lengths) {
@@ -96,15 +100,16 @@ function buildQuizSetup(refreshQuiz) {
       option.selected = length === modeSettings.questionCount;
       lengthSelect.append(option);
     }
+    dualCheckbox.checked = modeSettings.mixDualTypes === true;
   }
 
-  populateLengthOptions();
+  populateModeOptions();
 
   modeSelect.addEventListener('change', () => {
     state.quiz.mode = modeSelect.value;
     state.settings.quiz.defaultMode = modeSelect.value;
     getQuizModeSettings(modeSelect.value);
-    populateLengthOptions();
+    populateModeOptions();
     saveSettings(state.settings);
   });
 
@@ -113,8 +118,13 @@ function buildQuizSetup(refreshQuiz) {
     saveSettings(state.settings);
   });
 
+  dualCheckbox.addEventListener('change', () => {
+    getQuizModeSettings(state.quiz.mode).mixDualTypes = dualCheckbox.checked;
+    saveSettings(state.settings);
+  });
+
   lengthLabel.append(lengthSelect);
-  form.append(lengthLabel);
+  form.append(lengthLabel, dualLabel);
 
   const start = el('button', { text: 'Start quiz' });
   start.addEventListener('click', () => {
@@ -122,17 +132,15 @@ function buildQuizSetup(refreshQuiz) {
     refreshQuiz();
   });
   form.append(start);
-
   panel.append(form);
+  panel.append(el('p', { className: 'muted', text: 'When enabled, about one-third of questions use dual types; single-type questions remain mixed in.' }));
   return panel;
 }
 
 function buildSessionHeader() {
   const session = state.quiz.session;
   const header = el('div', { className: 'session-header' });
-  const questionLabel = session.length === 0
-    ? `Question ${session.questionNumber}`
-    : `Question ${session.questionNumber} of ${session.length}`;
+  const questionLabel = session.length === 0 ? `Question ${session.questionNumber}` : `Question ${session.questionNumber} of ${session.length}`;
   header.append(el('span', { text: questionLabel }));
   header.append(el('span', { text: `Session average: ${formatPercent(getSessionAverageScore())}` }));
   return header;
@@ -141,7 +149,6 @@ function buildSessionHeader() {
 function buildActiveQuestion(refreshQuiz) {
   const fragment = document.createDocumentFragment();
   fragment.append(buildSessionHeader());
-
   const question = state.quiz.question;
   const panel = el('div', { className: 'panel' });
   panel.append(el('h3', { text: question.prompt }));
@@ -149,12 +156,8 @@ function buildActiveQuestion(refreshQuiz) {
     question,
     selectedAnswers: state.quiz.selectedAnswers,
     result: state.quiz.result,
-    onToggle: answer => {
-      toggleAnswer(answer);
-      refreshQuiz();
-    }
+    onToggle: answer => { toggleAnswer(answer); refreshQuiz(); }
   }));
-
   if (state.quiz.result) panel.append(renderFeedback(state.quiz.result, question));
 
   const actions = el('div', { className: 'actions' });
@@ -171,25 +174,16 @@ function buildActiveQuestion(refreshQuiz) {
     });
     actions.append(submit);
   } else {
-    const isLast = state.quiz.session.length !== 0
-      && state.quiz.session.questionNumber >= state.quiz.session.length;
+    const isLast = state.quiz.session.length !== 0 && state.quiz.session.questionNumber >= state.quiz.session.length;
     const next = el('button', { text: isLast ? 'See summary' : 'Next question' });
-    next.addEventListener('click', () => {
-      if (advanceQuizSession()) createNextQuestion();
-      refreshQuiz();
-    });
+    next.addEventListener('click', () => { if (advanceQuizSession()) createNextQuestion(); refreshQuiz(); });
     actions.append(next);
   }
-
   if (state.quiz.session.length === 0) {
     const end = el('button', { className: 'secondary-button', text: 'End session' });
-    end.addEventListener('click', () => {
-      endQuizSession();
-      refreshQuiz();
-    });
+    end.addEventListener('click', () => { endQuizSession(); refreshQuiz(); });
     actions.append(end);
   }
-
   panel.append(actions);
   fragment.append(panel);
   return fragment;
@@ -199,22 +193,12 @@ function buildSessionSummary(refreshQuiz) {
   const panel = el('div', { className: 'panel summary-panel' });
   panel.append(el('h3', { text: 'Session complete' }));
   panel.append(el('p', { text: `Questions answered: ${state.quiz.session.results.length}` }));
-  panel.append(el('p', {
-    className: 'summary-score',
-    text: `Average score: ${formatPercent(getSessionAverageScore())}`
-  }));
-
+  panel.append(el('p', { className: 'summary-score', text: `Average score: ${formatPercent(getSessionAverageScore())}` }));
   const actions = el('div', { className: 'actions' });
   const again = el('button', { text: 'Quiz again' });
-  again.addEventListener('click', () => {
-    beginSession(state.quiz.session.length);
-    refreshQuiz();
-  });
+  again.addEventListener('click', () => { beginSession(state.quiz.session.length); refreshQuiz(); });
   const setup = el('button', { className: 'secondary-button', text: 'Change setup' });
-  setup.addEventListener('click', () => {
-    returnToQuizSetup();
-    refreshQuiz();
-  });
+  setup.addEventListener('click', () => { returnToQuizSetup(); refreshQuiz(); });
   actions.append(again, setup);
   panel.append(actions);
   return panel;
@@ -225,17 +209,11 @@ export function renderQuiz(container) {
   page.append(el('h2', { text: 'Quiz' }));
   const quizBody = el('div', { className: 'quiz-body' });
   page.append(quizBody);
-
   function refreshQuiz() {
-    if (state.quiz.status === 'idle') {
-      quizBody.replaceChildren(buildQuizSetup(refreshQuiz));
-    } else if (state.quiz.status === 'complete') {
-      quizBody.replaceChildren(buildSessionSummary(refreshQuiz));
-    } else {
-      quizBody.replaceChildren(buildActiveQuestion(refreshQuiz));
-    }
+    if (state.quiz.status === 'idle') quizBody.replaceChildren(buildQuizSetup(refreshQuiz));
+    else if (state.quiz.status === 'complete') quizBody.replaceChildren(buildSessionSummary(refreshQuiz));
+    else quizBody.replaceChildren(buildActiveQuestion(refreshQuiz));
   }
-
   refreshQuiz();
   container.replaceChildren(page);
 }
