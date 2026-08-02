@@ -5,7 +5,7 @@ function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-const MOVE_CRITERIA = {
+export const MOVE_CRITERIA = {
   'more-effective': {
     id: 'more-effective',
     label: 'more effective than neutral',
@@ -93,6 +93,11 @@ export function createChooseMoveQuestion({
   };
 }
 
+const chooseMoveMoreEffectiveConfig = {
+  criterion: 'more-effective',
+  defenderCount: 1
+};
+
 // Generators own subject matter and produce normalized questions.
 // Interaction formats own display and scoring behavior.
 export const QUESTION_GENERATORS = {
@@ -106,16 +111,11 @@ export const QUESTION_GENERATORS = {
     id: 'choose-move-more-effective',
     objectiveId: 'choose-move',
     formatId: 'type-multi-select',
-    config: {
-      criterion: 'more-effective',
-      defenderCount: 1
-    },
-    createQuestion() {
-      return createChooseMoveQuestion({
-        ...this.config,
-        generatorId: this.id
-      });
-    }
+    config: chooseMoveMoreEffectiveConfig,
+    createQuestion: () => createChooseMoveQuestion({
+      ...chooseMoveMoreEffectiveConfig,
+      generatorId: 'choose-move-more-effective'
+    })
   }
 };
 
