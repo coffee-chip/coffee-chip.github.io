@@ -6,6 +6,27 @@ function difference(left, right) {
   return left.filter(value => !right.includes(value));
 }
 
+function buildRelationshipOutcomes(question, correctlySelected, missedAnswers, incorrectAnswers) {
+  const relationshipsByAnswer = new Map(
+    (question.relationships ?? []).map(relationship => [relationship.answer, relationship])
+  );
+
+  const outcomes = [];
+  for (const answer of correctlySelected) {
+    const relationship = relationshipsByAnswer.get(answer);
+    if (relationship) outcomes.push({ ...relationship, outcome: 'correct', earnedScore: 1 });
+  }
+  for (const answer of missedAnswers) {
+    const relationship = relationshipsByAnswer.get(answer);
+    if (relationship) outcomes.push({ ...relationship, outcome: 'missed', earnedScore: 0 });
+  }
+  for (const answer of incorrectAnswers) {
+    const relationship = relationshipsByAnswer.get(answer);
+    if (relationship) outcomes.push({ ...relationship, outcome: 'false-selection', earnedScore: 0 });
+  }
+  return outcomes;
+}
+
 export function scoreMultiSelect(question, submittedAnswers) {
   const correctAnswers = [...question.correctAnswers];
   const selectedAnswers = [...submittedAnswers];
@@ -21,7 +42,13 @@ export function scoreMultiSelect(question, submittedAnswers) {
     missedAnswers,
     incorrectAnswers,
     correctAnswers,
-    selectedAnswers
+    selectedAnswers,
+    relationshipOutcomes: buildRelationshipOutcomes(
+      question,
+      correctlySelected,
+      missedAnswers,
+      incorrectAnswers
+    )
   };
 }
 
