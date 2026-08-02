@@ -1,0 +1,48 @@
+import { state } from '../state.js';
+import { STORAGE_VERSION, loadPersistentData } from '../storage.js';
+import { getServiceWorkerDiagnostics } from '../serviceWorker.js';
+
+function el(tag, options = {}) {
+  const node = document.createElement(tag);
+  if (options.className) node.className = options.className;
+  if (options.text) node.textContent = options.text;
+  return node;
+}
+
+function row(label, value, status = '') {
+  const node = el('div', { className: `diagnostic-row ${status}`.trim() });
+  node.append(el('span', { text: label }), el('strong', { text: String(value) }));
+  return node;
+}
+
+export async function renderDebug(container) {
+  const page = el('section', { className: 'page' });
+  page.append(el('h2', { text: 'Developer diagnostics' }));
+  const back = el('a', { className: 'back-link', text: '← Back to settings' });
+  back.href = '#settings';
+  page.append(back);
+
+  const sw = await getServiceWorkerDiagnostics();
+  const saved = loadPersistentData();
+
+  const worker = el('div', { className: 'panel diagnostic-panel' });
+  worker.append(el('h3', { text: 'Service worker' }));
+  worker.append(row('Supported', sw.supported ? 'Yes' : 'No', sw.supported ? 'ok' : 'bad'));
+  worker.append(row('Status', sw.status, sw.status === 'error' ? 'bad' : 'ok'));
+  worker.append(row('Installed version', sw.version ?? 'Unknown'));
+  worker.append(row('Active cache', sw.cacheName ?? 'Unknown'));
+  worker.append(row('Waiting update', sw.waiting ? 'Yes' : 'No'));
+  worker.append(row('Known app caches', sw.cacheNames.length));
+  for (const cacheName of sw.cacheNames) worker.append(row('Cache', cacheName));
+  page.append(worker);
+
+  const storage = el('div', { className: 'panel diagnostic-panel' });
+  storage.append(el('h3', { text: 'Persistent data' }));
+  storage.append(row('Schema version', STORAGE_VERSION, 'ok'));
+  storage.append(row('Auto-update on launch', state.settings.developer.autoUpdateOnLaunch ? 'On' : 'Off'));
+  storage.append(row('Saved questions', saved.progress.totalAnswered));
+  storage.append(row('Cached Pokémon', Object.keys(saved.cache.pokemon ?? {}).length));
+  page.append(storage);
+
+  container.replaceChildren(page);
+}
