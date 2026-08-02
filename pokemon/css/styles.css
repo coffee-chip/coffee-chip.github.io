@@ -132,6 +132,21 @@ a { color: var(--accent); }
 .diagnostic-row.ok strong { color: var(--success); }
 .diagnostic-row.bad strong { color: var(--danger); }
 
+.danger-zone { border-color: #f0b4ae; }
+.danger-zone h3 { color: var(--danger); }
+.danger-button {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--danger);
+  border-radius: .5rem;
+  background: var(--surface);
+  color: var(--danger);
+  font-weight: 700;
+}
+.danger-button:hover, .danger-button:focus-visible {
+  background: #fef3f2;
+}
+
 @media (min-width: 36rem) {
   .type-grid { grid-template-columns: repeat(6, 1fr); }
   .quiz-setup { grid-template-columns: 1fr 1fr auto; align-items: end; }
