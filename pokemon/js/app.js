@@ -4,6 +4,7 @@ import { loadPersistentData } from './storage.js';
 import { VIEWS } from './views/index.js';
 import { runEngineSelfTests } from './engine/effectiveness.js';
 import { validateQuizArchitecture } from './quiz/validation.js';
+import { validateTypeIcons } from './components/typeBadge.js';
 
 hydratePersistentState(loadPersistentData());
 
@@ -38,4 +39,12 @@ console.table(architectureResults);
 console.groupEnd();
 if (architectureResults.some(test => !test.passed)) {
   console.error('Quiz architecture validation failed.');
+}
+
+const iconResults = validateTypeIcons();
+console.group('Type icon checks');
+console.table(iconResults);
+console.groupEnd();
+if (iconResults.some(test => !test.passed)) {
+  console.error('One or more type icons are missing.');
 }
