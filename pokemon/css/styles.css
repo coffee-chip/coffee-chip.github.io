@@ -192,6 +192,28 @@ a { color: var(--accent); }
   font-weight: 700;
 }
 .danger-button:hover, .danger-button:focus-visible { background: #fef3f2; }
+.inline-confirmation {
+  margin-top: .75rem;
+  padding: .85rem;
+  border: 1px solid #f0b4ae;
+  border-radius: .65rem;
+  background: #fef3f2;
+}
+.inline-confirmation p { margin: 0; }
+.settings-status {
+  margin: .85rem 0 0;
+  padding: .7rem .8rem;
+  border-radius: .5rem;
+  font-weight: 650;
+}
+.settings-status.success {
+  color: var(--success);
+  background: #ecfdf3;
+}
+.settings-status.error {
+  color: var(--danger);
+  background: #fef3f2;
+}
 
 @media (min-width: 36rem) {
   .type-grid { grid-template-columns: repeat(6, 1fr); }
