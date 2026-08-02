@@ -84,7 +84,7 @@ export function getPersistentSnapshot() {
     },
     progress: {
       ...state.progress,
-      relationshipStats: { ...state.progress.relationshipStats }
+      relationshipStats: structuredClone(state.progress.relationshipStats)
     },
     cache: {
       pokemon: { ...state.cache.pokemon }
@@ -111,11 +111,42 @@ export function startQuizSession(length = getQuizModeSettings().questionCount) {
   resetQuestionState();
 }
 
+function recordRelationshipOutcome(outcome, timestamp) {
+  const existing = state.progress.relationshipStats[outcome.key] ?? {
+    attackingType: outcome.attackingType,
+    defendingType: outcome.defendingType,
+    attempts: 0,
+    earnedScore: 0,
+    correctSelections: 0,
+    misses: 0,
+    falseSelections: 0,
+    lastSeen: null
+  };
+
+  existing.attempts += 1;
+  existing.earnedScore += outcome.earnedScore;
+  existing.lastSeen = timestamp;
+  if (outcome.outcome === 'correct') existing.correctSelections += 1;
+  if (outcome.outcome === 'missed') existing.misses += 1;
+  if (outcome.outcome === 'false-selection') existing.falseSelections += 1;
+  state.progress.relationshipStats[outcome.key] = existing;
+}
+
 export function recordQuestionResult(question, result) {
-  state.quiz.session.results.push({ questionId: question.id, generatorId: question.generatorId, score: result.score, metadata: question.metadata });
+  state.quiz.session.results.push({
+    questionId: question.id,
+    generatorId: question.generatorId,
+    score: result.score,
+    metadata: question.metadata
+  });
   state.quiz.session.totalScore += result.score;
   state.progress.totalAnswered += 1;
   state.progress.totalScore += result.score;
+
+  const timestamp = new Date().toISOString();
+  for (const outcome of result.relationshipOutcomes ?? []) {
+    recordRelationshipOutcome(outcome, timestamp);
+  }
 }
 
 export function advanceQuizSession() {
