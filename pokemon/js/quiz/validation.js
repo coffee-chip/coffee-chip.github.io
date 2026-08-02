@@ -1,6 +1,6 @@
 import { LEARNING_OBJECTIVES } from './objectives.js';
 import { INTERACTION_FORMATS } from './formats.js';
-import { QUESTION_GENERATORS } from './generators.js';
+import { MOVE_CRITERIA, QUESTION_GENERATORS } from './generators.js';
 import { PRACTICE_PRESETS } from './modes.js';
 
 function result(name, passed, detail = '') {
@@ -22,6 +22,14 @@ export function validateQuizArchitecture() {
       generator.formatId
     ));
 
+    if (generator.config?.criterion) {
+      results.push(result(
+        `Generator ${generator.id} has a registered criterion`,
+        Boolean(MOVE_CRITERIA[generator.config.criterion]),
+        generator.config.criterion
+      ));
+    }
+
     try {
       const question = generator.createQuestion();
       const required = ['id', 'generatorId', 'objectiveId', 'formatId', 'prompt', 'answerType', 'choices', 'correctAnswers'];
@@ -41,6 +49,13 @@ export function validateQuizArchitecture() {
         question.objectiveId === generator.objectiveId,
         question.objectiveId
       ));
+      if (generator.config?.criterion) {
+        results.push(result(
+          `Question criterion matches generator ${generator.id}`,
+          question.metadata?.criterion === generator.config.criterion,
+          question.metadata?.criterion ?? 'Missing criterion metadata'
+        ));
+      }
     } catch (error) {
       results.push(result(`Generator ${generator.id} can create a question`, false, error.message));
     }
