@@ -3,6 +3,7 @@ import { state, hydratePersistentState } from './state.js';
 import { loadPersistentData } from './storage.js';
 import { VIEWS } from './views/index.js';
 import { runEngineSelfTests } from './engine/effectiveness.js';
+import { validateQuizArchitecture } from './quiz/validation.js';
 
 hydratePersistentState(loadPersistentData());
 
@@ -23,8 +24,18 @@ startRouter(route => {
   render();
 });
 
-const testResults = runEngineSelfTests();
-console.table(testResults);
-if (testResults.some(test => !test.passed)) {
+const engineResults = runEngineSelfTests();
+console.group('Type engine checks');
+console.table(engineResults);
+console.groupEnd();
+if (engineResults.some(test => !test.passed)) {
   console.error('Type engine self-test failed.');
+}
+
+const architectureResults = validateQuizArchitecture();
+console.group('Quiz architecture checks');
+console.table(architectureResults);
+console.groupEnd();
+if (architectureResults.some(test => !test.passed)) {
+  console.error('Quiz architecture validation failed.');
 }
