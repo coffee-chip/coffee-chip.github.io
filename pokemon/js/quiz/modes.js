@@ -1,7 +1,5 @@
 import { getQuestionGenerator } from './generators.js';
 
-// A practice preset chooses learning objectives, interaction formats, and generators.
-// The persisted key remains "quiz mode" for compatibility, but the concept is a preset.
 export const PRACTICE_PRESETS = {
   'select-all': {
     id: 'select-all',
@@ -19,7 +17,6 @@ export const PRACTICE_PRESETS = {
   }
 };
 
-// Compatibility alias while surrounding state/storage naming is migrated incrementally.
 export const QUIZ_MODES = PRACTICE_PRESETS;
 
 export function getQuizMode(modeId) {
@@ -28,11 +25,12 @@ export function getQuizMode(modeId) {
   return preset;
 }
 
-export function createQuestionForMode(modeId) {
+export function createQuestionForMode(modeId, { mixDualTypes = false, dualTypeChance = 0.35 } = {}) {
   const preset = getQuizMode(modeId);
   const generatorId = preset.generatorIds[Math.floor(Math.random() * preset.generatorIds.length)];
   const generator = getQuestionGenerator(generatorId);
-  const question = generator.createQuestion();
+  const useDualTypes = mixDualTypes && Math.random() < dualTypeChance;
+  const question = generator.createQuestion({ defenderCount: useDualTypes ? 2 : 1 });
 
   if (!preset.objectiveIds.includes(question.objectiveId)) {
     throw new Error(`Generator ${generatorId} produced objective ${question.objectiveId}, which is not allowed by preset ${modeId}.`);
