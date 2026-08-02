@@ -1,11 +1,31 @@
 import { state, resetProgress } from '../state.js';
-import { saveProgress } from '../storage.js';
+import { loadPersistentData, saveProgress } from '../storage.js';
+
+let resetStage = 'idle';
+let resetMessage = '';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
   if (options.className) node.className = options.className;
   if (options.text) node.textContent = options.text;
   return node;
+}
+
+function persistResetProgress() {
+  resetProgress();
+  const writeSucceeded = saveProgress(state.progress);
+  const stored = loadPersistentData().progress;
+  const persistedAsCleared = stored.totalAnswered === 0
+    && stored.totalScore === 0
+    && Object.keys(stored.relationshipStats ?? {}).length === 0;
+
+  if (writeSucceeded && persistedAsCleared) {
+    resetStage = 'complete';
+    resetMessage = 'Past statistics were cleared and saved.';
+  } else {
+    resetStage = 'error';
+    resetMessage = 'Statistics were cleared for this session, but could not be confirmed in browser storage. They may return after reloading.';
+  }
 }
 
 export function renderSettings(container, render) {
@@ -28,23 +48,51 @@ export function renderSettings(container, render) {
     text: `Saved questions answered: ${state.progress.totalAnswered}. Clearing statistics removes overall and relationship-level progress, but keeps quiz preferences and cached Pokémon.`
   }));
 
-  const resetButton = el('button', { className: 'danger-button', text: 'Clear past statistics' });
-  resetButton.type = 'button';
-  resetButton.addEventListener('click', () => {
-    const confirmed = window.confirm(
-      'Clear all saved quiz statistics? This cannot be undone. Quiz settings and cached Pokémon will be kept.'
-    );
-    if (!confirmed) return;
+  if (resetStage === 'confirming') {
+    const confirmPanel = el('div', { className: 'inline-confirmation' });
+    confirmPanel.append(el('p', {
+      text: 'Clear all saved quiz statistics? This cannot be undone.'
+    }));
 
-    resetProgress();
-    const saved = saveProgress(state.progress);
-    if (!saved) {
-      window.alert('Statistics were cleared for this session, but could not be saved. They may return after reloading.');
-    }
-    render();
-  });
+    const actions = el('div', { className: 'actions' });
+    const cancelButton = el('button', { className: 'secondary-button', text: 'Cancel' });
+    cancelButton.type = 'button';
+    cancelButton.addEventListener('click', () => {
+      resetStage = 'idle';
+      resetMessage = '';
+      render();
+    });
 
-  dataPanel.append(resetButton);
+    const confirmButton = el('button', { className: 'danger-button', text: 'Yes, clear statistics' });
+    confirmButton.type = 'button';
+    confirmButton.addEventListener('click', () => {
+      persistResetProgress();
+      render();
+    });
+
+    actions.append(cancelButton, confirmButton);
+    confirmPanel.append(actions);
+    dataPanel.append(confirmPanel);
+  } else {
+    const resetButton = el('button', { className: 'danger-button', text: 'Clear past statistics' });
+    resetButton.type = 'button';
+    resetButton.addEventListener('click', () => {
+      resetStage = 'confirming';
+      resetMessage = '';
+      render();
+    });
+    dataPanel.append(resetButton);
+  }
+
+  if (resetMessage) {
+    const status = el('p', {
+      className: `settings-status ${resetStage === 'error' ? 'error' : 'success'}`,
+      text: resetMessage
+    });
+    status.setAttribute('role', 'status');
+    dataPanel.append(status);
+  }
+
   page.append(dataPanel);
   container.replaceChildren(page);
 }
