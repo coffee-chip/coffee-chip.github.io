@@ -32,17 +32,15 @@ function createNextQuestion() {
   state.quiz.status = 'answering';
 }
 
-function beginSession(length, render) {
+function beginSession(length) {
   startQuizSession(length);
   saveSettings(state.settings);
   createNextQuestion();
-  render();
 }
 
-function toggleAnswer(answer, render) {
+function toggleAnswer(answer) {
   if (state.quiz.selectedAnswers.has(answer)) state.quiz.selectedAnswers.delete(answer);
   else state.quiz.selectedAnswers.add(answer);
-  render();
 }
 
 function feedbackRow(label, types) {
@@ -62,10 +60,10 @@ function renderFeedback(result, question) {
   return feedback;
 }
 
-function renderQuizSetup(page, render) {
+function buildQuizSetup(refreshQuiz) {
   const panel = el('div', { className: 'panel' });
   panel.append(el('p', {
-    text: 'This practice preset currently uses one choose-switch question generator and one multi-select answer format.'
+    text: 'Choose a practice preset and session length. Each preset remembers its own question count.'
   }));
 
   const form = el('div', { className: 'quiz-setup' });
@@ -119,14 +117,17 @@ function renderQuizSetup(page, render) {
   form.append(lengthLabel);
 
   const start = el('button', { text: 'Start quiz' });
-  start.addEventListener('click', () => beginSession(Number(lengthSelect.value), render));
+  start.addEventListener('click', () => {
+    beginSession(Number(lengthSelect.value));
+    refreshQuiz();
+  });
   form.append(start);
 
   panel.append(form);
-  page.append(panel);
+  return panel;
 }
 
-function renderSessionHeader(page) {
+function buildSessionHeader() {
   const session = state.quiz.session;
   const header = el('div', { className: 'session-header' });
   const questionLabel = session.length === 0
@@ -134,11 +135,12 @@ function renderSessionHeader(page) {
     : `Question ${session.questionNumber} of ${session.length}`;
   header.append(el('span', { text: questionLabel }));
   header.append(el('span', { text: `Session average: ${formatPercent(getSessionAverageScore())}` }));
-  page.append(header);
+  return header;
 }
 
-function renderActiveQuestion(page, render) {
-  renderSessionHeader(page);
+function buildActiveQuestion(refreshQuiz) {
+  const fragment = document.createDocumentFragment();
+  fragment.append(buildSessionHeader());
 
   const question = state.quiz.question;
   const panel = el('div', { className: 'panel' });
@@ -147,7 +149,10 @@ function renderActiveQuestion(page, render) {
     question,
     selectedAnswers: state.quiz.selectedAnswers,
     result: state.quiz.result,
-    onToggle: answer => toggleAnswer(answer, render)
+    onToggle: answer => {
+      toggleAnswer(answer);
+      refreshQuiz();
+    }
   }));
 
   if (state.quiz.result) panel.append(renderFeedback(state.quiz.result, question));
@@ -162,7 +167,7 @@ function renderActiveQuestion(page, render) {
       state.quiz.status = 'answered';
       recordQuestionResult(question, result);
       saveProgress(state.progress);
-      render();
+      refreshQuiz();
     });
     actions.append(submit);
   } else {
@@ -171,7 +176,7 @@ function renderActiveQuestion(page, render) {
     const next = el('button', { text: isLast ? 'See summary' : 'Next question' });
     next.addEventListener('click', () => {
       if (advanceQuizSession()) createNextQuestion();
-      render();
+      refreshQuiz();
     });
     actions.append(next);
   }
@@ -180,16 +185,17 @@ function renderActiveQuestion(page, render) {
     const end = el('button', { className: 'secondary-button', text: 'End session' });
     end.addEventListener('click', () => {
       endQuizSession();
-      render();
+      refreshQuiz();
     });
     actions.append(end);
   }
 
   panel.append(actions);
-  page.append(panel);
+  fragment.append(panel);
+  return fragment;
 }
 
-function renderSessionSummary(page, render) {
+function buildSessionSummary(refreshQuiz) {
   const panel = el('div', { className: 'panel summary-panel' });
   panel.append(el('h3', { text: 'Session complete' }));
   panel.append(el('p', { text: `Questions answered: ${state.quiz.session.results.length}` }));
@@ -200,24 +206,36 @@ function renderSessionSummary(page, render) {
 
   const actions = el('div', { className: 'actions' });
   const again = el('button', { text: 'Quiz again' });
-  again.addEventListener('click', () => beginSession(state.quiz.session.length, render));
+  again.addEventListener('click', () => {
+    beginSession(state.quiz.session.length);
+    refreshQuiz();
+  });
   const setup = el('button', { className: 'secondary-button', text: 'Change setup' });
   setup.addEventListener('click', () => {
     returnToQuizSetup();
-    render();
+    refreshQuiz();
   });
   actions.append(again, setup);
   panel.append(actions);
-  page.append(panel);
+  return panel;
 }
 
-export function renderQuiz(container, render) {
+export function renderQuiz(container) {
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Quiz' }));
+  const quizBody = el('div', { className: 'quiz-body' });
+  page.append(quizBody);
 
-  if (state.quiz.status === 'idle') renderQuizSetup(page, render);
-  else if (state.quiz.status === 'complete') renderSessionSummary(page, render);
-  else renderActiveQuestion(page, render);
+  function refreshQuiz() {
+    if (state.quiz.status === 'idle') {
+      quizBody.replaceChildren(buildQuizSetup(refreshQuiz));
+    } else if (state.quiz.status === 'complete') {
+      quizBody.replaceChildren(buildSessionSummary(refreshQuiz));
+    } else {
+      quizBody.replaceChildren(buildActiveQuestion(refreshQuiz));
+    }
+  }
 
+  refreshQuiz();
   container.replaceChildren(page);
 }
