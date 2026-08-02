@@ -1,6 +1,7 @@
 import { TYPES, TYPE_META } from '../data/types.js';
 import { state } from '../state.js';
 import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiveness.js';
+import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective',
@@ -37,17 +38,11 @@ function createTypeSelect(value, includeNone = false) {
   return select;
 }
 
-function createTypeChip(type) {
-  return el('span', { className: 'type-chip', text: TYPE_META[type].label });
-}
-
 function renderGroup(multiplier, types) {
   if (!types.length) return null;
   const group = el('section', { className: 'matchup-group' });
   group.append(el('h3', { text: MULTIPLIER_LABELS[multiplier] }));
-  const chips = el('div', { className: 'type-chip-list' });
-  for (const type of types) chips.append(createTypeChip(type));
-  group.append(chips);
+  group.append(createTypeList(types));
   return group;
 }
 
@@ -56,10 +51,10 @@ function renderResults(page) {
 
   if (state.study.mode === 'offense') {
     const groups = getOffensiveMatchups(state.study.primaryType);
-    results.append(el('p', {
-      className: 'muted',
-      text: `${TYPE_META[state.study.primaryType].label}-type attacks against each defending type.`
-    }));
+    const heading = el('div', { className: 'study-heading' });
+    heading.append(createTypeBadge(state.study.primaryType));
+    heading.append(el('span', { text: 'attacks against each defending type' }));
+    results.append(heading);
     for (const multiplier of [2, 1, 0.5, 0]) {
       const group = renderGroup(multiplier, groups[multiplier]);
       if (group) results.append(group);
@@ -68,11 +63,10 @@ function renderResults(page) {
     const defendingTypes = [state.study.primaryType];
     if (state.study.secondaryType) defendingTypes.push(state.study.secondaryType);
     const groups = getDefensiveMatchups(defendingTypes);
-    const name = defendingTypes.map(type => TYPE_META[type].label).join('/');
-    results.append(el('p', {
-      className: 'muted',
-      text: `Damage taken by a ${name}-type defender from each attacking type.`
-    }));
+    const heading = el('div', { className: 'study-heading' });
+    heading.append(el('span', { text: 'Damage taken by' }));
+    heading.append(createTypeList(defendingTypes));
+    results.append(heading);
     for (const multiplier of [4, 2, 1, 0.5, 0.25, 0]) {
       const group = renderGroup(multiplier, groups[multiplier]);
       if (group) results.append(group);
