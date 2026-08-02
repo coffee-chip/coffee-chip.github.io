@@ -5,6 +5,15 @@ function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function relationship(attackingType, defendingType, answer) {
+  return {
+    key: `${attackingType}>${defendingType}`,
+    attackingType,
+    defendingType,
+    answer
+  };
+}
+
 export const MOVE_CRITERIA = {
   'more-effective': {
     id: 'more-effective',
@@ -47,9 +56,11 @@ export function createUnsafeSwitchQuestion() {
     answerType: 'type-multi-select',
     choices: [...TYPES],
     correctAnswers,
+    relationships: TYPES.map(defendingType => relationship(attackingType, defendingType, defendingType)),
     explanation: `${TYPE_META[attackingType].label} attacks deal 2× damage to the highlighted types, making them risky switch-ins.`,
     metadata: {
       battleDecision: 'choose-switch',
+      criterion: 'more-effective',
       outcome: 'unsafe',
       attackingType,
       multiplier: 2
@@ -69,6 +80,7 @@ export function createChooseMoveQuestion({
   }
 
   const defendingTypes = [randomItem(TYPES)];
+  const defendingType = defendingTypes[0];
   const correctAnswers = TYPES.filter(attackingType =>
     criterionDefinition.matches(getMultiplier(attackingType, defendingTypes))
   );
@@ -82,6 +94,7 @@ export function createChooseMoveQuestion({
     answerType: 'type-multi-select',
     choices: [...TYPES],
     correctAnswers,
+    relationships: TYPES.map(attackingType => relationship(attackingType, defendingType, attackingType)),
     explanation: criterionDefinition.explanation(defendingTypes),
     metadata: {
       battleDecision: 'choose-move',
@@ -98,8 +111,6 @@ const chooseMoveMoreEffectiveConfig = {
   defenderCount: 1
 };
 
-// Generators own subject matter and produce normalized questions.
-// Interaction formats own display and scoring behavior.
 export const QUESTION_GENERATORS = {
   'choose-switch-unsafe': {
     id: 'choose-switch-unsafe',
