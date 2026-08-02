@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Pokémon Type Trainer icon</title>
+  <desc id="desc">A stylized type wheel with a lightning bolt.</desc>
+  <rect width="512" height="512" rx="112" fill="#364fc7"/>
+  <circle cx="256" cy="256" r="154" fill="#ffffff" opacity="0.14"/>
+  <circle cx="256" cy="256" r="112" fill="#ffffff" opacity="0.18"/>
+  <path d="M285 92 171 286h74l-18 134 114-194h-74z" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="184" fill="none" stroke="#ffffff" stroke-width="20" opacity="0.9"/>
+</svg>
