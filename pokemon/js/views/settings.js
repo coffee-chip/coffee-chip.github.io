@@ -1,6 +1,7 @@
 import { state, resetProgress } from '../state.js';
 import { loadPersistentData, saveProgress, saveSettings } from '../storage.js';
 import { applyTheme, THEME_PREFERENCES } from '../theme.js';
+import { renderDeveloperOverlay } from '../developerOverlay.js';
 import {
   serviceWorkerState,
   subscribeServiceWorker,
@@ -23,6 +24,16 @@ function el(tag, options = {}) {
   if (options.className) node.className = options.className;
   if (options.text) node.textContent = options.text;
   return node;
+}
+
+function toggle(label, checked, onChange) {
+  const field = el('label', { className: 'toggle-field' });
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = checked;
+  input.addEventListener('change', () => onChange(input.checked));
+  field.append(input, el('span', { text: label }));
+  return field;
 }
 
 function persistResetProgress() {
@@ -56,7 +67,6 @@ function statusLabel() {
 
 export function renderSettings(container, render) {
   currentRender = render;
-
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Settings' }));
 
@@ -87,20 +97,26 @@ export function renderSettings(container, render) {
   page.append(preferences);
 
   const developerPanel = el('div', { className: 'panel settings-section' });
-  developerPanel.append(el('h3', { text: 'App updates and cache' }));
+  developerPanel.append(el('h3', { text: 'Developer tools' }));
   developerPanel.append(el('p', { text: `Service worker: ${statusLabel()}` }));
   developerPanel.append(el('p', { className: 'muted', text: `Installed version: ${serviceWorkerState.version ?? 'Unknown'} · App caches: ${serviceWorkerState.cacheNames.length}` }));
-
-  const autoLabel = el('label', { className: 'toggle-field' });
-  const auto = document.createElement('input');
-  auto.type = 'checkbox';
-  auto.checked = state.settings.developer.autoUpdateOnLaunch;
-  auto.addEventListener('change', () => {
-    state.settings.developer.autoUpdateOnLaunch = auto.checked;
-    saveSettings(state.settings);
-  });
-  autoLabel.append(auto, el('span', { text: 'Automatically check for and apply updates on launch' }));
-  developerPanel.append(autoLabel);
+  developerPanel.append(toggle(
+    'Show developer status overlay',
+    state.settings.developer.showOverlay,
+    checked => {
+      state.settings.developer.showOverlay = checked;
+      saveSettings(state.settings);
+      renderDeveloperOverlay();
+    }
+  ));
+  developerPanel.append(toggle(
+    'Automatically check for and apply updates on launch',
+    state.settings.developer.autoUpdateOnLaunch,
+    checked => {
+      state.settings.developer.autoUpdateOnLaunch = checked;
+      saveSettings(state.settings);
+    }
+  ));
 
   const updateActions = el('div', { className: 'actions' });
   const checkButton = el('button', { text: 'Get latest version' });
@@ -113,14 +129,12 @@ export function renderSettings(container, render) {
     render();
   });
   updateActions.append(checkButton);
-
   if (serviceWorkerState.status === 'update-ready') {
     const applyButton = el('button', { text: 'Update now' });
     applyButton.type = 'button';
     applyButton.addEventListener('click', () => applyWaitingUpdate());
     updateActions.append(applyButton);
   }
-
   const clearButton = el('button', { className: 'secondary-button', text: 'Clear app cache' });
   clearButton.type = 'button';
   clearButton.addEventListener('click', async () => {
@@ -130,7 +144,6 @@ export function renderSettings(container, render) {
   });
   updateActions.append(clearButton);
   developerPanel.append(updateActions);
-
   if (serviceMessage || serviceWorkerState.message) {
     const status = el('p', { className: 'settings-status', text: serviceMessage || serviceWorkerState.message });
     status.setAttribute('role', 'status');
