@@ -1,4 +1,4 @@
-import { TYPE_META } from '../data/types.js';
+import { createTypeBadge } from '../components/typeBadge.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -11,10 +11,8 @@ export function renderTypeMultiSelect({ question, selectedAnswers, result, onTog
   const grid = el('div', { className: 'type-grid' });
 
   for (const type of question.choices) {
-    const button = el('button', {
-      className: 'type-button',
-      text: TYPE_META[type].label
-    });
+    const button = el('button', { className: 'type-button' });
+    button.append(createTypeBadge(type));
     button.type = 'button';
     button.dataset.answer = type;
     button.setAttribute('aria-pressed', String(selectedAnswers.has(type)));
