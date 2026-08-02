@@ -16,13 +16,14 @@ export const state = {
   },
   settings: {
     theme: 'system',
+    developer: {
+      autoUpdateOnLaunch: false
+    },
     quiz: {
       defaultMode: 'select-all',
       common: {},
       modes: {
-        'select-all': {
-          questionCount: 10
-        }
+        'select-all': { questionCount: 10 }
       }
     }
   },
@@ -42,9 +43,7 @@ export const state = {
 };
 
 export function getQuizModeSettings(modeId = state.quiz.mode) {
-  if (!state.settings.quiz.modes[modeId]) {
-    state.settings.quiz.modes[modeId] = { questionCount: 10 };
-  }
+  if (!state.settings.quiz.modes[modeId]) state.settings.quiz.modes[modeId] = { questionCount: 10 };
   return state.settings.quiz.modes[modeId];
 }
 
@@ -52,6 +51,10 @@ export function hydratePersistentState(persistentData) {
   state.settings = {
     ...state.settings,
     ...persistentData.settings,
+    developer: {
+      ...state.settings.developer,
+      ...persistentData.settings.developer
+    },
     quiz: {
       ...state.settings.quiz,
       ...persistentData.settings.quiz,
@@ -61,7 +64,6 @@ export function hydratePersistentState(persistentData) {
   };
   state.progress = { ...state.progress, ...persistentData.progress };
   state.cache = { ...state.cache, ...persistentData.cache };
-
   state.quiz.mode = state.settings.quiz.defaultMode;
   const modeSettings = getQuizModeSettings(state.quiz.mode);
   state.quiz.session.mode = state.quiz.mode;
@@ -72,6 +74,7 @@ export function getPersistentSnapshot() {
   return {
     settings: {
       theme: state.settings.theme,
+      developer: { ...state.settings.developer },
       quiz: {
         defaultMode: state.settings.quiz.defaultMode,
         common: { ...state.settings.quiz.common },
@@ -89,11 +92,7 @@ export function getPersistentSnapshot() {
 }
 
 export function resetProgress() {
-  state.progress = {
-    totalAnswered: 0,
-    totalScore: 0,
-    relationshipStats: {}
-  };
+  state.progress = { totalAnswered: 0, totalScore: 0, relationshipStats: {} };
 }
 
 export function resetQuestionState() {
@@ -107,25 +106,12 @@ export function startQuizSession(length = getQuizModeSettings().questionCount) {
   modeSettings.questionCount = length;
   state.settings.quiz.defaultMode = state.quiz.mode;
   state.quiz.status = 'answering';
-  state.quiz.session = {
-    mode: state.quiz.mode,
-    length,
-    questionNumber: 1,
-    totalScore: 0,
-    results: []
-  };
+  state.quiz.session = { mode: state.quiz.mode, length, questionNumber: 1, totalScore: 0, results: [] };
   resetQuestionState();
 }
 
 export function recordQuestionResult(question, result) {
-  const entry = {
-    questionId: question.id,
-    generatorId: question.generatorId,
-    score: result.score,
-    metadata: question.metadata
-  };
-
-  state.quiz.session.results.push(entry);
+  state.quiz.session.results.push({ questionId: question.id, generatorId: question.generatorId, score: result.score, metadata: question.metadata });
   state.quiz.session.totalScore += result.score;
   state.progress.totalAnswered += 1;
   state.progress.totalScore += result.score;
@@ -138,7 +124,6 @@ export function advanceQuizSession() {
     resetQuestionState();
     return false;
   }
-
   state.quiz.session.questionNumber += 1;
   resetQuestionState();
   state.quiz.status = 'answering';
@@ -157,11 +142,9 @@ export function returnToQuizSetup() {
 
 export function getSessionAverageScore() {
   const count = state.quiz.session.results.length;
-  if (count === 0) return 0;
-  return state.quiz.session.totalScore / count;
+  return count === 0 ? 0 : state.quiz.session.totalScore / count;
 }
 
 export function getAverageScore() {
-  if (state.progress.totalAnswered === 0) return 0;
-  return state.progress.totalScore / state.progress.totalAnswered;
+  return state.progress.totalAnswered === 0 ? 0 : state.progress.totalScore / state.progress.totalAnswered;
 }
