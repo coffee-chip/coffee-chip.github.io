@@ -29,6 +29,7 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
 
 function cloneDefaults() { return structuredClone(DEFAULT_PERSISTENT_DATA); }
 function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
+function nonnegativeNumber(value, fallback = 0) { return Number.isFinite(value) && value >= 0 ? value : fallback; }
 function normalizeQuestionCount(value, fallback = 10) { return new Set([5, 10, 20, 0]).has(value) ? value : fallback; }
 
 function normalizeModeSettings(value, fallback = {}) {
@@ -64,13 +65,38 @@ function normalizeSettings(value) {
   };
 }
 
+function normalizeRelationshipStats(value) {
+  if (!isObject(value)) return {};
+  const normalized = {};
+  for (const [key, record] of Object.entries(value)) {
+    if (!isObject(record)) continue;
+    const [keyAttacker, keyDefender] = key.split('>');
+    const attackingType = typeof record.attackingType === 'string' ? record.attackingType : keyAttacker;
+    const defendingType = typeof record.defendingType === 'string' ? record.defendingType : keyDefender;
+    if (!attackingType || !defendingType) continue;
+    const attempts = Math.floor(nonnegativeNumber(record.attempts));
+    const earnedScore = Math.min(nonnegativeNumber(record.earnedScore), attempts);
+    normalized[`${attackingType}>${defendingType}`] = {
+      attackingType,
+      defendingType,
+      attempts,
+      earnedScore,
+      correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
+      misses: Math.floor(nonnegativeNumber(record.misses)),
+      falseSelections: Math.floor(nonnegativeNumber(record.falseSelections)),
+      lastSeen: typeof record.lastSeen === 'string' ? record.lastSeen : null
+    };
+  }
+  return normalized;
+}
+
 function normalizeProgress(value) {
   const defaults = cloneDefaults().progress;
   if (!isObject(value)) return defaults;
   return {
-    totalAnswered: Number.isFinite(value.totalAnswered) && value.totalAnswered >= 0 ? Math.floor(value.totalAnswered) : defaults.totalAnswered,
-    totalScore: Number.isFinite(value.totalScore) && value.totalScore >= 0 ? value.totalScore : defaults.totalScore,
-    relationshipStats: isObject(value.relationshipStats) ? value.relationshipStats : {}
+    totalAnswered: Math.floor(nonnegativeNumber(value.totalAnswered, defaults.totalAnswered)),
+    totalScore: nonnegativeNumber(value.totalScore, defaults.totalScore),
+    relationshipStats: normalizeRelationshipStats(value.relationshipStats)
   };
 }
 
