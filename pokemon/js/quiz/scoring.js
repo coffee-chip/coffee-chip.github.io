@@ -7,22 +7,22 @@ function difference(left, right) {
 }
 
 function buildRelationshipOutcomes(question, correctlySelected, missedAnswers, incorrectAnswers) {
-  const relationshipsByAnswer = new Map(
-    (question.relationships ?? []).map(relationship => [relationship.answer, relationship])
-  );
-
+  const answersByOutcome = {
+    correct: correctlySelected,
+    missed: missedAnswers,
+    'false-selection': incorrectAnswers
+  };
   const outcomes = [];
-  for (const answer of correctlySelected) {
-    const relationship = relationshipsByAnswer.get(answer);
-    if (relationship) outcomes.push({ ...relationship, outcome: 'correct', earnedScore: 1 });
-  }
-  for (const answer of missedAnswers) {
-    const relationship = relationshipsByAnswer.get(answer);
-    if (relationship) outcomes.push({ ...relationship, outcome: 'missed', earnedScore: 0 });
-  }
-  for (const answer of incorrectAnswers) {
-    const relationship = relationshipsByAnswer.get(answer);
-    if (relationship) outcomes.push({ ...relationship, outcome: 'false-selection', earnedScore: 0 });
+  for (const relationship of question.relationships ?? []) {
+    for (const [outcome, answers] of Object.entries(answersByOutcome)) {
+      if (!answers.includes(relationship.answer)) continue;
+      if (relationship.allowedOutcomes && !relationship.allowedOutcomes.includes(outcome)) continue;
+      outcomes.push({
+        ...relationship,
+        outcome,
+        earnedScore: outcome === 'correct' ? 1 : 0
+      });
+    }
   }
   return outcomes;
 }
@@ -43,12 +43,7 @@ export function scoreMultiSelect(question, submittedAnswers) {
     incorrectAnswers,
     correctAnswers,
     selectedAnswers,
-    relationshipOutcomes: buildRelationshipOutcomes(
-      question,
-      correctlySelected,
-      missedAnswers,
-      incorrectAnswers
-    )
+    relationshipOutcomes: buildRelationshipOutcomes(question, correctlySelected, missedAnswers, incorrectAnswers)
   };
 }
 
