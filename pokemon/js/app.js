@@ -6,6 +6,7 @@ import { runEngineSelfTests } from './engine/effectiveness.js';
 import { validateQuizArchitecture } from './quiz/validation.js';
 import { validateTypeIcons } from './components/typeBadge.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
+import { renderDeveloperOverlay } from './developerOverlay.js';
 import {
   registerServiceWorker,
   subscribeServiceWorker,
@@ -51,9 +52,13 @@ function render() {
   view(viewRoot, render);
   for (const link of navLinks) link.toggleAttribute('aria-current', link.dataset.route === state.route);
   renderUpdateBanner();
+  renderDeveloperOverlay();
 }
 
-subscribeServiceWorker(() => renderUpdateBanner());
+subscribeServiceWorker(() => {
+  renderUpdateBanner();
+  renderDeveloperOverlay();
+});
 
 startRouter(route => {
   state.route = route;
