@@ -3,7 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#f7f7f8">
+  <script>
+    (() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('pokemon-type-trainer') || 'null');
+        const preference = ['system', 'light', 'dark'].includes(saved?.settings?.theme)
+          ? saved.settings.theme
+          : 'system';
+        const resolved = preference === 'system'
+          ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : preference;
+        document.documentElement.dataset.themePreference = preference;
+        document.documentElement.dataset.theme = resolved;
+      } catch {
+        document.documentElement.dataset.themePreference = 'system';
+        document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+    })();
+  </script>
   <title>Pokémon Type Trainer</title>
   <link rel="stylesheet" href="./css/styles.css">
 </head>
