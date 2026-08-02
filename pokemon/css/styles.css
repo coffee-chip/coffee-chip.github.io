@@ -38,13 +38,15 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); }
+html { min-height: 100%; background: var(--bg); }
+body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); }
 button, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: var(--accent); }
 
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr auto;
   max-width: 48rem;
@@ -53,8 +55,17 @@ a { color: var(--accent); }
 }
 
 .app-header, .page, .app-nav { padding: 1rem; }
-.app-header { border-bottom: 1px solid var(--border); }
+.app-header {
+  padding-top: calc(1rem + env(safe-area-inset-top));
+  padding-left: calc(1rem + env(safe-area-inset-left));
+  padding-right: calc(1rem + env(safe-area-inset-right));
+  border-bottom: 1px solid var(--border);
+}
 .app-header h1 { margin: 0; font-size: 1.25rem; }
+.page {
+  padding-left: calc(1rem + env(safe-area-inset-left));
+  padding-right: calc(1rem + env(safe-area-inset-right));
+}
 .page h2 { margin-top: 0; }
 .muted { color: var(--muted); }
 .panel { border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; margin-bottom: 1rem; background: var(--surface); }
@@ -65,6 +76,9 @@ a { color: var(--accent); }
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: .5rem;
+  padding-left: calc(1rem + env(safe-area-inset-left));
+  padding-right: calc(1rem + env(safe-area-inset-right));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
