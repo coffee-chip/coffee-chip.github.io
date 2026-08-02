@@ -1,21 +1,38 @@
 import { getQuestionGenerator } from './generators.js';
 
-export const QUIZ_MODES = {
+// A practice preset chooses learning objectives, interaction formats, and generators.
+// The persisted key remains "quiz mode" for compatibility, but the concept is a preset.
+export const PRACTICE_PRESETS = {
   'select-all': {
     id: 'select-all',
-    label: 'Select all matching types',
-    generatorIds: ['offensive-weakness']
+    label: 'Switch-in safety · Select all',
+    objectiveIds: ['choose-switch'],
+    formatIds: ['type-multi-select'],
+    generatorIds: ['choose-switch-unsafe']
   }
 };
 
+// Compatibility alias while surrounding state/storage naming is migrated incrementally.
+export const QUIZ_MODES = PRACTICE_PRESETS;
+
 export function getQuizMode(modeId) {
-  const mode = QUIZ_MODES[modeId];
-  if (!mode) throw new Error(`Unknown quiz mode: ${modeId}`);
-  return mode;
+  const preset = PRACTICE_PRESETS[modeId];
+  if (!preset) throw new Error(`Unknown practice preset: ${modeId}`);
+  return preset;
 }
 
 export function createQuestionForMode(modeId) {
-  const mode = getQuizMode(modeId);
-  const generatorId = mode.generatorIds[Math.floor(Math.random() * mode.generatorIds.length)];
-  return getQuestionGenerator(generatorId)();
+  const preset = getQuizMode(modeId);
+  const generatorId = preset.generatorIds[Math.floor(Math.random() * preset.generatorIds.length)];
+  const generator = getQuestionGenerator(generatorId);
+  const question = generator.createQuestion();
+
+  if (!preset.objectiveIds.includes(question.objectiveId)) {
+    throw new Error(`Generator ${generatorId} produced objective ${question.objectiveId}, which is not allowed by preset ${modeId}.`);
+  }
+  if (!preset.formatIds.includes(question.formatId)) {
+    throw new Error(`Generator ${generatorId} produced format ${question.formatId}, which is not allowed by preset ${modeId}.`);
+  }
+
+  return question;
 }
