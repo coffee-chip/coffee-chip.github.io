@@ -1,0 +1,72 @@
+.progress-overview h3,
+.progress-panel h3 {
+  margin-top: 0;
+}
+
+.progress-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.progress-metric {
+  display: grid;
+  gap: .2rem;
+  padding: .7rem;
+  border-radius: .6rem;
+  background: var(--surface-subtle);
+  text-align: center;
+}
+
+.progress-metric strong {
+  font-size: 1.1rem;
+}
+
+.progress-metric span {
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.relationship-list {
+  display: grid;
+  gap: .65rem;
+}
+
+.relationship-row {
+  display: grid;
+  gap: .5rem;
+  padding-top: .65rem;
+  border-top: 1px solid var(--border);
+}
+
+.relationship-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.relationship-pair {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.relationship-arrow {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.relationship-summary {
+  display: grid;
+  gap: .15rem;
+}
+
+.relationship-summary .muted {
+  font-size: .84rem;
+}
+
+@media (max-width: 25rem) {
+  .progress-metrics {
+    grid-template-columns: 1fr;
+  }
+}
