@@ -1,4 +1,4 @@
-const APP_VERSION = '2026.08.02.5';
+const APP_VERSION = '2026.08.02.6';
 const CACHE_PREFIX = 'pokemon-type-trainer-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const CORE_ASSETS = [
@@ -14,9 +14,11 @@ const CORE_ASSETS = [
   './js/state.js',
   './js/storage.js',
   './js/quiz/generators.js',
+  './js/quiz/modes.js',
   './js/quiz/scoring.js',
   './js/quiz/validation.js',
   './js/views/index.js',
+  './js/views/quiz.js',
   './js/views/progress.js',
   './js/views/settings.js',
   './manifest.webmanifest',
@@ -37,9 +39,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
-  if (event.data?.type === 'GET_VERSION') {
-    event.source?.postMessage({ type: 'SW_VERSION', version: APP_VERSION, cacheName: CACHE_NAME });
-  }
+  if (event.data?.type === 'GET_VERSION') event.source?.postMessage({ type: 'SW_VERSION', version: APP_VERSION, cacheName: CACHE_NAME });
 });
 
 self.addEventListener('fetch', event => {
@@ -47,7 +47,6 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
       try {
@@ -61,7 +60,6 @@ self.addEventListener('fetch', event => {
     })());
     return;
   }
-
   event.respondWith((async () => {
     const cached = await caches.match(request);
     const network = fetch(request).then(async response => {
