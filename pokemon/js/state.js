@@ -17,7 +17,8 @@ export const state = {
   settings: {
     theme: 'system',
     developer: {
-      autoUpdateOnLaunch: false
+      autoUpdateOnLaunch: false,
+      showOverlay: false
     },
     quiz: {
       defaultMode: 'select-all',
