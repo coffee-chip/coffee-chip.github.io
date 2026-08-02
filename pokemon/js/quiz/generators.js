@@ -5,28 +5,38 @@ function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-export function createOffensiveWeaknessQuestion() {
+export function createUnsafeSwitchQuestion() {
   const attackingType = randomItem(TYPES);
   const correctAnswers = getDefendingTypesAtMultiplier(attackingType, 2);
 
   return {
-    id: `offensive-weakness:${attackingType}`,
-    generatorId: 'offensive-weakness',
-    prompt: `Which types are weak to ${TYPE_META[attackingType].label} attacks?`,
+    id: `choose-switch-unsafe:${attackingType}`,
+    generatorId: 'choose-switch-unsafe',
+    objectiveId: 'choose-switch',
+    formatId: 'type-multi-select',
+    prompt: `Which Pokémon types are weak to ${TYPE_META[attackingType].label} attacks?`,
     answerType: 'type-multi-select',
     choices: [...TYPES],
     correctAnswers,
-    explanation: `${TYPE_META[attackingType].label} attacks deal 2× damage to the highlighted types.`,
+    explanation: `${TYPE_META[attackingType].label} attacks deal 2× damage to the highlighted types, making them risky switch-ins.`,
     metadata: {
-      direction: 'offense',
+      battleDecision: 'choose-switch',
+      outcome: 'unsafe',
       attackingType,
       multiplier: 2
     }
   };
 }
 
+// Generators own subject matter and produce normalized questions.
+// Interaction formats own display and scoring behavior.
 export const QUESTION_GENERATORS = {
-  'offensive-weakness': createOffensiveWeaknessQuestion
+  'choose-switch-unsafe': {
+    id: 'choose-switch-unsafe',
+    objectiveId: 'choose-switch',
+    formatId: 'type-multi-select',
+    createQuestion: createUnsafeSwitchQuestion
+  }
 };
 
 export function getQuestionGenerator(generatorId) {
