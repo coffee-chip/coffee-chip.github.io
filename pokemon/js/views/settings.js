@@ -12,7 +12,11 @@ import {
 let resetStage = 'idle';
 let resetMessage = '';
 let serviceMessage = '';
-let unsubscribe = null;
+let currentRender = null;
+
+subscribeServiceWorker(() => {
+  if (state.route === 'settings' && currentRender) currentRender();
+});
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -51,10 +55,7 @@ function statusLabel() {
 }
 
 export function renderSettings(container, render) {
-  if (unsubscribe) unsubscribe();
-  unsubscribe = subscribeServiceWorker(() => {
-    if (state.route === 'settings') render();
-  });
+  currentRender = render;
 
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Settings' }));
@@ -123,9 +124,6 @@ export function renderSettings(container, render) {
   const clearButton = el('button', { className: 'secondary-button', text: 'Clear app cache' });
   clearButton.type = 'button';
   clearButton.addEventListener('click', async () => {
-    const onlineWarning = navigator.onLine ? '' : ' You are offline, so the app may not reopen until you reconnect.';
-    const confirmed = window.confirm(`Clear cached app files? Quiz statistics and preferences will be kept.${onlineWarning}`);
-    if (!confirmed) return;
     await clearAppCaches();
     serviceMessage = serviceWorkerState.message;
     render();
