@@ -1,0 +1,19 @@
+{
+  "name": "Pokémon Type Trainer",
+  "short_name": "Type Trainer",
+  "description": "Study and practice Pokémon type matchups.",
+  "start_url": "./#quiz",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f7f8",
+  "theme_color": "#364fc7",
+  "icons": [
+    {
+      "src": "./icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
