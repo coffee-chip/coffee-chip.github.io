@@ -9,6 +9,13 @@ export const PRACTICE_PRESETS = {
     objectiveIds: ['choose-switch'],
     formatIds: ['type-multi-select'],
     generatorIds: ['choose-switch-unsafe']
+  },
+  'choose-move-select-all': {
+    id: 'choose-move-select-all',
+    label: 'Choose a move · Select all',
+    objectiveIds: ['choose-move'],
+    formatIds: ['type-multi-select'],
+    generatorIds: ['choose-move-more-effective']
   }
 };
 
