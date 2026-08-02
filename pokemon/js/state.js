@@ -88,6 +88,14 @@ export function getPersistentSnapshot() {
   };
 }
 
+export function resetProgress() {
+  state.progress = {
+    totalAnswered: 0,
+    totalScore: 0,
+    relationshipStats: {}
+  };
+}
+
 export function resetQuestionState() {
   state.quiz.selectedAnswers = new Set();
   state.quiz.result = null;
