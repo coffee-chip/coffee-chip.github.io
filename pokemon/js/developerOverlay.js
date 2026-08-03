@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { serviceWorkerState, subscribeServiceWorker } from './serviceWorker.js';
 
-const APP_BUILD = '2026.08.03.3';
+const APP_BUILD = '2026.08.03.4';
 let overlay = null;
 let unsubscribe = null;
 
