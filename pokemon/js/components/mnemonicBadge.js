@@ -1,5 +1,5 @@
-import { createInlineTypeBadge, createTypeButtonBadge } from './typeBadge.js';
-import { getMnemonicsForRelationships } from '../data/mnemonics.js';
+import { createTypeButtonBadge } from './typeBadge.js';
+import { getRelationshipMnemonic } from '../relationships.js';
 
 function createLightbulbIcon() {
   const bulb = document.createElement('span');
@@ -11,15 +11,22 @@ function createLightbulbIcon() {
 
 export function createMnemonicTypeBadge(type, relationshipKeys, onActivate) {
   const keys = Array.isArray(relationshipKeys) ? relationshipKeys : [relationshipKeys];
-  const mnemonics = getMnemonicsForRelationships(keys);
-  if (!mnemonics.length) return createInlineTypeBadge(type);
+  const mnemonics = keys.map(getRelationshipMnemonic).filter(Boolean);
+  const hasMnemonic = mnemonics.length > 0;
 
   const button = createTypeButtonBadge(type, {
-    className: 'mnemonic-type-badge',
-    trailingIcon: createLightbulbIcon(),
-    ariaLabel: `Show mnemonic for ${type}`
+    className: `mnemonic-type-badge${hasMnemonic ? '' : ' no-mnemonic'}`,
+    trailingIcon: hasMnemonic ? createLightbulbIcon() : null,
+    ariaLabel: hasMnemonic ? `Show mnemonic for ${type}` : `${type} has no mnemonic`
   });
   button.dataset.relationshipKeys = keys.join(',');
-  button.addEventListener('click', () => onActivate?.({ relationshipKeys: keys, mnemonics, button }));
+
+  if (hasMnemonic) {
+    button.addEventListener('click', () => onActivate?.({ relationshipKeys: keys, mnemonics, button }));
+  } else {
+    button.setAttribute('aria-disabled', 'true');
+    button.tabIndex = -1;
+  }
+
   return button;
 }
