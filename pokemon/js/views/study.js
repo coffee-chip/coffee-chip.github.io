@@ -2,6 +2,7 @@ import { TYPES, TYPE_META } from '../data/types.js';
 import { state } from '../state.js';
 import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiveness.js';
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
+import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective',
@@ -11,6 +12,9 @@ const MULTIPLIER_LABELS = {
   0.25: '¼× — strongly resisted',
   0: '0× — no effect'
 };
+
+let activeMnemonicKey = null;
+let activeMnemonicBanner = null;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -38,11 +42,61 @@ function createTypeSelect(value, includeNone = false) {
   return select;
 }
 
-function renderGroup(multiplier, types) {
+function dismissMnemonicBanner() {
+  activeMnemonicBanner?.remove();
+  activeMnemonicBanner = null;
+  activeMnemonicKey = null;
+  for (const button of document.querySelectorAll('.mnemonic-badge-button[aria-pressed="true"]')) {
+    button.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
+  const selectionKey = relationshipKeys.join('|');
+  if (activeMnemonicKey === selectionKey) {
+    dismissMnemonicBanner();
+    return;
+  }
+
+  dismissMnemonicBanner();
+  activeMnemonicKey = selectionKey;
+  button.setAttribute('aria-pressed', 'true');
+
+  const banner = el('button', { className: 'mnemonic-banner' });
+  banner.type = 'button';
+  banner.setAttribute('aria-label', 'Dismiss mnemonic');
+
+  const heading = el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' });
+  banner.append(heading);
+  for (const mnemonic of mnemonics) {
+    const [attackingType, defendingType] = mnemonic.relationshipKey.split('>');
+    const line = el('span', { className: 'mnemonic-banner-line' });
+    line.append(createTypeBadge(attackingType));
+    line.append(el('span', { className: 'relationship-arrow', text: '→' }));
+    line.append(createTypeBadge(defendingType));
+    line.append(el('span', { className: 'mnemonic-text', text: mnemonic.text }));
+    banner.append(line);
+  }
+  banner.append(el('span', { className: 'mnemonic-dismiss-hint', text: 'Tap to dismiss' }));
+  banner.addEventListener('click', dismissMnemonicBanner);
+
+  document.body.append(banner);
+  activeMnemonicBanner = banner;
+}
+
+function createMnemonicList(types, relationshipKeysForType) {
+  const list = el('span', { className: 'type-badge-list' });
+  for (const type of types) {
+    list.append(createMnemonicTypeBadge(type, relationshipKeysForType(type), showMnemonicBanner));
+  }
+  return list;
+}
+
+function renderGroup(multiplier, types, relationshipKeysForType) {
   if (!types.length) return null;
   const group = el('section', { className: 'matchup-group' });
   group.append(el('h3', { text: MULTIPLIER_LABELS[multiplier] }));
-  group.append(createTypeList(types));
+  group.append(createMnemonicList(types, relationshipKeysForType));
   return group;
 }
 
@@ -50,13 +104,16 @@ function renderResults(page) {
   const results = el('div', { className: 'study-results' });
 
   if (state.study.mode === 'offense') {
-    const groups = getOffensiveMatchups(state.study.primaryType);
+    const attackingType = state.study.primaryType;
+    const groups = getOffensiveMatchups(attackingType);
     const heading = el('div', { className: 'study-heading' });
-    heading.append(createTypeBadge(state.study.primaryType));
+    heading.append(createTypeBadge(attackingType));
     heading.append(el('span', { text: 'attacks against each defending type' }));
     results.append(heading);
     for (const multiplier of [2, 1, 0.5, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier]);
+      const group = renderGroup(multiplier, groups[multiplier], defendingType => [
+        `${attackingType}>${defendingType}`
+      ]);
       if (group) results.append(group);
     }
   } else {
@@ -68,7 +125,9 @@ function renderResults(page) {
     heading.append(createTypeList(defendingTypes));
     results.append(heading);
     for (const multiplier of [4, 2, 1, 0.5, 0.25, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier]);
+      const group = renderGroup(multiplier, groups[multiplier], attackingType =>
+        defendingTypes.map(defendingType => `${attackingType}>${defendingType}`)
+      );
       if (group) results.append(group);
     }
   }
@@ -77,6 +136,7 @@ function renderResults(page) {
 }
 
 export function renderStudy(container, render) {
+  dismissMnemonicBanner();
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Study' }));
 
