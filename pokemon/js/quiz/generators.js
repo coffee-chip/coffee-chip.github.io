@@ -1,5 +1,6 @@
 import { TYPES, TYPE_META } from '../data/types.js';
 import { getMultiplier } from '../engine/effectiveness.js';
+import { createRelationship } from '../relationships.js';
 
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
 function randomDistinctTypes(count) {
@@ -8,8 +9,8 @@ function randomDistinctTypes(count) {
   while (result.length < count) result.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
   return result;
 }
-function relationship(attackingType, defendingType, answer, allowedOutcomes) {
-  return { key: `${attackingType}>${defendingType}`, attackingType, defendingType, answer, allowedOutcomes };
+function questionRelationship(attackingType, defendingType, answer, allowedOutcomes) {
+  return createRelationship(attackingType, defendingType, { answer, allowedOutcomes });
 }
 function labelTypes(types) { return types.map(type => TYPE_META[type].label).join(' / '); }
 
@@ -45,9 +46,9 @@ export function createUnsafeSwitchQuestion({ defenderCount = 1 } = {}) {
     const overallCorrect = componentMatches.some(item => item.matches);
     for (const item of componentMatches) {
       if (item.matches) {
-        relationships.push(relationship(item.attackingType, defendingType, defendingType, ['correct', 'missed']));
+        relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['correct', 'missed']));
       } else if (!overallCorrect) {
-        relationships.push(relationship(item.attackingType, defendingType, defendingType, ['false-selection']));
+        relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['false-selection']));
       }
     }
   }
@@ -85,9 +86,9 @@ export function createChooseMoveQuestion({ criterion = 'more-effective', defende
     }));
     for (const component of components) {
       if (combinedMatches && component.matches) {
-        relationships.push(relationship(attackingType, component.defendingType, attackingType, ['correct', 'missed']));
+        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['correct', 'missed']));
       } else if (!combinedMatches && components.every(item => !item.matches)) {
-        relationships.push(relationship(attackingType, component.defendingType, attackingType, ['false-selection']));
+        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['false-selection']));
       }
     }
   }
