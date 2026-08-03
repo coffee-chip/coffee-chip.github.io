@@ -4,7 +4,11 @@ import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiven
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { createRelationshipKey, parseRelationshipKey } from '../relationships.js';
-import { getPokemon } from '../data/pokemonRepository.js';
+import {
+  getCachedPokemonNameIndex,
+  getPokemon,
+  getPokemonNameIndex
+} from '../data/pokemonRepository.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective',
@@ -23,6 +27,7 @@ const SOURCE_LABELS = {
 
 let activeMnemonicKey = null;
 let activeMnemonicBanner = null;
+let pokemonNameIndexPromise = null;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -180,6 +185,25 @@ function renderPokemonResult(page) {
   page.append(card);
 }
 
+function populatePokemonDatalist(datalist, names) {
+  if (!datalist.isConnected && !document.body.contains(datalist)) return;
+  const fragment = document.createDocumentFragment();
+  for (const name of names) {
+    const option = document.createElement('option');
+    option.value = name;
+    fragment.append(option);
+  }
+  datalist.replaceChildren(fragment);
+}
+
+function loadPokemonNameIndex() {
+  if (!pokemonNameIndexPromise) {
+    pokemonNameIndexPromise = getPokemonNameIndex()
+      .finally(() => { pokemonNameIndexPromise = null; });
+  }
+  return pokemonNameIndexPromise;
+}
+
 function renderPokemonLookup(page, render) {
   const form = el('form', { className: 'panel pokemon-lookup-form' });
   const label = el('label');
@@ -191,13 +215,23 @@ function renderPokemonLookup(page, render) {
   input.spellcheck = false;
   input.placeholder = 'e.g. Bulbasaur or 1';
   input.value = state.study.pokemonQuery;
+  input.setAttribute('list', 'pokemon-name-options');
   input.addEventListener('input', () => { state.study.pokemonQuery = input.value; });
   label.append(input);
+
+  const datalist = document.createElement('datalist');
+  datalist.id = 'pokemon-name-options';
+  const cachedIndex = getCachedPokemonNameIndex();
+  if (cachedIndex) populatePokemonDatalist(datalist, cachedIndex.names);
+
+  loadPokemonNameIndex()
+    .then(result => populatePokemonDatalist(datalist, result.names))
+    .catch(error => console.warn('Could not load Pokémon autocomplete names.', error));
 
   const submit = el('button', { text: 'Search' });
   submit.type = 'submit';
   submit.disabled = state.study.pokemonStatus === 'loading';
-  form.append(label, submit);
+  form.append(label, datalist, submit);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     state.study.pokemonStatus = 'loading';
