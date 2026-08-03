@@ -4,11 +4,7 @@ import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiven
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { createRelationshipKey, parseRelationshipKey } from '../relationships.js';
-import {
-  getCachedPokemonNameIndex,
-  getPokemon,
-  getPokemonNameIndex
-} from '../data/pokemonRepository.js';
+import { getCachedPokemonNameIndex, getPokemon } from '../data/pokemonRepository.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective',
@@ -27,7 +23,8 @@ const SOURCE_LABELS = {
 
 let activeMnemonicKey = null;
 let activeMnemonicBanner = null;
-let pokemonNameIndexPromise = null;
+let activePokemonDatalist = null;
+let datalistPopulationToken = 0;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -186,22 +183,25 @@ function renderPokemonResult(page) {
 }
 
 function populatePokemonDatalist(datalist, names) {
-  if (!datalist.isConnected && !document.body.contains(datalist)) return;
-  const fragment = document.createDocumentFragment();
-  for (const name of names) {
-    const option = document.createElement('option');
-    option.value = name;
-    fragment.append(option);
-  }
-  datalist.replaceChildren(fragment);
-}
+  const token = ++datalistPopulationToken;
+  datalist.replaceChildren();
+  let index = 0;
+  const batchSize = 100;
 
-function loadPokemonNameIndex() {
-  if (!pokemonNameIndexPromise) {
-    pokemonNameIndexPromise = getPokemonNameIndex()
-      .finally(() => { pokemonNameIndexPromise = null; });
+  function appendBatch() {
+    if (token !== datalistPopulationToken || datalist !== activePokemonDatalist || !datalist.isConnected) return;
+    const fragment = document.createDocumentFragment();
+    const end = Math.min(index + batchSize, names.length);
+    for (; index < end; index += 1) {
+      const option = document.createElement('option');
+      option.value = names[index];
+      fragment.append(option);
+    }
+    datalist.append(fragment);
+    if (index < names.length) window.setTimeout(appendBatch, 0);
   }
-  return pokemonNameIndexPromise;
+
+  window.setTimeout(appendBatch, 0);
 }
 
 function renderPokemonLookup(page, render) {
@@ -221,12 +221,9 @@ function renderPokemonLookup(page, render) {
 
   const datalist = document.createElement('datalist');
   datalist.id = 'pokemon-name-options';
+  activePokemonDatalist = datalist;
   const cachedIndex = getCachedPokemonNameIndex();
   if (cachedIndex) populatePokemonDatalist(datalist, cachedIndex.names);
-
-  loadPokemonNameIndex()
-    .then(result => populatePokemonDatalist(datalist, result.names))
-    .catch(error => console.warn('Could not load Pokémon autocomplete names.', error));
 
   const submit = el('button', { text: 'Search' });
   submit.type = 'submit';
@@ -260,6 +257,8 @@ function renderPokemonLookup(page, render) {
 
 export function renderStudy(container, render) {
   dismissMnemonicBanner();
+  activePokemonDatalist = null;
+  datalistPopulationToken += 1;
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Study' }));
 
@@ -316,6 +315,12 @@ export function renderStudy(container, render) {
   else renderTypeResults(page);
   container.replaceChildren(page);
 }
+
+document.addEventListener('pokemon-name-index-ready', event => {
+  if (activePokemonDatalist && Array.isArray(event.detail?.names)) {
+    populatePokemonDatalist(activePokemonDatalist, event.detail.names);
+  }
+});
 
 window.addEventListener('hashchange', () => {
   if (location.hash !== '#study') dismissMnemonicBanner();
