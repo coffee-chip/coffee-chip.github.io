@@ -27,11 +27,6 @@
   font-size: .78rem;
 }
 
-.progress-ranking-note {
-  margin: .85rem 0 0;
-  font-size: .84rem;
-}
-
 .progress-panel-heading {
   display: flex;
   align-items: center;
@@ -106,8 +101,14 @@
 }
 
 .progress-list-limit {
-  margin-bottom: 0;
+  margin: .85rem 0 0;
   font-size: .84rem;
+}
+
+.progress-panel-bottom-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: .75rem;
 }
 
 @media (max-width: 25rem) {
@@ -118,5 +119,9 @@
   .progress-panel-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .progress-panel-bottom-controls {
+    justify-content: flex-start;
   }
 }
