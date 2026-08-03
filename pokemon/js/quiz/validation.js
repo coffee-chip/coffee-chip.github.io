@@ -1,8 +1,8 @@
-import { TYPES } from '../data/types.js';
 import { LEARNING_OBJECTIVES } from './objectives.js';
 import { INTERACTION_FORMATS } from './formats.js';
 import { MOVE_CRITERIA, QUESTION_GENERATORS } from './generators.js';
 import { PRACTICE_PRESETS } from './modes.js';
+import { parseRelationshipKey } from '../relationships.js';
 
 function result(name, passed, detail = '') { return { name, passed, detail }; }
 
@@ -12,8 +12,14 @@ function validateRelationships(question) {
     if (!relationship?.key || !relationship.attackingType || !relationship.defendingType || !relationship.answer) {
       return 'Relationship missing key, types, or answer';
     }
-    if (relationship.key !== `${relationship.attackingType}>${relationship.defendingType}`) return `Invalid key ${relationship.key}`;
-    if (!TYPES.includes(relationship.attackingType) || !TYPES.includes(relationship.defendingType)) return `Unknown type in ${relationship.key}`;
+    try {
+      const parsed = parseRelationshipKey(relationship.key);
+      if (parsed.attackingType !== relationship.attackingType || parsed.defendingType !== relationship.defendingType) {
+        return `Relationship fields do not match key ${relationship.key}`;
+      }
+    } catch (error) {
+      return error.message;
+    }
     if (!question.choices.includes(relationship.answer)) return `Relationship answer is not a choice: ${relationship.answer}`;
     if (relationship.allowedOutcomes && relationship.allowedOutcomes.some(value => !['correct', 'missed', 'false-selection'].includes(value))) {
       return `Invalid allowed outcome for ${relationship.key}`;
