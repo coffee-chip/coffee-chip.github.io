@@ -65,9 +65,8 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   const banner = el('button', { className: 'mnemonic-banner' });
   banner.type = 'button';
   banner.setAttribute('aria-label', 'Dismiss mnemonic');
+  banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
 
-  const heading = el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' });
-  banner.append(heading);
   for (const mnemonic of mnemonics) {
     const [attackingType, defendingType] = mnemonic.relationshipKey.split('>');
     const line = el('span', { className: 'mnemonic-banner-line' });
@@ -77,9 +76,9 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
     line.append(el('span', { className: 'mnemonic-text', text: mnemonic.text }));
     banner.append(line);
   }
+
   banner.append(el('span', { className: 'mnemonic-dismiss-hint', text: 'Tap to dismiss' }));
   banner.addEventListener('click', dismissMnemonicBanner);
-
   document.body.append(banner);
   activeMnemonicBanner = banner;
 }
@@ -111,9 +110,7 @@ function renderResults(page) {
     heading.append(el('span', { text: 'attacks against each defending type' }));
     results.append(heading);
     for (const multiplier of [2, 1, 0.5, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier], defendingType => [
-        `${attackingType}>${defendingType}`
-      ]);
+      const group = renderGroup(multiplier, groups[multiplier], defendingType => [`${attackingType}>${defendingType}`]);
       if (group) results.append(group);
     }
   } else {
@@ -141,7 +138,6 @@ export function renderStudy(container, render) {
   page.append(el('h2', { text: 'Study' }));
 
   const controls = el('div', { className: 'panel study-controls' });
-
   const modeLabel = el('label');
   modeLabel.append(el('span', { text: 'Lookup' }));
   const modeSelect = el('select');
@@ -187,3 +183,7 @@ export function renderStudy(container, render) {
   renderResults(page);
   container.replaceChildren(page);
 }
+
+window.addEventListener('hashchange', () => {
+  if (location.hash !== '#study') dismissMnemonicBanner();
+});
