@@ -33,7 +33,12 @@ export const state = {
   study: {
     mode: 'offense',
     primaryType: 'fire',
-    secondaryType: null
+    secondaryType: null,
+    pokemonQuery: '',
+    pokemonStatus: 'idle',
+    pokemonResult: null,
+    pokemonSource: null,
+    pokemonError: null
   },
   progress: {
     totalAnswered: 0,
