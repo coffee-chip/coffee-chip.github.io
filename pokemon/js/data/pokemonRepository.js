@@ -1,9 +1,15 @@
 import { TYPES } from './types.js';
 import { state } from '../state.js';
 import { saveCache } from '../storage.js';
-import { fetchPokemon, normalizePokemonIdentifier, PokeApiError } from '../api/pokeApi.js';
+import {
+  fetchPokemon,
+  fetchPokemonNameIndex,
+  normalizePokemonIdentifier,
+  PokeApiError
+} from '../api/pokeApi.js';
 
 const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const NAME_INDEX_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function titleCase(value) {
   return value.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ');
@@ -43,6 +49,19 @@ function isValidCachedPokemon(value) {
     && typeof value.fetchedAt === 'string';
 }
 
+function isValidNameIndex(value) {
+  return value
+    && Array.isArray(value.names)
+    && value.names.length > 0
+    && value.names.every(name => typeof name === 'string' && name.length > 0)
+    && typeof value.fetchedAt === 'string';
+}
+
+function isFresh(record, maxAgeMs) {
+  const fetchedAt = Date.parse(record.fetchedAt);
+  return Number.isFinite(fetchedAt) && Date.now() - fetchedAt < maxAgeMs;
+}
+
 function getCached(identifier) {
   const normalized = normalizePokemonIdentifier(identifier);
   const direct = state.cache.pokemon?.[normalized];
@@ -59,16 +78,20 @@ function cachePokemon(pokemon) {
   saveCache(state.cache);
 }
 
-function isFresh(record) {
-  const fetchedAt = Date.parse(record.fetchedAt);
-  return Number.isFinite(fetchedAt) && Date.now() - fetchedAt < CACHE_MAX_AGE_MS;
+function cachePokemonNameIndex(names) {
+  state.cache.pokemonNameIndex = {
+    names: [...new Set(names)].sort((a, b) => a.localeCompare(b)),
+    fetchedAt: new Date().toISOString()
+  };
+  saveCache(state.cache);
+  return state.cache.pokemonNameIndex;
 }
 
 export async function getPokemon(identifier, { forceRefresh = false } = {}) {
   const normalized = normalizePokemonIdentifier(identifier);
   const cached = getCached(normalized);
 
-  if (cached && !forceRefresh && isFresh(cached)) {
+  if (cached && !forceRefresh && isFresh(cached, CACHE_MAX_AGE_MS)) {
     return { pokemon: cached, source: 'cache', stale: false };
   }
 
@@ -79,6 +102,28 @@ export async function getPokemon(identifier, { forceRefresh = false } = {}) {
     return { pokemon, source: 'network', stale: false };
   } catch (error) {
     if (cached) return { pokemon: cached, source: 'stale-cache', stale: true, error };
+    throw error;
+  }
+}
+
+export function getCachedPokemonNameIndex() {
+  return isValidNameIndex(state.cache.pokemonNameIndex)
+    ? state.cache.pokemonNameIndex
+    : null;
+}
+
+export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
+  const cached = getCachedPokemonNameIndex();
+  if (cached && !forceRefresh && isFresh(cached, NAME_INDEX_MAX_AGE_MS)) {
+    return { names: cached.names, source: 'cache', stale: false };
+  }
+
+  try {
+    const names = await fetchPokemonNameIndex();
+    const index = cachePokemonNameIndex(names);
+    return { names: index.names, source: 'network', stale: false };
+  } catch (error) {
+    if (cached) return { names: cached.names, source: 'stale-cache', stale: true, error };
     throw error;
   }
 }
