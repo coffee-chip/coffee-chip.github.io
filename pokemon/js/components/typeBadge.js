@@ -42,25 +42,45 @@ export function createTypeIcon(type, { className = '' } = {}) {
   return svg;
 }
 
-export function createTypeBadge(type, { compact = false, className = '' } = {}) {
+function appendBadgeContents(node, type, { trailingIcon = null } = {}) {
   const meta = assertType(type);
+  node.dataset.type = type;
+  node.style.setProperty('--type-color', meta.color);
+  node.append(createTypeIcon(type));
+
+  const label = document.createElement('span');
+  label.className = 'type-label';
+  label.textContent = meta.label;
+  node.append(label);
+
+  if (trailingIcon) node.append(trailingIcon);
+  return node;
+}
+
+export function createInlineTypeBadge(type, { className = '' } = {}) {
   const badge = document.createElement('span');
-  badge.className = `type-badge${compact ? ' compact' : ''}${className ? ` ${className}` : ''}`;
-  badge.dataset.type = type;
-  badge.style.setProperty('--type-color', meta.color);
-  badge.append(createTypeIcon(type));
+  badge.className = `type-badge type-badge-inline${className ? ` ${className}` : ''}`;
+  return appendBadgeContents(badge, type);
+}
 
-  if (!compact) {
-    const label = document.createElement('span');
-    label.className = 'type-label';
-    label.textContent = meta.label;
-    badge.append(label);
-  } else {
-    badge.setAttribute('aria-label', meta.label);
-    badge.title = meta.label;
-  }
+export function createTypeButtonBadge(type, {
+  className = '',
+  trailingIcon = null,
+  ariaLabel = '',
+  onClick = null
+} = {}) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `type-badge type-badge-button${className ? ` ${className}` : ''}`;
+  if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
+  appendBadgeContents(button, type, { trailingIcon });
+  if (onClick) button.addEventListener('click', onClick);
+  return button;
+}
 
-  return badge;
+// Compatibility alias: ordinary, non-interactive use is the inline badge.
+export function createTypeBadge(type, options = {}) {
+  return createInlineTypeBadge(type, options);
 }
 
 export function createTypeList(types, { emptyText = 'None' } = {}) {
@@ -70,7 +90,7 @@ export function createTypeList(types, { emptyText = 'None' } = {}) {
     list.textContent = emptyText;
     return list;
   }
-  for (const type of types) list.append(createTypeBadge(type));
+  for (const type of types) list.append(createInlineTypeBadge(type));
   return list;
 }
 
