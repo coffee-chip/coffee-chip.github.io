@@ -1,3 +1,5 @@
+import { parseRelationshipKey } from './relationships.js';
+
 export const state = {
   route: 'quiz',
   quiz: {
@@ -112,9 +114,10 @@ export function startQuizSession(length = getQuizModeSettings().questionCount) {
 }
 
 function recordRelationshipOutcome(outcome, timestamp) {
-  const existing = state.progress.relationshipStats[outcome.key] ?? {
-    attackingType: outcome.attackingType,
-    defendingType: outcome.defendingType,
+  const relationship = parseRelationshipKey(outcome.key);
+  const existing = state.progress.relationshipStats[relationship.key] ?? {
+    attackingType: relationship.attackingType,
+    defendingType: relationship.defendingType,
     attempts: 0,
     earnedScore: 0,
     correctSelections: 0,
@@ -129,7 +132,7 @@ function recordRelationshipOutcome(outcome, timestamp) {
   if (outcome.outcome === 'correct') existing.correctSelections += 1;
   if (outcome.outcome === 'missed') existing.misses += 1;
   if (outcome.outcome === 'false-selection') existing.falseSelections += 1;
-  state.progress.relationshipStats[outcome.key] = existing;
+  state.progress.relationshipStats[relationship.key] = existing;
 }
 
 export function recordQuestionResult(question, result) {
