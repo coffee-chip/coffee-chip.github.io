@@ -1,0 +1,18 @@
+.app-shell { grid-template-rows: 1fr auto; }
+.study-controls-with-tabs { margin-top: 0; }
+.study-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem; grid-column: 1 / -1; }
+.study-tab { min-height: 2.75rem; padding: .45rem .35rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--surface); }
+.study-tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.pokemon-result-navigation { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: stretch; gap: .45rem; margin-bottom: 1rem; }
+.pokemon-result-navigation .pokemon-result-card { margin-bottom: 0; }
+.pokemon-evolution-side { min-width: 0; padding: 0; border: 1px solid var(--border); border-radius: .65rem; background: var(--surface-subtle); color: var(--accent); font-size: 2rem; font-weight: 700; line-height: 1; }
+.pokemon-evolution-side:active, .pokemon-evolution-side:focus-visible { background: var(--accent-soft); }
+.pokemon-evolution-spacer:empty { visibility: hidden; }
+.pokemon-evolution-chooser h3 { margin-top: 0; }
+.pokemon-evolution-options { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pokemon-evolution-options button, .pokemon-evolution-close { min-height: 2.5rem; padding: 0 .75rem; }
+.pokemon-evolution-close { margin-top: .75rem; }
+@media (max-width: 25rem) {
+  .study-tab { font-size: .86rem; }
+  .pokemon-result-navigation { grid-template-columns: 2.35rem minmax(0, 1fr) 2.35rem; gap: .3rem; }
+}
