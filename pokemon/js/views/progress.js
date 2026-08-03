@@ -1,6 +1,7 @@
 import { state, getAverageScore } from '../state.js';
 import { TYPES } from '../data/types.js';
 import { createTypeBadge } from '../components/typeBadge.js';
+import { getRelationshipMastery, parseRelationshipKey } from '../relationships.js';
 
 const COLLAPSED_LIMIT = 5;
 const EXPANDED_LIMIT = 100;
@@ -17,19 +18,16 @@ function formatPercent(value) {
   return `${Math.round(value * 100)}%`;
 }
 
-function mastery(record) {
-  return record.attempts ? record.earnedScore / record.attempts : 0;
-}
-
 function relationshipRow(record) {
+  const relationship = parseRelationshipKey(record.key);
   const row = el('div', { className: 'relationship-row' });
   const pairing = el('div', { className: 'relationship-pair' });
-  pairing.append(createTypeBadge(record.attackingType));
+  pairing.append(createTypeBadge(relationship.attackingType));
   pairing.append(el('span', { className: 'relationship-arrow', text: '→' }));
-  pairing.append(createTypeBadge(record.defendingType));
+  pairing.append(createTypeBadge(relationship.defendingType));
 
   const summary = el('div', { className: 'relationship-summary' });
-  summary.append(el('strong', { text: formatPercent(mastery(record)) }));
+  summary.append(el('strong', { text: formatPercent(getRelationshipMastery(record)) }));
   summary.append(el('span', {
     className: 'muted',
     text: `${record.attempts} attempt${record.attempts === 1 ? '' : 's'} · ${record.misses} missed · ${record.falseSelections} false`
@@ -88,7 +86,8 @@ export function renderProgress(container) {
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Progress' }));
 
-  const records = Object.values(state.progress.relationshipStats ?? {})
+  const records = Object.entries(state.progress.relationshipStats ?? {})
+    .map(([key, record]) => ({ ...record, key }))
     .filter(record => record.attempts > 0);
 
   const overview = el('section', { className: 'panel progress-overview' });
@@ -107,11 +106,11 @@ export function renderProgress(container) {
   page.append(overview);
 
   const byWeakest = [...records]
-    .sort((a, b) => mastery(a) - mastery(b) || b.attempts - a.attempts);
+    .sort((a, b) => getRelationshipMastery(a) - getRelationshipMastery(b) || b.attempts - a.attempts);
   const byStrongest = [...records]
-    .sort((a, b) => mastery(b) - mastery(a) || b.attempts - a.attempts);
+    .sort((a, b) => getRelationshipMastery(b) - getRelationshipMastery(a) || b.attempts - a.attempts);
   const byLeastPracticed = [...records]
-    .sort((a, b) => a.attempts - b.attempts || mastery(a) - mastery(b));
+    .sort((a, b) => a.attempts - b.attempts || getRelationshipMastery(a) - getRelationshipMastery(b));
 
   const rerender = () => renderProgress(container);
   page.append(relationshipPanel({
