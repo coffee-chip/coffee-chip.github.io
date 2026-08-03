@@ -5,6 +5,7 @@ import { VIEWS } from './views/index.js';
 import { runEngineSelfTests } from './engine/effectiveness.js';
 import { validateQuizArchitecture } from './quiz/validation.js';
 import { validateTypeIcons } from './components/typeBadge.js';
+import { getPokemonNameIndex } from './data/pokemonRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
 import {
@@ -55,6 +56,16 @@ function render() {
   renderDeveloperOverlay();
 }
 
+function warmPokemonNameIndex() {
+  getPokemonNameIndex()
+    .then(result => {
+      document.dispatchEvent(new CustomEvent('pokemon-name-index-ready', {
+        detail: { names: result.names, source: result.source }
+      }));
+    })
+    .catch(error => console.warn('Could not preload Pokémon autocomplete names.', error));
+}
+
 subscribeServiceWorker(() => {
   renderUpdateBanner();
   renderDeveloperOverlay();
@@ -66,6 +77,12 @@ startRouter(route => {
 });
 
 registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
+
+if ('requestIdleCallback' in window) {
+  window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
+} else {
+  window.setTimeout(warmPokemonNameIndex, 0);
+}
 
 const engineResults = runEngineSelfTests();
 console.group('Type engine checks');
