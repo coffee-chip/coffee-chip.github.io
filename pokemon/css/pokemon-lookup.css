@@ -85,17 +85,40 @@
   font-size: .84rem;
 }
 
+.pokemon-evolution-nav h3,
 .pokemon-matchups h3 {
   margin-top: 0;
   margin-bottom: .25rem;
 }
 
+.pokemon-evolution-group {
+  display: grid;
+  gap: .4rem;
+  margin-top: .8rem;
+}
+
+.pokemon-evolution-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.pokemon-evolution-button {
+  min-height: 2.5rem;
+  padding: 0 .75rem;
+}
+
 .pokemon-matchups-intro {
   margin-top: 0;
+  margin-bottom: .8rem;
+}
+
+.pokemon-matchup-group {
+  margin-top: .75rem;
 }
 
 .pokemon-matchup-group h4 {
-  margin: 1rem 0 .45rem;
+  margin: 0 0 .45rem;
   font-size: .95rem;
 }
 
