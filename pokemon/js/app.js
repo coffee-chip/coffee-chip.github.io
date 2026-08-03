@@ -7,6 +7,8 @@ import { validateQuizArchitecture } from './quiz/validation.js';
 import { validateTypeIcons } from './components/typeBadge.js';
 import { initializePokemonAutocomplete } from './components/pokemonAutocomplete.js';
 import { enhancePokemonLookupResult } from './components/pokemonMatchupEnhancer.js';
+import { enhancePokemonEvolutionControls } from './components/pokemonEvolutionControls.js';
+import { enhanceStudyTabs } from './components/studyTabs.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
@@ -54,6 +56,8 @@ function renderUpdateBanner() {
 function render() {
   const view = VIEWS[state.route] ?? VIEWS.quiz;
   view(viewRoot, render);
+  enhanceStudyTabs(viewRoot);
+  enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
   for (const link of navLinks) link.toggleAttribute('aria-current', link.dataset.route === state.route);
   renderUpdateBanner();
