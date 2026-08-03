@@ -5,6 +5,7 @@ import { VIEWS } from './views/index.js';
 import { runEngineSelfTests } from './engine/effectiveness.js';
 import { validateQuizArchitecture } from './quiz/validation.js';
 import { validateTypeIcons } from './components/typeBadge.js';
+import { initializePokemonAutocomplete } from './components/pokemonAutocomplete.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
@@ -18,6 +19,7 @@ import {
 hydratePersistentState(loadPersistentData());
 applyTheme(state.settings.theme);
 watchSystemTheme(() => state.settings.theme);
+initializePokemonAutocomplete();
 
 const viewRoot = document.querySelector('#app-view');
 const navLinks = [...document.querySelectorAll('[data-route]')];
