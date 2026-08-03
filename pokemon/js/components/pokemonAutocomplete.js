@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { getCachedPokemonNameIndex } from '../data/pokemonRepository.js';
 
 const INPUT_SELECTOR = '.pokemon-lookup-form input[type="search"]';
-const MAX_SUGGESTIONS = 10;
+const MAX_SUGGESTIONS = 5;
 let names = getCachedPokemonNameIndex()?.names ?? [];
 let activeInput = null;
 let suggestionList = null;
