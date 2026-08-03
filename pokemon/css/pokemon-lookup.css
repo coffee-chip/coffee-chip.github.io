@@ -85,6 +85,20 @@
   font-size: .84rem;
 }
 
+.pokemon-matchups h3 {
+  margin-top: 0;
+  margin-bottom: .25rem;
+}
+
+.pokemon-matchups-intro {
+  margin-top: 0;
+}
+
+.pokemon-matchup-group h4 {
+  margin: 1rem 0 .45rem;
+  font-size: .95rem;
+}
+
 @media (max-width: 25rem) {
   .pokemon-result-card {
     grid-template-columns: 1fr;
