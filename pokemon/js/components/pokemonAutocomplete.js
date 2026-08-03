@@ -7,6 +7,30 @@ let names = getCachedPokemonNameIndex()?.names ?? [];
 let activeInput = null;
 let suggestionList = null;
 
+function installStyles() {
+  if (document.querySelector('#pokemon-autocomplete-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'pokemon-autocomplete-styles';
+  style.textContent = `
+    .pokemon-lookup-form label { position: relative; }
+    .pokemon-autocomplete-list {
+      position: absolute; z-index: 20; top: 100%; right: 0; left: 0;
+      overflow: hidden; margin-top: .25rem; border: 1px solid var(--border);
+      border-radius: .55rem; background: var(--surface);
+      box-shadow: 0 .5rem 1.25rem rgb(0 0 0 / .16);
+    }
+    .pokemon-autocomplete-option {
+      display: block; width: 100%; min-height: 2.5rem; padding: .55rem .7rem;
+      border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
+      background: var(--surface); color: var(--text); text-align: left;
+    }
+    .pokemon-autocomplete-option:last-child { border-bottom: 0; }
+    .pokemon-autocomplete-option:active,
+    .pokemon-autocomplete-option:focus-visible { background: var(--surface-subtle); }
+  `;
+  document.head.append(style);
+}
+
 function displayName(name) {
   return name.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ');
 }
@@ -20,20 +44,9 @@ function closeSuggestions() {
 function findMatches(query) {
   const normalized = query.trim().toLowerCase();
   if (!normalized || /^\d+$/.test(normalized)) return [];
-  const prefix = [];
-  const contains = [];
-  for (const name of names) {
-    if (name.startsWith(normalized)) prefix.push(name);
-    else if (name.includes(normalized)) contains.push(name);
-    if (prefix.length >= MAX_SUGGESTIONS) break;
-  }
-  if (prefix.length < MAX_SUGGESTIONS) {
-    for (const name of contains) {
-      prefix.push(name);
-      if (prefix.length >= MAX_SUGGESTIONS) break;
-    }
-  }
-  return prefix;
+  const prefix = names.filter(name => name.startsWith(normalized));
+  const contains = names.filter(name => !name.startsWith(normalized) && name.includes(normalized));
+  return [...prefix, ...contains].slice(0, MAX_SUGGESTIONS);
 }
 
 function renderSuggestions(input) {
@@ -73,6 +86,8 @@ function renderSuggestions(input) {
 }
 
 export function initializePokemonAutocomplete() {
+  installStyles();
+
   document.addEventListener('input', event => {
     const input = event.target.closest?.(INPUT_SELECTOR);
     if (!input) return;
