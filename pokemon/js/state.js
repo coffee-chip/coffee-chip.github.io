@@ -31,7 +31,7 @@ export const state = {
     }
   },
   study: {
-    mode: 'offense',
+    mode: 'pokemon',
     primaryType: 'fire',
     secondaryType: null,
     pokemonQuery: '',
