@@ -13,6 +13,10 @@ function el(tag, options = {}) {
   return node;
 }
 
+function displayName(name) {
+  return name.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ');
+}
+
 function dismissMnemonicBanner() {
   activeMnemonicBanner?.remove();
   activeMnemonicBanner = null;
@@ -54,11 +58,64 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   activeMnemonicBanner = banner;
 }
 
+function createEvolutionButton(name, direction) {
+  const button = el('button', {
+    className: 'secondary-button pokemon-evolution-button',
+    text: `${direction === 'previous' ? '← ' : ''}${displayName(name)}${direction === 'next' ? ' →' : ''}`
+  });
+  button.type = 'button';
+  button.addEventListener('click', () => {
+    const form = document.querySelector('.pokemon-lookup-form');
+    const input = form?.querySelector('input[type="search"]');
+    if (!form || !input) return;
+    input.value = name;
+    state.study.pokemonQuery = name;
+    form.requestSubmit();
+  });
+  return button;
+}
+
+function createEvolutionNavigation(evolution) {
+  const previous = Array.isArray(evolution?.previous) ? evolution.previous : [];
+  const next = Array.isArray(evolution?.next) ? evolution.next : [];
+  if (!previous.length && !next.length) return null;
+
+  const nav = el('section', { className: 'panel pokemon-evolution-nav' });
+  nav.append(el('h3', { text: 'Evolution' }));
+
+  if (previous.length) {
+    const group = el('div', { className: 'pokemon-evolution-group' });
+    group.append(el('span', { className: 'muted pokemon-evolution-label', text: 'Evolves from' }));
+    const actions = el('div', { className: 'pokemon-evolution-actions' });
+    previous.forEach(name => actions.append(createEvolutionButton(name, 'previous')));
+    group.append(actions);
+    nav.append(group);
+  }
+
+  if (next.length) {
+    const group = el('div', { className: 'pokemon-evolution-group' });
+    group.append(el('span', { className: 'muted pokemon-evolution-label', text: 'Evolves to' }));
+    const actions = el('div', { className: 'pokemon-evolution-actions' });
+    next.forEach(name => actions.append(createEvolutionButton(name, 'next')));
+    group.append(actions);
+    nav.append(group);
+  }
+
+  return nav;
+}
+
 export function enhancePokemonLookupResult(root) {
   dismissMnemonicBanner();
   if (state.route !== 'study' || state.study.mode !== 'pokemon' || !state.study.pokemonResult) return;
   if (root.querySelector('.pokemon-matchups')) return;
   const card = root.querySelector('.pokemon-result-card');
   if (!card) return;
-  card.after(createPokemonDefensiveMatchups(state.study.pokemonResult.types, showMnemonicBanner));
+
+  let anchor = card;
+  const evolutionNav = createEvolutionNavigation(state.study.pokemonResult.evolution);
+  if (evolutionNav) {
+    anchor.after(evolutionNav);
+    anchor = evolutionNav;
+  }
+  anchor.after(createPokemonDefensiveMatchups(state.study.pokemonResult.types, showMnemonicBanner));
 }
