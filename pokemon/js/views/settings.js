@@ -2,6 +2,7 @@ import { state, resetProgress } from '../state.js';
 import { loadPersistentData, saveProgress, saveSettings } from '../storage.js';
 import { applyTheme, THEME_PREFERENCES } from '../theme.js';
 import { renderDeveloperOverlay } from '../developerOverlay.js';
+import { clearPokemonCache, getPokemonCacheEntryCount } from '../data/pokemonRepository.js';
 import {
   serviceWorkerState,
   subscribeServiceWorker,
@@ -13,6 +14,7 @@ import {
 let resetStage = 'idle';
 let resetMessage = '';
 let serviceMessage = '';
+let pokemonCacheMessage = '';
 let currentRender = null;
 
 subscribeServiceWorker(() => {
@@ -144,8 +146,29 @@ export function renderSettings(container, render) {
   });
   updateActions.append(clearButton);
   developerPanel.append(updateActions);
+
+  developerPanel.append(el('p', {
+    className: 'muted',
+    text: `Cached Pokémon: ${getPokemonCacheEntryCount()} · Name index: ${state.cache.pokemonNameIndex ? 'cached' : 'not cached'}`
+  }));
+  const clearPokemonButton = el('button', { className: 'secondary-button', text: 'Clear Pokémon cache' });
+  clearPokemonButton.type = 'button';
+  clearPokemonButton.addEventListener('click', () => {
+    const cleared = clearPokemonCache();
+    pokemonCacheMessage = cleared
+      ? 'Pokémon records and autocomplete names were cleared.'
+      : 'Pokémon cache was cleared for this session, but could not be saved.';
+    render();
+  });
+  developerPanel.append(clearPokemonButton);
+
   if (serviceMessage || serviceWorkerState.message) {
     const status = el('p', { className: 'settings-status', text: serviceMessage || serviceWorkerState.message });
+    status.setAttribute('role', 'status');
+    developerPanel.append(status);
+  }
+  if (pokemonCacheMessage) {
+    const status = el('p', { className: 'settings-status', text: pokemonCacheMessage });
     status.setAttribute('role', 'status');
     developerPanel.append(status);
   }
