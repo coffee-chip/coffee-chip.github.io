@@ -25,7 +25,8 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
     relationshipStats: {}
   },
   cache: {
-    pokemon: {}
+    pokemon: {},
+    pokemonNameIndex: null
   }
 });
 
@@ -114,7 +115,18 @@ function normalizeProgress(value) {
   };
 }
 
-function normalizeCache(value) { return { pokemon: isObject(value?.pokemon) ? value.pokemon : {} }; }
+function normalizePokemonNameIndex(value) {
+  if (!isObject(value) || !Array.isArray(value.names) || typeof value.fetchedAt !== 'string') return null;
+  const names = [...new Set(value.names.filter(name => typeof name === 'string' && name.length > 0))];
+  return names.length ? { names, fetchedAt: value.fetchedAt } : null;
+}
+
+function normalizeCache(value) {
+  return {
+    pokemon: isObject(value?.pokemon) ? value.pokemon : {},
+    pokemonNameIndex: normalizePokemonNameIndex(value?.pokemonNameIndex)
+  };
+}
 
 function migrateV1(raw) {
   const defaults = cloneDefaults();
