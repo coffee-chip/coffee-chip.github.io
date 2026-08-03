@@ -46,7 +46,8 @@ export const state = {
     relationshipStats: {}
   },
   cache: {
-    pokemon: {}
+    pokemon: {},
+    pokemonNameIndex: null
   }
 };
 
@@ -94,7 +95,10 @@ export function getPersistentSnapshot() {
       relationshipStats: structuredClone(state.progress.relationshipStats)
     },
     cache: {
-      pokemon: { ...state.cache.pokemon }
+      pokemon: { ...state.cache.pokemon },
+      pokemonNameIndex: state.cache.pokemonNameIndex
+        ? structuredClone(state.cache.pokemonNameIndex)
+        : null
     }
   };
 }
