@@ -16,20 +16,16 @@ export function normalizePokemonIdentifier(identifier) {
   return normalized;
 }
 
-export async function fetchPokemon(identifier, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
-  const normalized = normalizePokemonIdentifier(identifier);
+async function fetchJson(url, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`${API_BASE}/pokemon/${encodeURIComponent(normalized)}/`, {
+    const response = await fetch(url, {
       headers: { Accept: 'application/json' },
       signal: controller.signal
     });
 
-    if (response.status === 404) {
-      throw new PokeApiError(`No Pokémon found for “${normalized}”.`, { code: 'not-found', status: 404 });
-    }
     if (!response.ok) {
       throw new PokeApiError(`PokéAPI returned ${response.status}.`, { code: 'http-error', status: response.status });
     }
@@ -37,10 +33,40 @@ export async function fetchPokemon(identifier, { timeoutMs = DEFAULT_TIMEOUT_MS 
   } catch (error) {
     if (error instanceof PokeApiError) throw error;
     if (error?.name === 'AbortError') {
-      throw new PokeApiError('The Pokémon lookup timed out.', { code: 'timeout', cause: error });
+      throw new PokeApiError('The PokéAPI request timed out.', { code: 'timeout', cause: error });
     }
     throw new PokeApiError('Could not reach PokéAPI.', { code: 'network-error', cause: error });
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function fetchPokemon(identifier, options = {}) {
+  const normalized = normalizePokemonIdentifier(identifier);
+  try {
+    return await fetchJson(`${API_BASE}/pokemon/${encodeURIComponent(normalized)}/`, options);
+  } catch (error) {
+    if (error instanceof PokeApiError && error.status === 404) {
+      throw new PokeApiError(`No Pokémon found for “${normalized}”.`, { code: 'not-found', status: 404 });
+    }
+    throw error;
+  }
+}
+
+export async function fetchPokemonNameIndex(options = {}) {
+  const summary = await fetchJson(`${API_BASE}/pokemon/?limit=1&offset=0`, options);
+  const count = Number(summary?.count);
+  if (!Number.isInteger(count) || count < 1) {
+    throw new PokeApiError('PokéAPI returned an invalid Pokémon list count.', { code: 'invalid-response' });
+  }
+
+  const fullList = await fetchJson(`${API_BASE}/pokemon/?limit=${count}&offset=0`, options);
+  const names = (fullList?.results ?? [])
+    .map(entry => entry?.name)
+    .filter(name => typeof name === 'string' && name.length > 0);
+
+  if (!names.length) {
+    throw new PokeApiError('PokéAPI returned an empty Pokémon name list.', { code: 'invalid-response' });
+  }
+  return names;
 }
