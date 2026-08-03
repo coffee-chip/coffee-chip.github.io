@@ -1,4 +1,4 @@
-const APP_VERSION = '2026.08.03.7';
+const APP_VERSION = '2026.08.03.8';
 const CACHE_PREFIX = 'pokemon-type-trainer-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const CORE_ASSETS = [
@@ -9,15 +9,18 @@ const CORE_ASSETS = [
   './css/developer-overlay.css',
   './css/progress.css',
   './css/mnemonics.css',
+  './css/pokemon-lookup.css',
   './js/app.js',
   './js/serviceWorker.js',
   './js/developerOverlay.js',
   './js/state.js',
   './js/storage.js',
   './js/relationships.js',
+  './js/api/pokeApi.js',
   './js/components/typeBadge.js',
   './js/components/mnemonicBadge.js',
   './js/data/mnemonics.js',
+  './js/data/pokemonRepository.js',
   './js/quiz/generators.js',
   './js/quiz/modes.js',
   './js/quiz/scoring.js',
