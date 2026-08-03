@@ -8,7 +8,7 @@ import {
   parseRelationshipKey
 } from '../relationships.js';
 
-const EXPANDED_LIMIT = 50;
+const EXPANDED_LIMIT = 30;
 const expandedSections = new Set();
 
 function el(tag, options = {}) {
@@ -22,7 +22,7 @@ function formatPercent(value) {
   return `${Math.round(value * 100)}%`;
 }
 
-function relationshipRow(record, rank) {
+function matchupRow(record, rank) {
   const relationship = parseRelationshipKey(record.key);
   const row = el('div', { className: 'relationship-row' });
   row.append(el('span', { className: 'relationship-rank', text: `${rank}.` }));
@@ -50,25 +50,34 @@ function relationshipRow(record, rank) {
   return row;
 }
 
-function relationshipPanel({ id, title, records, emptyText, rerender }) {
+function createToggleButton({ expanded, recordsLength, onToggle }) {
+  const toggle = el('button', {
+    className: 'progress-expand-button',
+    text: expanded ? 'Collapse' : `Show rankings (${Math.min(recordsLength, EXPANDED_LIMIT)})`
+  });
+  toggle.type = 'button';
+  toggle.setAttribute('aria-expanded', String(expanded));
+  toggle.addEventListener('click', onToggle);
+  return toggle;
+}
+
+function matchupPanel({ id, title, records, emptyText, rerender }) {
   const panel = el('section', { className: 'panel progress-panel' });
   const expanded = expandedSections.has(id);
+  const toggleSection = () => {
+    if (expanded) expandedSections.delete(id);
+    else expandedSections.add(id);
+    rerender();
+  };
 
   const heading = el('div', { className: 'progress-panel-heading' });
   heading.append(el('h3', { text: title }));
   if (records.length) {
-    const toggle = el('button', {
-      className: 'progress-expand-button',
-      text: expanded ? 'Collapse' : `Show rankings (${Math.min(records.length, EXPANDED_LIMIT)})`
-    });
-    toggle.type = 'button';
-    toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.addEventListener('click', () => {
-      if (expanded) expandedSections.delete(id);
-      else expandedSections.add(id);
-      rerender();
-    });
-    heading.append(toggle);
+    heading.append(createToggleButton({
+      expanded,
+      recordsLength: records.length,
+      onToggle: toggleSection
+    }));
   }
   panel.append(heading);
 
@@ -81,20 +90,26 @@ function relationshipPanel({ id, title, records, emptyText, rerender }) {
 
   const visibleRecords = records.slice(0, EXPANDED_LIMIT);
   const list = el('div', { className: 'relationship-list' });
-  visibleRecords.forEach((record, index) => list.append(relationshipRow(record, index + 1)));
+  visibleRecords.forEach((record, index) => list.append(matchupRow(record, index + 1)));
   panel.append(list);
 
-  if (records.length > EXPANDED_LIMIT) {
-    panel.append(el('p', {
-      className: 'muted progress-list-limit',
-      text: `Showing the first ${EXPANDED_LIMIT} of ${records.length} ranked relationships.`
-    }));
-  }
+  panel.append(el('p', {
+    className: 'muted progress-list-limit',
+    text: `Showing the first ${visibleRecords.length} of ${records.length} ranked matchups.`
+  }));
+
+  const bottomControls = el('div', { className: 'progress-panel-bottom-controls' });
+  bottomControls.append(createToggleButton({
+    expanded: true,
+    recordsLength: records.length,
+    onToggle: toggleSection
+  }));
+  panel.append(bottomControls);
 
   return panel;
 }
 
-function getAllNonNeutralRelationshipRecords() {
+function getAllNonNeutralMatchupRecords() {
   const records = [];
   for (const attackingType of TYPES) {
     for (const defendingType of TYPES) {
@@ -123,10 +138,7 @@ export function renderProgress(container) {
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Progress' }));
 
-  const practicedRecords = Object.entries(state.progress.relationshipStats ?? {})
-    .map(([key, record]) => ({ ...record, key }))
-    .filter(record => record.attempts > 0);
-  const nonNeutralRecords = getAllNonNeutralRelationshipRecords();
+  const nonNeutralRecords = getAllNonNeutralMatchupRecords();
   const practicedNonNeutral = nonNeutralRecords.filter(record => record.attempts > 0);
 
   const overview = el('section', { className: 'panel progress-overview' });
@@ -135,17 +147,13 @@ export function renderProgress(container) {
   for (const [label, value] of [
     ['Questions', state.progress.totalAnswered],
     ['Average score', formatPercent(getAverageScore())],
-    ['Relationships practiced', `${practicedRecords.length} of ${TYPES.length * TYPES.length}`]
+    ['Non-neutral matchups practiced', `${practicedNonNeutral.length} of ${nonNeutralRecords.length}`]
   ]) {
     const metric = el('div', { className: 'progress-metric' });
     metric.append(el('strong', { text: String(value) }), el('span', { text: label }));
     metrics.append(metric);
   }
   overview.append(metrics);
-  overview.append(el('p', {
-    className: 'muted progress-ranking-note',
-    text: 'Rankings currently cover non-neutral relationships. Neutral relationships remain in the underlying data but are not ranked because current quizzes do not score them symmetrically.'
-  }));
   page.append(overview);
 
   const byWeakest = [...practicedNonNeutral]
@@ -168,25 +176,25 @@ export function renderProgress(container) {
     );
 
   const rerender = () => renderProgress(container);
-  page.append(relationshipPanel({
+  page.append(matchupPanel({
     id: 'weakest',
-    title: 'Weakest relationships',
+    title: 'Weakest matchups',
     records: byWeakest,
-    emptyText: 'Answer some quiz questions to begin tracking relationship mastery.',
+    emptyText: 'Answer some quiz questions to begin tracking matchup mastery.',
     rerender
   }));
-  page.append(relationshipPanel({
+  page.append(matchupPanel({
     id: 'strongest',
-    title: 'Strongest relationships',
+    title: 'Strongest matchups',
     records: byStrongest,
-    emptyText: 'No practiced non-neutral relationships yet.',
+    emptyText: 'No practiced non-neutral matchups yet.',
     rerender
   }));
-  page.append(relationshipPanel({
+  page.append(matchupPanel({
     id: 'least-practiced',
-    title: 'Least practiced relationships',
+    title: 'Least practiced matchups',
     records: byLeastPracticed,
-    emptyText: 'No non-neutral relationships are available to rank.',
+    emptyText: 'No non-neutral matchups are available to rank.',
     rerender
   }));
 
