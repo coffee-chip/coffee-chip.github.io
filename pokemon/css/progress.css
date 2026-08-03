@@ -27,12 +27,16 @@
   font-size: .78rem;
 }
 
+.progress-ranking-note {
+  margin: .85rem 0 0;
+  font-size: .84rem;
+}
+
 .progress-panel-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: .75rem;
-  margin-bottom: .75rem;
 }
 
 .progress-panel-heading h3 {
@@ -52,11 +56,13 @@
 .relationship-list {
   display: grid;
   gap: .65rem;
+  margin-top: .75rem;
 }
 
 .relationship-row {
   display: grid;
-  gap: .5rem;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: .35rem;
   padding-top: .65rem;
   border-top: 1px solid var(--border);
 }
@@ -64,6 +70,18 @@
 .relationship-row:first-child {
   padding-top: 0;
   border-top: 0;
+}
+
+.relationship-rank {
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.75rem;
+  text-align: right;
+}
+
+.relationship-row-content {
+  display: grid;
+  gap: .5rem;
 }
 
 .relationship-pair {
