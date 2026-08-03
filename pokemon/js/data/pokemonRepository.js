@@ -2,8 +2,10 @@ import { TYPES } from './types.js';
 import { state } from '../state.js';
 import { saveCache } from '../storage.js';
 import {
+  fetchEvolutionChain,
   fetchPokemon,
   fetchPokemonNameIndex,
+  fetchPokemonSpecies,
   normalizePokemonIdentifier,
   PokeApiError
 } from '../api/pokeApi.js';
@@ -34,8 +36,17 @@ function normalizeApiPokemon(raw) {
       ?? raw.sprites?.front_default
       ?? null,
     speciesName: raw.species?.name ?? raw.name,
+    evolution: null,
     fetchedAt: new Date().toISOString()
   };
+}
+
+function isValidEvolution(value) {
+  return value
+    && Array.isArray(value.previous)
+    && Array.isArray(value.next)
+    && value.previous.every(name => typeof name === 'string' && name.length > 0)
+    && value.next.every(name => typeof name === 'string' && name.length > 0);
 }
 
 function isValidCachedPokemon(value) {
@@ -87,17 +98,57 @@ function cachePokemonNameIndex(names) {
   return state.cache.pokemonNameIndex;
 }
 
+function findEvolutionContext(link, targetName, parentName = null) {
+  if (!link?.species?.name) return null;
+  if (link.species.name === targetName) {
+    return {
+      previous: parentName ? [parentName] : [],
+      next: (link.evolves_to ?? [])
+        .map(child => child?.species?.name)
+        .filter(name => typeof name === 'string' && name.length > 0)
+    };
+  }
+
+  for (const child of link.evolves_to ?? []) {
+    const match = findEvolutionContext(child, targetName, link.species.name);
+    if (match) return match;
+  }
+  return null;
+}
+
+async function enrichWithEvolution(pokemon) {
+  if (isValidEvolution(pokemon.evolution)) return pokemon;
+
+  try {
+    const species = await fetchPokemonSpecies(pokemon.speciesName);
+    const chainUrl = species?.evolution_chain?.url;
+    if (!chainUrl) return { ...pokemon, evolution: { previous: [], next: [] } };
+    const chain = await fetchEvolutionChain(chainUrl);
+    const evolution = findEvolutionContext(chain?.chain, pokemon.speciesName)
+      ?? { previous: [], next: [] };
+    return { ...pokemon, evolution };
+  } catch (error) {
+    console.warn('Could not load Pokémon evolution data.', error);
+    return pokemon;
+  }
+}
+
 export async function getPokemon(identifier, { forceRefresh = false } = {}) {
   const normalized = normalizePokemonIdentifier(identifier);
   const cached = getCached(normalized);
 
   if (cached && !forceRefresh && isFresh(cached, CACHE_MAX_AGE_MS)) {
-    return { pokemon: cached, source: 'cache', stale: false };
+    if (isValidEvolution(cached.evolution)) {
+      return { pokemon: cached, source: 'cache', stale: false };
+    }
+    const enriched = await enrichWithEvolution(cached);
+    if (enriched !== cached) cachePokemon(enriched);
+    return { pokemon: enriched, source: 'cache', stale: false };
   }
 
   try {
     const raw = await fetchPokemon(normalized);
-    const pokemon = normalizeApiPokemon(raw);
+    const pokemon = await enrichWithEvolution(normalizeApiPokemon(raw));
     cachePokemon(pokemon);
     return { pokemon, source: 'network', stale: false };
   } catch (error) {
