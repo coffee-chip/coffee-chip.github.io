@@ -131,3 +131,9 @@ export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
 export function getPokemonCacheEntryCount() {
   return new Set(Object.values(state.cache.pokemon ?? {}).filter(isValidCachedPokemon).map(record => record.id)).size;
 }
+
+export function clearPokemonCache() {
+  state.cache.pokemon = {};
+  state.cache.pokemonNameIndex = null;
+  return saveCache(state.cache);
+}
