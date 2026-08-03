@@ -4,6 +4,7 @@ import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiven
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { createRelationshipKey, parseRelationshipKey } from '../relationships.js';
+import { getPokemon } from '../data/pokemonRepository.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective',
@@ -12,6 +13,12 @@ const MULTIPLIER_LABELS = {
   0.5: '½× — resisted',
   0.25: '¼× — strongly resisted',
   0: '0× — no effect'
+};
+
+const SOURCE_LABELS = {
+  network: 'Loaded from PokéAPI',
+  cache: 'Loaded from local cache',
+  'stale-cache': 'Loaded from stale local cache'
 };
 
 let activeMnemonicKey = null;
@@ -100,7 +107,7 @@ function renderGroup(multiplier, types, relationshipKeysForType) {
   return group;
 }
 
-function renderResults(page) {
+function renderTypeResults(page) {
   const results = el('div', { className: 'study-results' });
 
   if (state.study.mode === 'offense') {
@@ -135,6 +142,88 @@ function renderResults(page) {
   page.append(results);
 }
 
+function renderPokemonResult(page) {
+  if (state.study.pokemonStatus === 'loading') {
+    page.append(el('p', { className: 'muted pokemon-lookup-status', text: 'Looking up Pokémon…' }));
+    return;
+  }
+
+  if (state.study.pokemonError) {
+    page.append(el('p', { className: 'pokemon-lookup-error', text: state.study.pokemonError }));
+  }
+
+  const pokemon = state.study.pokemonResult;
+  if (!pokemon) return;
+
+  const card = el('section', { className: 'panel pokemon-result-card' });
+  const visual = el('div', { className: 'pokemon-result-visual' });
+  if (pokemon.spriteUrl) {
+    const image = document.createElement('img');
+    image.src = pokemon.spriteUrl;
+    image.alt = pokemon.displayName;
+    image.loading = 'lazy';
+    visual.append(image);
+  } else {
+    visual.append(el('div', { className: 'pokemon-sprite-placeholder', text: 'No image' }));
+  }
+
+  const details = el('div', { className: 'pokemon-result-details' });
+  details.append(el('div', { className: 'pokemon-dex-number', text: `#${String(pokemon.id).padStart(4, '0')}` }));
+  details.append(el('h3', { text: pokemon.displayName }));
+  details.append(createTypeList(pokemon.types));
+  details.append(el('p', {
+    className: 'muted pokemon-source',
+    text: SOURCE_LABELS[state.study.pokemonSource] ?? 'Loaded Pokémon data'
+  }));
+
+  card.append(visual, details);
+  page.append(card);
+}
+
+function renderPokemonLookup(page, render) {
+  const form = el('form', { className: 'panel pokemon-lookup-form' });
+  const label = el('label');
+  label.append(el('span', { text: 'Pokémon name or Pokédex number' }));
+  const input = document.createElement('input');
+  input.type = 'search';
+  input.autocomplete = 'off';
+  input.autocapitalize = 'none';
+  input.spellcheck = false;
+  input.placeholder = 'e.g. Bulbasaur or 1';
+  input.value = state.study.pokemonQuery;
+  input.addEventListener('input', () => { state.study.pokemonQuery = input.value; });
+  label.append(input);
+
+  const submit = el('button', { text: 'Search' });
+  submit.type = 'submit';
+  submit.disabled = state.study.pokemonStatus === 'loading';
+  form.append(label, submit);
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    state.study.pokemonStatus = 'loading';
+    state.study.pokemonError = null;
+    render();
+    try {
+      const result = await getPokemon(state.study.pokemonQuery);
+      state.study.pokemonResult = result.pokemon;
+      state.study.pokemonSource = result.source;
+      state.study.pokemonError = result.stale
+        ? 'The live lookup failed, so this result may be out of date.'
+        : null;
+      state.study.pokemonStatus = 'success';
+    } catch (error) {
+      state.study.pokemonResult = null;
+      state.study.pokemonSource = null;
+      state.study.pokemonError = error?.message ?? 'Could not look up that Pokémon.';
+      state.study.pokemonStatus = 'error';
+    }
+    render();
+  });
+
+  page.append(form);
+  renderPokemonResult(page);
+}
+
 export function renderStudy(container, render) {
   dismissMnemonicBanner();
   const page = el('section', { className: 'page' });
@@ -144,7 +233,11 @@ export function renderStudy(container, render) {
   const modeLabel = el('label');
   modeLabel.append(el('span', { text: 'Lookup' }));
   const modeSelect = el('select');
-  for (const [value, label] of [['offense', 'Attacking with a type'], ['defense', 'Defending as a type']]) {
+  for (const [value, label] of [
+    ['offense', 'Attacking with a type'],
+    ['defense', 'Defending as a type'],
+    ['pokemon', 'Pokémon by name or number']
+  ]) {
     const option = document.createElement('option');
     option.value = value;
     option.textContent = label;
@@ -158,16 +251,18 @@ export function renderStudy(container, render) {
   modeLabel.append(modeSelect);
   controls.append(modeLabel);
 
-  const primaryLabel = el('label');
-  primaryLabel.append(el('span', { text: state.study.mode === 'offense' ? 'Attacking type' : 'First defending type' }));
-  const primarySelect = createTypeSelect(state.study.primaryType);
-  primarySelect.addEventListener('change', () => {
-    state.study.primaryType = primarySelect.value;
-    if (state.study.secondaryType === primarySelect.value) state.study.secondaryType = null;
-    render();
-  });
-  primaryLabel.append(primarySelect);
-  controls.append(primaryLabel);
+  if (state.study.mode !== 'pokemon') {
+    const primaryLabel = el('label');
+    primaryLabel.append(el('span', { text: state.study.mode === 'offense' ? 'Attacking type' : 'First defending type' }));
+    const primarySelect = createTypeSelect(state.study.primaryType);
+    primarySelect.addEventListener('change', () => {
+      state.study.primaryType = primarySelect.value;
+      if (state.study.secondaryType === primarySelect.value) state.study.secondaryType = null;
+      render();
+    });
+    primaryLabel.append(primarySelect);
+    controls.append(primaryLabel);
+  }
 
   if (state.study.mode === 'defense') {
     const secondaryLabel = el('label');
@@ -183,7 +278,8 @@ export function renderStudy(container, render) {
   }
 
   page.append(controls);
-  renderResults(page);
+  if (state.study.mode === 'pokemon') renderPokemonLookup(page, render);
+  else renderTypeResults(page);
   container.replaceChildren(page);
 }
 
