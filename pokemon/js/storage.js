@@ -1,3 +1,5 @@
+import { createRelationshipKey, parseRelationshipKey } from './relationships.js';
+
 const STORAGE_KEY = 'pokemon-type-trainer';
 export const STORAGE_VERSION = 4;
 
@@ -68,17 +70,29 @@ function normalizeSettings(value) {
 function normalizeRelationshipStats(value) {
   if (!isObject(value)) return {};
   const normalized = {};
-  for (const [key, record] of Object.entries(value)) {
+  for (const [storedKey, record] of Object.entries(value)) {
     if (!isObject(record)) continue;
-    const [keyAttacker, keyDefender] = key.split('>');
-    const attackingType = typeof record.attackingType === 'string' ? record.attackingType : keyAttacker;
-    const defendingType = typeof record.defendingType === 'string' ? record.defendingType : keyDefender;
-    if (!attackingType || !defendingType) continue;
+
+    let relationship;
+    try {
+      relationship = parseRelationshipKey(storedKey);
+    } catch {
+      try {
+        relationship = {
+          key: createRelationshipKey(record.attackingType, record.defendingType),
+          attackingType: record.attackingType,
+          defendingType: record.defendingType
+        };
+      } catch {
+        continue;
+      }
+    }
+
     const attempts = Math.floor(nonnegativeNumber(record.attempts));
     const earnedScore = Math.min(nonnegativeNumber(record.earnedScore), attempts);
-    normalized[`${attackingType}>${defendingType}`] = {
-      attackingType,
-      defendingType,
+    normalized[relationship.key] = {
+      attackingType: relationship.attackingType,
+      defendingType: relationship.defendingType,
       attempts,
       earnedScore,
       correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
