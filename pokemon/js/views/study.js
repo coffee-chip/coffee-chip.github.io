@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiveness.js';
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
+import { createRelationshipKey, parseRelationshipKey } from '../relationships.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective',
@@ -68,7 +69,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
 
   for (const mnemonic of mnemonics) {
-    const [attackingType, defendingType] = mnemonic.relationshipKey.split('>');
+    const { attackingType, defendingType } = parseRelationshipKey(mnemonic.relationshipKey);
     const line = el('span', { className: 'mnemonic-banner-line' });
     line.append(createTypeBadge(attackingType));
     line.append(el('span', { className: 'relationship-arrow', text: '→' }));
@@ -110,7 +111,9 @@ function renderResults(page) {
     heading.append(el('span', { text: 'attacks against each defending type' }));
     results.append(heading);
     for (const multiplier of [2, 1, 0.5, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier], defendingType => [`${attackingType}>${defendingType}`]);
+      const group = renderGroup(multiplier, groups[multiplier], defendingType => [
+        createRelationshipKey(attackingType, defendingType)
+      ]);
       if (group) results.append(group);
     }
   } else {
@@ -123,7 +126,7 @@ function renderResults(page) {
     results.append(heading);
     for (const multiplier of [4, 2, 1, 0.5, 0.25, 0]) {
       const group = renderGroup(multiplier, groups[multiplier], attackingType =>
-        defendingTypes.map(defendingType => `${attackingType}>${defendingType}`)
+        defendingTypes.map(defendingType => createRelationshipKey(attackingType, defendingType))
       );
       if (group) results.append(group);
     }
