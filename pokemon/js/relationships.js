@@ -35,10 +35,10 @@ export function isValidRelationshipKey(key) {
 
 export function createRelationship(attackingType, defendingType, extra = {}) {
   return {
+    ...extra,
     key: createRelationshipKey(attackingType, defendingType),
     attackingType,
-    defendingType,
-    ...extra
+    defendingType
   };
 }
 
