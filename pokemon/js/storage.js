@@ -1,7 +1,7 @@
 import { createRelationshipKey, parseRelationshipKey } from './relationships.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 5;
+export const STORAGE_VERSION = 6;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -15,7 +15,7 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
       modes: { 'select-all': { questionCount: 10 } }
     }
   },
-  progress: { totalAnswered: 0, totalScore: 0, relationshipStats: {}, pokemonRecognitionStats: {} },
+  progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
   cache: { pokemon: {}, pokemonNameIndex: null }
 });
 
@@ -116,12 +116,25 @@ function normalizePokemonRecognitionStats(value) {
   return normalized;
 }
 
+function normalizeQuizStats(value) {
+  if (!isObject(value)) return {};
+  const normalized = {};
+  for (const [modeId, record] of Object.entries(value)) {
+    if (!isObject(record) || typeof modeId !== 'string' || !modeId) continue;
+    const questionCount = Math.floor(nonnegativeNumber(record.questionCount));
+    normalized[modeId] = {
+      questionCount,
+      totalScore: Math.min(nonnegativeNumber(record.totalScore), questionCount)
+    };
+  }
+  return normalized;
+}
+
 function normalizeProgress(value) {
   const defaults = cloneDefaults().progress;
   if (!isObject(value)) return defaults;
   return {
-    totalAnswered: Math.floor(nonnegativeNumber(value.totalAnswered, defaults.totalAnswered)),
-    totalScore: nonnegativeNumber(value.totalScore, defaults.totalScore),
+    quizStats: normalizeQuizStats(value.quizStats),
     relationshipStats: normalizeRelationshipStats(value.relationshipStats),
     pokemonRecognitionStats: normalizePokemonRecognitionStats(value.pokemonRecognitionStats)
   };
@@ -155,7 +168,7 @@ function migrateV1(raw) {
 
 function migrate(raw) {
   if (!isObject(raw)) return cloneDefaults();
-  if ([2, 3, 4, STORAGE_VERSION].includes(raw.version)) {
+  if ([2, 3, 4, 5, STORAGE_VERSION].includes(raw.version)) {
     return {
       version: STORAGE_VERSION,
       settings: normalizeSettings(raw.settings),
