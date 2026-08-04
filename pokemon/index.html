@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-palette="classic" data-appearance="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -12,13 +12,21 @@
     (() => {
       try {
         const saved = JSON.parse(localStorage.getItem('pokemon-type-trainer') || 'null');
-        const preference = ['system', 'light', 'dark'].includes(saved?.settings?.theme) ? saved.settings.theme : 'system';
-        const resolved = preference === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : preference;
-        document.documentElement.dataset.themePreference = preference;
+        const paletteTheme = saved?.settings?.paletteTheme || 'classic';
+        const appearance = saved?.settings?.appearance || saved?.settings?.theme || 'system';
+        const resolved = appearance === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : appearance;
+        document.documentElement.dataset.palette = paletteTheme;
+        document.documentElement.dataset.appearancePreference = appearance;
+        document.documentElement.dataset.appearance = resolved;
+        document.documentElement.dataset.themePreference = appearance;
         document.documentElement.dataset.theme = resolved;
       } catch {
+        const resolved = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.palette = 'classic';
+        document.documentElement.dataset.appearancePreference = 'system';
+        document.documentElement.dataset.appearance = resolved;
         document.documentElement.dataset.themePreference = 'system';
-        document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = resolved;
       }
     })();
   </script>
@@ -33,6 +41,7 @@
   <link rel="stylesheet" href="./css/mnemonics.css">
   <link rel="stylesheet" href="./css/pokemon-lookup.css">
   <link rel="stylesheet" href="./css/study-navigation.css">
+  <link rel="stylesheet" href="./css/color-tokens.css">
 </head>
 <body>
   <div class="app-shell">
