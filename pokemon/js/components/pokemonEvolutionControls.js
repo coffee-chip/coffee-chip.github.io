@@ -20,9 +20,17 @@ function createChooser(direction, names, root, card) {
   chooser.className = 'panel pokemon-evolution-chooser';
   chooser.setAttribute('aria-label', direction === 'previous' ? 'Previous evolutions' : 'Next evolutions');
 
+  const header = document.createElement('div');
+  header.className = 'pokemon-evolution-chooser-header';
   const heading = document.createElement('h3');
   heading.textContent = direction === 'previous' ? 'Evolves from' : 'Evolves to';
-  chooser.append(heading);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'pokemon-evolution-close';
+  close.setAttribute('aria-label', 'Close evolution choices');
+  close.textContent = '×';
+  close.addEventListener('click', () => chooser.remove());
+  header.append(heading, close);
 
   const actions = document.createElement('div');
   actions.className = 'pokemon-evolution-options';
@@ -35,12 +43,7 @@ function createChooser(direction, names, root, card) {
     actions.append(button);
   }
 
-  const close = document.createElement('button');
-  close.type = 'button';
-  close.className = 'secondary-button pokemon-evolution-close';
-  close.textContent = 'Close';
-  close.addEventListener('click', () => chooser.remove());
-  chooser.append(actions, close);
+  chooser.append(header, actions);
   card.after(chooser);
 }
 
