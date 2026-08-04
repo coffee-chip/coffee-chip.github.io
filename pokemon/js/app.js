@@ -12,21 +12,11 @@ import { enhanceStudyTabs } from './components/studyTabs.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
-import {
-  registerServiceWorker,
-  subscribeServiceWorker,
-  serviceWorkerState,
-  applyWaitingUpdate
-} from './serviceWorker.js';
+import { registerServiceWorker, subscribeServiceWorker, serviceWorkerState, applyWaitingUpdate } from './serviceWorker.js';
 
 hydratePersistentState(loadPersistentData());
-state.settings.paletteTheme ??= 'classic';
-state.settings.appearance ??= state.settings.theme ?? 'system';
 applyTheme(state.settings.paletteTheme, state.settings.appearance);
-watchSystemTheme(() => ({
-  paletteTheme: state.settings.paletteTheme,
-  appearance: state.settings.appearance
-}));
+watchSystemTheme(() => ({ paletteTheme: state.settings.paletteTheme, appearance: state.settings.appearance }));
 initializePokemonAutocomplete();
 
 const viewRoot = document.querySelector('#app-view');
@@ -34,10 +24,7 @@ const navLinks = [...document.querySelectorAll('[data-route]')];
 
 function renderUpdateBanner() {
   let banner = document.querySelector('.update-banner');
-  if (serviceWorkerState.status !== 'update-ready') {
-    banner?.remove();
-    return;
-  }
+  if (serviceWorkerState.status !== 'update-ready') { banner?.remove(); return; }
   if (!banner) {
     banner = document.createElement('div');
     banner.className = 'update-banner';
@@ -70,47 +57,23 @@ function render() {
 }
 
 function warmPokemonNameIndex() {
-  getPokemonNameIndex()
-    .then(result => {
-      document.dispatchEvent(new CustomEvent('pokemon-name-index-ready', {
-        detail: { names: result.names, source: result.source }
-      }));
-    })
-    .catch(error => console.warn('Could not preload Pokémon autocomplete names.', error));
+  getPokemonNameIndex().then(result => {
+    document.dispatchEvent(new CustomEvent('pokemon-name-index-ready', { detail: { names: result.names, source: result.source } }));
+  }).catch(error => console.warn('Could not preload Pokémon autocomplete names.', error));
 }
 
-subscribeServiceWorker(() => {
-  renderUpdateBanner();
-  renderDeveloperOverlay();
-});
-
-startRouter(route => {
-  state.route = route;
-  render();
-});
-
+subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
+startRouter(route => { state.route = route; render(); });
 registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
-
-if ('requestIdleCallback' in window) {
-  window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
-} else {
-  window.setTimeout(warmPokemonNameIndex, 0);
-}
+if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
+else window.setTimeout(warmPokemonNameIndex, 0);
 
 const engineResults = runEngineSelfTests();
-console.group('Type engine checks');
-console.table(engineResults);
-console.groupEnd();
+console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
 if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
-
 const architectureResults = validateQuizArchitecture();
-console.group('Quiz architecture checks');
-console.table(architectureResults);
-console.groupEnd();
+console.group('Quiz architecture checks'); console.table(architectureResults); console.groupEnd();
 if (architectureResults.some(test => !test.passed)) console.error('Quiz architecture validation failed.');
-
 const iconResults = validateTypeIcons();
-console.group('Type icon checks');
-console.table(iconResults);
-console.groupEnd();
+console.group('Type icon checks'); console.table(iconResults); console.groupEnd();
 if (iconResults.some(test => !test.passed)) console.error('One or more type icons are missing.');
