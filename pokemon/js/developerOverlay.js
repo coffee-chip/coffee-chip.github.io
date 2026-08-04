@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { serviceWorkerState, subscribeServiceWorker } from './serviceWorker.js';
 
-const APP_BUILD = '2026.08.03.16';
+const APP_BUILD = '2026.08.03.17';
 let overlay = null;
 let unsubscribe = null;
 
@@ -22,6 +22,8 @@ function updateOverlay() {
     line('App', APP_BUILD),
     line('Route', state.route),
     line('Hash', location.hash || '(none)'),
+    line('Palette', document.documentElement.dataset.palette ?? 'classic'),
+    line('Appearance', document.documentElement.dataset.appearance ?? 'Unknown'),
     line('Online', navigator.onLine ? 'Yes' : 'No'),
     line('SW status', serviceWorkerState.status),
     line('SW version', serviceWorkerState.version ?? 'Unknown'),
