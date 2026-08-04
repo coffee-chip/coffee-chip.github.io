@@ -1,0 +1,142 @@
+:root {
+  /* Stable identity palette: Pokémon types do not change with app theme. */
+  --type-normal: #929da3;
+  --type-fire: #ff9d55;
+  --type-water: #5090d6;
+  --type-electric: #f4d23c;
+  --type-grass: #63bc5a;
+  --type-ice: #73cec0;
+  --type-fighting: #ce416b;
+  --type-poison: #aa6bc8;
+  --type-ground: #d97845;
+  --type-flying: #8fa9de;
+  --type-psychic: #fa7179;
+  --type-bug: #91c12f;
+  --type-rock: #c5b78c;
+  --type-ghost: #5269ad;
+  --type-dragon: #0b6dc3;
+  --type-dark: #5a5465;
+  --type-steel: #5a8ea2;
+  --type-fairy: #ec8fe6;
+}
+
+/* Raw palette for the current Classic theme. */
+:root[data-palette="classic"] {
+  --palette-blue: #364fc7;
+  --palette-green: #157347;
+  --palette-yellow: #9a6700;
+  --palette-red: #b42318;
+  --palette-white: #ffffff;
+  --palette-gray-050: #f7f7f8;
+  --palette-gray-100: #f3f4f6;
+  --palette-gray-300: #d0d5dd;
+  --palette-gray-500: #667085;
+  --palette-gray-800: #1f2933;
+  --palette-gray-900: #111827;
+}
+
+/* Five-step semantic ramps. Numbers describe emphasis within the active appearance. */
+:root[data-palette="classic"][data-appearance="light"] {
+  --neutral-1: var(--palette-white);
+  --neutral-2: var(--palette-gray-050);
+  --neutral-3: var(--palette-gray-100);
+  --neutral-4: var(--palette-gray-500);
+  --neutral-5: var(--palette-gray-800);
+
+  --info-1: #eef2ff;
+  --info-2: #dfe5ff;
+  --info-3: #9aa7ff;
+  --info-4: var(--palette-blue);
+  --info-5: #273896;
+
+  --success-1: #ecfdf3;
+  --success-2: #c8f2da;
+  --success-3: #6ee7a8;
+  --success-4: var(--palette-green);
+  --success-5: #0f5132;
+
+  --warning-1: #fffaeb;
+  --warning-2: #fef0c7;
+  --warning-3: #f4c96b;
+  --warning-4: var(--palette-yellow);
+  --warning-5: #6f4b00;
+
+  --error-1: #fef3f2;
+  --error-2: #fee4e2;
+  --error-3: #ff9b91;
+  --error-4: var(--palette-red);
+  --error-5: #8a1c13;
+}
+
+:root[data-palette="classic"][data-appearance="dark"] {
+  --neutral-1: var(--palette-gray-900);
+  --neutral-2: #1f2937;
+  --neutral-3: #273449;
+  --neutral-4: #aeb8c7;
+  --neutral-5: #f3f4f6;
+
+  --info-1: #29345f;
+  --info-2: #344477;
+  --info-3: #6978c7;
+  --info-4: #9aa7ff;
+  --info-5: #dfe5ff;
+
+  --success-1: #173d31;
+  --success-2: #205340;
+  --success-3: #3f9f72;
+  --success-4: #6ee7a8;
+  --success-5: #c8f2da;
+
+  --warning-1: #45391f;
+  --warning-2: #5b4922;
+  --warning-3: #a88435;
+  --warning-4: #f4c96b;
+  --warning-5: #fef0c7;
+
+  --error-1: #4a2424;
+  --error-2: #63302e;
+  --error-3: #b85a52;
+  --error-4: #ff9b91;
+  --error-5: #fee4e2;
+}
+
+/* Functional tokens: components should consume these, not raw palette values. */
+:root {
+  --page-background: var(--neutral-1);
+  --app-background: var(--neutral-1);
+  --panel-background: var(--neutral-1);
+  --subtle-background: var(--neutral-3);
+  --text-primary: var(--neutral-5);
+  --text-muted: var(--neutral-4);
+  --heading-color: var(--neutral-5);
+  --border-default: color-mix(in srgb, var(--neutral-4) 38%, var(--neutral-1));
+  --border-strong: color-mix(in srgb, var(--neutral-4) 68%, var(--neutral-1));
+
+  --action-primary: var(--info-4);
+  --action-primary-strong: var(--info-5);
+  --action-primary-soft: var(--info-1);
+  --focus-ring: var(--info-4);
+
+  --status-success: var(--success-4);
+  --status-success-soft: var(--success-1);
+  --status-warning: var(--warning-4);
+  --status-warning-soft: var(--warning-1);
+  --status-error: var(--error-4);
+  --status-error-soft: var(--error-1);
+
+  /* Compatibility aliases for existing components during incremental refactoring. */
+  --bg: var(--page-background);
+  --surface: var(--panel-background);
+  --surface-subtle: var(--subtle-background);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-default);
+  --accent: var(--action-primary);
+  --accent-soft: var(--action-primary-soft);
+  --success: var(--status-success);
+  --success-soft: var(--status-success-soft);
+  --warning: var(--status-warning);
+  --warning-soft: var(--status-warning-soft);
+  --danger: var(--status-error);
+  --danger-soft: var(--status-error-soft);
+}
