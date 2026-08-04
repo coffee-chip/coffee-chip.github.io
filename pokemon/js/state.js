@@ -1,7 +1,7 @@
 import { parseRelationshipKey } from './relationships.js';
 
 function emptyProgress() {
-  return { totalAnswered: 0, totalScore: 0, relationshipStats: {}, pokemonRecognitionStats: {} };
+  return { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} };
 }
 
 export const state = {
@@ -44,6 +44,7 @@ export function hydratePersistentState(persistentData) {
   state.progress = {
     ...emptyProgress(),
     ...persistentData.progress,
+    quizStats: structuredClone(persistentData.progress.quizStats ?? {}),
     relationshipStats: structuredClone(persistentData.progress.relationshipStats ?? {}),
     pokemonRecognitionStats: structuredClone(persistentData.progress.pokemonRecognitionStats ?? {})
   };
@@ -68,6 +69,7 @@ export function getPersistentSnapshot() {
     },
     progress: {
       ...state.progress,
+      quizStats: structuredClone(state.progress.quizStats),
       relationshipStats: structuredClone(state.progress.relationshipStats),
       pokemonRecognitionStats: structuredClone(state.progress.pokemonRecognitionStats)
     },
@@ -132,11 +134,17 @@ function recordPokemonRecognition(question, result, timestamp) {
   state.progress.pokemonRecognitionStats[key] = existing;
 }
 
+function recordQuizStat(modeId, score) {
+  const existing = state.progress.quizStats[modeId] ?? { questionCount: 0, totalScore: 0 };
+  existing.questionCount += 1;
+  existing.totalScore += score;
+  state.progress.quizStats[modeId] = existing;
+}
+
 export function recordQuestionResult(question, result) {
   state.quiz.session.results.push({ questionId: question.id, generatorId: question.generatorId, score: result.score, metadata: question.metadata });
   state.quiz.session.totalScore += result.score;
-  state.progress.totalAnswered += 1;
-  state.progress.totalScore += result.score;
+  recordQuizStat(state.quiz.session.mode, result.score);
   const timestamp = new Date().toISOString();
   for (const outcome of result.relationshipOutcomes ?? []) recordRelationshipOutcome(outcome, timestamp);
   recordPokemonRecognition(question, result, timestamp);
@@ -153,4 +161,3 @@ export function advanceQuizSession() {
 export function endQuizSession() { state.quiz.status = 'complete'; resetQuestionState(); }
 export function returnToQuizSetup() { state.quiz.status = 'idle'; resetQuestionState(); }
 export function getSessionAverageScore() { const count = state.quiz.session.results.length; return count === 0 ? 0 : state.quiz.session.totalScore / count; }
-export function getAverageScore() { return state.progress.totalAnswered === 0 ? 0 : state.progress.totalScore / state.progress.totalAnswered; }
