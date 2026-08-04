@@ -1,0 +1,29 @@
+.quiz-pokemon-display {
+  display: grid;
+  place-items: center;
+  min-height: 11rem;
+  margin: 0 0 .75rem;
+  border-radius: .75rem;
+  background: var(--subtle-background);
+}
+
+.quiz-pokemon-display img {
+  display: block;
+  width: min(100%, 13rem);
+  height: auto;
+}
+
+.quiz-loading-panel {
+  display: grid;
+  justify-items: start;
+  gap: .75rem;
+}
+
+.quiz-loading-panel p {
+  margin: 0;
+}
+
+.quiz-dual-toggle[hidden],
+.quiz-dual-note[hidden] {
+  display: none;
+}
