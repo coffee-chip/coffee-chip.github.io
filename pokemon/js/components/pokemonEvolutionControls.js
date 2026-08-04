@@ -51,9 +51,12 @@ function createDirectionButton(direction, names, root, card) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `pokemon-evolution-button pokemon-evolution-${direction}`;
-  button.setAttribute('aria-label', direction === 'previous' ? 'Show previous evolutions' : 'Show next evolutions');
+  button.setAttribute('aria-label', direction === 'previous' ? 'Go to previous evolution' : 'Go to next evolution');
   button.textContent = direction === 'previous' ? '‹' : '›';
-  button.addEventListener('click', () => createChooser(direction, names, root, card));
+  button.addEventListener('click', () => {
+    if (names.length === 1) submitLookup(names[0], root);
+    else createChooser(direction, names, root, card);
+  });
   return button;
 }
 
