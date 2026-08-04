@@ -16,6 +16,9 @@ import { createTypeBadge } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { parseRelationshipKey } from '../relationships.js';
 
+let questionLoadError = '';
+let questionLoadToken = 0;
+
 function el(tag, options = {}) {
   const node = document.createElement(tag);
   if (options.className) node.className = options.className;
@@ -25,20 +28,34 @@ function el(tag, options = {}) {
 
 function formatPercent(score) { return `${Math.round(score * 100)}%`; }
 
-function createNextQuestion() {
+async function createNextQuestion(refreshQuiz) {
+  const token = ++questionLoadToken;
   const modeSettings = getQuizModeSettings(state.quiz.session.mode);
-  state.quiz.question = createQuestionForMode(state.quiz.session.mode, {
-    mixDualTypes: modeSettings.mixDualTypes === true
-  });
+  state.quiz.question = null;
   state.quiz.selectedAnswers = new Set();
   state.quiz.result = null;
-  state.quiz.status = 'answering';
+  state.quiz.status = 'loading';
+  questionLoadError = '';
+  refreshQuiz();
+  try {
+    const question = await createQuestionForMode(state.quiz.session.mode, {
+      mixDualTypes: modeSettings.mixDualTypes === true
+    });
+    if (token !== questionLoadToken) return;
+    state.quiz.question = question;
+    state.quiz.status = 'answering';
+  } catch (error) {
+    if (token !== questionLoadToken) return;
+    questionLoadError = error?.message ?? 'Could not load the next question.';
+    state.quiz.status = 'load-error';
+  }
+  refreshQuiz();
 }
 
-function beginSession(length) {
+function beginSession(length, refreshQuiz) {
   startQuizSession(length);
   saveSettings(state.settings);
-  createNextQuestion();
+  createNextQuestion(refreshQuiz);
 }
 
 function toggleAnswer(answer) {
@@ -48,16 +65,11 @@ function toggleAnswer(answer) {
 
 function dismissFeedbackMnemonic() {
   document.querySelector('.quiz-mnemonic-banner')?.remove();
-  for (const button of document.querySelectorAll('.feedback .mnemonic-type-badge[aria-pressed="true"]')) {
-    button.setAttribute('aria-pressed', 'false');
-  }
+  for (const button of document.querySelectorAll('.feedback .mnemonic-type-badge[aria-pressed="true"]')) button.setAttribute('aria-pressed', 'false');
 }
 
 function showFeedbackMnemonic({ mnemonics, button }) {
-  if (button.getAttribute('aria-pressed') === 'true') {
-    dismissFeedbackMnemonic();
-    return;
-  }
+  if (button.getAttribute('aria-pressed') === 'true') { dismissFeedbackMnemonic(); return; }
   dismissFeedbackMnemonic();
   button.setAttribute('aria-pressed', 'true');
   const banner = el('button', { className: 'mnemonic-banner quiz-mnemonic-banner' });
@@ -79,22 +91,15 @@ function showFeedbackMnemonic({ mnemonics, button }) {
 }
 
 function relationshipKeysForType(question, type) {
-  return (question.relationships ?? [])
-    .filter(relationship => relationship.answer === type)
-    .map(relationship => relationship.key);
+  return (question.relationships ?? []).filter(relationship => relationship.answer === type).map(relationship => relationship.key);
 }
 
 function feedbackRow(label, types, question) {
   const row = el('div', { className: 'feedback-row' });
   row.append(el('strong', { text: `${label}: ` }));
   const list = el('span', { className: 'type-badge-list' });
-  if (!types.length) {
-    list.textContent = 'None';
-  } else {
-    for (const type of types) {
-      list.append(createMnemonicTypeBadge(type, relationshipKeysForType(question, type), showFeedbackMnemonic));
-    }
-  }
+  if (!types.length) list.textContent = 'None';
+  else for (const type of types) list.append(createMnemonicTypeBadge(type, relationshipKeysForType(question, type), showFeedbackMnemonic));
   row.append(list);
   return row;
 }
@@ -124,6 +129,7 @@ function buildQuizSetup(refreshQuiz) {
   }
   modeLabel.append(modeSelect);
   form.append(modeLabel);
+
   const lengthLabel = el('label');
   lengthLabel.append(el('span', { text: 'Questions' }));
   const lengthSelect = el('select');
@@ -132,6 +138,8 @@ function buildQuizSetup(refreshQuiz) {
   const dualCheckbox = document.createElement('input');
   dualCheckbox.type = 'checkbox';
   dualLabel.append(dualCheckbox, el('span', { text: 'Mix in dual-type questions' }));
+  const dualNote = el('p', { className: 'muted quiz-dual-note', text: 'When enabled, about one-third of questions use dual types; single-type questions remain mixed in.' });
+
   function populateModeOptions() {
     const modeSettings = getQuizModeSettings(state.quiz.mode);
     lengthSelect.replaceChildren();
@@ -143,7 +151,11 @@ function buildQuizSetup(refreshQuiz) {
       lengthSelect.append(option);
     }
     dualCheckbox.checked = modeSettings.mixDualTypes === true;
+    const supportsDualMix = state.quiz.mode !== 'pokemon-type-recognition';
+    dualLabel.hidden = !supportsDualMix;
+    dualNote.hidden = !supportsDualMix;
   }
+
   populateModeOptions();
   modeSelect.addEventListener('change', () => {
     state.quiz.mode = modeSelect.value;
@@ -163,10 +175,9 @@ function buildQuizSetup(refreshQuiz) {
   lengthLabel.append(lengthSelect);
   form.append(lengthLabel, dualLabel);
   const start = el('button', { text: 'Start quiz' });
-  start.addEventListener('click', () => { beginSession(Number(lengthSelect.value)); refreshQuiz(); });
+  start.addEventListener('click', () => beginSession(Number(lengthSelect.value), refreshQuiz));
   form.append(start);
-  panel.append(form);
-  panel.append(el('p', { className: 'muted', text: 'When enabled, about one-third of questions use dual types; single-type questions remain mixed in.' }));
+  panel.append(form, dualNote);
   return panel;
 }
 
@@ -179,12 +190,47 @@ function buildSessionHeader() {
   return header;
 }
 
+function buildQuestionDisplay(question) {
+  if (question.display?.kind !== 'pokemon') return null;
+  const figure = el('figure', { className: 'quiz-pokemon-display' });
+  if (question.display.pokemon.spriteUrl) {
+    const image = document.createElement('img');
+    image.src = question.display.pokemon.spriteUrl;
+    image.alt = question.display.pokemon.displayName;
+    figure.append(image);
+  }
+  return figure;
+}
+
+function buildLoadingQuestion(refreshQuiz) {
+  const fragment = document.createDocumentFragment();
+  fragment.append(buildSessionHeader());
+  const panel = el('div', { className: 'panel quiz-loading-panel' });
+  panel.append(el('p', { text: 'Loading question…' }));
+  fragment.append(panel);
+  return fragment;
+}
+
+function buildLoadError(refreshQuiz) {
+  const fragment = document.createDocumentFragment();
+  fragment.append(buildSessionHeader());
+  const panel = el('div', { className: 'panel quiz-loading-panel' });
+  panel.append(el('p', { className: 'settings-status error', text: questionLoadError }));
+  const retry = el('button', { text: 'Retry' });
+  retry.addEventListener('click', () => createNextQuestion(refreshQuiz));
+  panel.append(retry);
+  fragment.append(panel);
+  return fragment;
+}
+
 function buildActiveQuestion(refreshQuiz) {
   dismissFeedbackMnemonic();
   const fragment = document.createDocumentFragment();
   fragment.append(buildSessionHeader());
   const question = state.quiz.question;
   const panel = el('div', { className: 'panel' });
+  const display = buildQuestionDisplay(question);
+  if (display) panel.append(display);
   panel.append(el('h3', { text: question.prompt }));
   panel.append(renderAnswerDisplay(question.answerType, {
     question,
@@ -195,9 +241,7 @@ function buildActiveQuestion(refreshQuiz) {
   if (state.quiz.result) panel.append(renderFeedback(state.quiz.result, question));
   const actions = el('div', { className: 'actions' });
   if (!state.quiz.result) {
-    const submit = el('button', {
-      text: state.quiz.selectedAnswers.size === 0 ? 'Submit no types' : 'Submit answer'
-    });
+    const submit = el('button', { text: state.quiz.selectedAnswers.size === 0 ? 'Submit no types' : 'Submit answer' });
     submit.addEventListener('click', () => {
       const result = scoreQuestion(question, state.quiz.selectedAnswers);
       state.quiz.result = result;
@@ -210,12 +254,15 @@ function buildActiveQuestion(refreshQuiz) {
   } else {
     const isLast = state.quiz.session.length !== 0 && state.quiz.session.questionNumber >= state.quiz.session.length;
     const next = el('button', { text: isLast ? 'See summary' : 'Next question' });
-    next.addEventListener('click', () => { if (advanceQuizSession()) createNextQuestion(); refreshQuiz(); });
+    next.addEventListener('click', () => {
+      if (!advanceQuizSession()) { refreshQuiz(); return; }
+      createNextQuestion(refreshQuiz);
+    });
     actions.append(next);
   }
   if (state.quiz.session.length === 0) {
     const end = el('button', { className: 'secondary-button', text: 'End session' });
-    end.addEventListener('click', () => { endQuizSession(); refreshQuiz(); });
+    end.addEventListener('click', () => { questionLoadToken += 1; endQuizSession(); refreshQuiz(); });
     actions.append(end);
   }
   panel.append(actions);
@@ -231,9 +278,9 @@ function buildSessionSummary(refreshQuiz) {
   panel.append(el('p', { className: 'summary-score', text: `Average score: ${formatPercent(getSessionAverageScore())}` }));
   const actions = el('div', { className: 'actions' });
   const again = el('button', { text: 'Quiz again' });
-  again.addEventListener('click', () => { beginSession(state.quiz.session.length); refreshQuiz(); });
+  again.addEventListener('click', () => beginSession(state.quiz.session.length, refreshQuiz));
   const setup = el('button', { className: 'secondary-button', text: 'Change setup' });
-  setup.addEventListener('click', () => { returnToQuizSetup(); refreshQuiz(); });
+  setup.addEventListener('click', () => { questionLoadToken += 1; returnToQuizSetup(); refreshQuiz(); });
   actions.append(again, setup);
   panel.append(actions);
   return panel;
@@ -247,6 +294,8 @@ export function renderQuiz(container) {
   function refreshQuiz() {
     if (state.quiz.status === 'idle') quizBody.replaceChildren(buildQuizSetup(refreshQuiz));
     else if (state.quiz.status === 'complete') quizBody.replaceChildren(buildSessionSummary(refreshQuiz));
+    else if (state.quiz.status === 'loading') quizBody.replaceChildren(buildLoadingQuestion(refreshQuiz));
+    else if (state.quiz.status === 'load-error') quizBody.replaceChildren(buildLoadError(refreshQuiz));
     else quizBody.replaceChildren(buildActiveQuestion(refreshQuiz));
   }
   refreshQuiz();
