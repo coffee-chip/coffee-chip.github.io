@@ -49,25 +49,43 @@ function createDirectionButton(direction, names, root, card) {
   button.type = 'button';
   button.className = `pokemon-evolution-button pokemon-evolution-${direction}`;
   button.setAttribute('aria-label', direction === 'previous' ? 'Show previous evolutions' : 'Show next evolutions');
-  button.textContent = direction === 'previous' ? '‹ Previous' : 'Next ›';
+  button.textContent = direction === 'previous' ? '‹' : '›';
   button.addEventListener('click', () => createChooser(direction, names, root, card));
   return button;
 }
 
+function createSpacer() {
+  const spacer = document.createElement('span');
+  spacer.className = 'pokemon-evolution-spacer';
+  spacer.setAttribute('aria-hidden', 'true');
+  return spacer;
+}
+
 export function enhancePokemonEvolutionControls(root) {
   if (state.route !== 'study' || state.study.mode !== 'pokemon') return;
+
+  root.querySelector('.pokemon-evolution-nav')?.remove();
+  root.querySelectorAll('.pokemon-evolution-group').forEach(group => group.closest('.panel')?.remove());
+
   const pokemon = state.study.pokemonResult;
   const card = root.querySelector('.pokemon-result-card');
-  const visual = card?.querySelector('.pokemon-result-visual');
-  if (!pokemon || !card || !visual || visual.querySelector('.pokemon-evolution-controls')) return;
+  if (!pokemon || !card || card.classList.contains('pokemon-result-card-arranged')) return;
+
+  const visual = card.querySelector('.pokemon-result-visual');
+  const details = card.querySelector('.pokemon-result-details');
+  if (!visual || !details) return;
 
   const previous = pokemon.evolution?.previous ?? [];
   const next = pokemon.evolution?.next ?? [];
-  if (!previous.length && !next.length) return;
+  const identityRow = document.createElement('div');
+  identityRow.className = 'pokemon-result-identity-row';
 
-  const controls = document.createElement('div');
-  controls.className = 'pokemon-evolution-controls';
-  if (previous.length) controls.append(createDirectionButton('previous', previous, root, card));
-  if (next.length) controls.append(createDirectionButton('next', next, root, card));
-  visual.append(controls);
+  identityRow.append(
+    previous.length ? createDirectionButton('previous', previous, root, card) : createSpacer(),
+    details,
+    next.length ? createDirectionButton('next', next, root, card) : createSpacer()
+  );
+
+  card.replaceChildren(visual, identityRow);
+  card.classList.add('pokemon-result-card-arranged');
 }
