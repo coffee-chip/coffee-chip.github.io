@@ -20,12 +20,16 @@ export function getQuizMode(modeId) {
   return preset;
 }
 
-export async function createQuestionForMode(modeId, { mixDualTypes = false, dualTypeChance = 0.35 } = {}) {
+export async function createQuestionForMode(modeId, options = {}) {
+  const { mixDualTypes = false, dualTypeChance = 0.35 } = options;
   const preset = getQuizMode(modeId);
   const generatorId = preset.generatorIds[Math.floor(Math.random() * preset.generatorIds.length)];
   const generator = getQuestionGenerator(generatorId);
   const useDualTypes = mixDualTypes && Math.random() < dualTypeChance;
-  const question = await generator.createQuestion({ defenderCount: useDualTypes ? 2 : 1 });
+  const question = await generator.createQuestion({
+    ...options,
+    defenderCount: useDualTypes ? 2 : 1
+  });
 
   if (!preset.objectiveIds.includes(question.objectiveId)) {
     throw new Error(`Generator ${generatorId} produced objective ${question.objectiveId}, which is not allowed by preset ${modeId}.`);
