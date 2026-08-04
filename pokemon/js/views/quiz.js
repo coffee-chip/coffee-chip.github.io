@@ -54,7 +54,6 @@ function dismissFeedbackMnemonic() {
 }
 
 function showFeedbackMnemonic({ mnemonics, button }) {
-  const existing = document.querySelector('.quiz-mnemonic-banner');
   if (button.getAttribute('aria-pressed') === 'true') {
     dismissFeedbackMnemonic();
     return;
@@ -81,7 +80,7 @@ function showFeedbackMnemonic({ mnemonics, button }) {
 
 function relationshipKeysForType(question, type) {
   return (question.relationships ?? [])
-    .filter(relationship => relationship.attackingType === type || relationship.defendingType === type)
+    .filter(relationship => relationship.answer === type)
     .map(relationship => relationship.key);
 }
 
