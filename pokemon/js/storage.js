@@ -15,7 +15,7 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
       modes: { 'select-all': { questionCount: 10 } }
     }
   },
-  progress: { totalAnswered: 0, totalScore: 0, relationshipStats: {} },
+  progress: { totalAnswered: 0, totalScore: 0, relationshipStats: {}, pokemonRecognitionStats: {} },
   cache: { pokemon: {}, pokemonNameIndex: null }
 });
 
@@ -91,13 +91,39 @@ function normalizeRelationshipStats(value) {
   return normalized;
 }
 
+function normalizePokemonRecognitionStats(value) {
+  if (!isObject(value)) return {};
+  const normalized = {};
+  for (const [storedKey, record] of Object.entries(value)) {
+    if (!isObject(record)) continue;
+    const pokemonId = Number(record.pokemonId ?? storedKey);
+    if (!Number.isInteger(pokemonId) || pokemonId < 1) continue;
+    const attempts = Math.floor(nonnegativeNumber(record.attempts));
+    normalized[String(pokemonId)] = {
+      pokemonId,
+      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName.length > 0
+        ? record.pokemonName
+        : `pokemon-${pokemonId}`,
+      attempts,
+      earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
+      exactAnswers: Math.min(Math.floor(nonnegativeNumber(record.exactAnswers)), attempts),
+      correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
+      misses: Math.floor(nonnegativeNumber(record.misses)),
+      falseSelections: Math.floor(nonnegativeNumber(record.falseSelections)),
+      lastSeen: typeof record.lastSeen === 'string' ? record.lastSeen : null
+    };
+  }
+  return normalized;
+}
+
 function normalizeProgress(value) {
   const defaults = cloneDefaults().progress;
   if (!isObject(value)) return defaults;
   return {
     totalAnswered: Math.floor(nonnegativeNumber(value.totalAnswered, defaults.totalAnswered)),
     totalScore: nonnegativeNumber(value.totalScore, defaults.totalScore),
-    relationshipStats: normalizeRelationshipStats(value.relationshipStats)
+    relationshipStats: normalizeRelationshipStats(value.relationshipStats),
+    pokemonRecognitionStats: normalizePokemonRecognitionStats(value.pokemonRecognitionStats)
   };
 }
 
