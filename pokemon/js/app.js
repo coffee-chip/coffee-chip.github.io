@@ -20,8 +20,13 @@ import {
 } from './serviceWorker.js';
 
 hydratePersistentState(loadPersistentData());
-applyTheme(state.settings.theme);
-watchSystemTheme(() => state.settings.theme);
+state.settings.paletteTheme ??= 'classic';
+state.settings.appearance ??= state.settings.theme ?? 'system';
+applyTheme(state.settings.paletteTheme, state.settings.appearance);
+watchSystemTheme(() => ({
+  paletteTheme: state.settings.paletteTheme,
+  appearance: state.settings.appearance
+}));
 initializePokemonAutocomplete();
 
 const viewRoot = document.querySelector('#app-view');
