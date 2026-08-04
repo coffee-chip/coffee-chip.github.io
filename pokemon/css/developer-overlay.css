@@ -2,3 +2,12 @@
 .developer-overlay-row { display: flex; justify-content: space-between; gap: .75rem; padding: .15rem 0; }
 .developer-overlay-row span { color: var(--text-muted); }
 .developer-overlay-row strong { overflow-wrap: anywhere; text-align: right; }
+
+.developer-error-overlay { position: fixed; z-index: 1200; inset: auto max(.75rem, env(safe-area-inset-right)) max(4.75rem, calc(4rem + env(safe-area-inset-bottom))) max(.75rem, env(safe-area-inset-left)); max-height: min(70vh, 34rem); overflow: auto; padding: .85rem; border: 2px solid var(--error-border, var(--border-default)); border-radius: .75rem; background: var(--panel-background); color: var(--text-primary); box-shadow: 0 .75rem 2rem rgb(0 0 0 / 28%); }
+.developer-error-overlay-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.developer-error-overlay-close { flex: 0 0 auto; width: 2.25rem; min-height: 2.25rem; padding: 0; border-radius: 50%; font-size: 1.4rem; line-height: 1; }
+.developer-error-overlay-message, .developer-error-overlay details pre { overflow-wrap: anywhere; white-space: pre-wrap; }
+.developer-error-overlay-message { margin: .75rem 0 .4rem; font: inherit; font-weight: 700; }
+.developer-error-overlay-location { color: var(--text-muted); font-size: .82rem; }
+.developer-error-overlay details { margin-top: .75rem; }
+.developer-error-overlay details pre { font-size: .75rem; }
