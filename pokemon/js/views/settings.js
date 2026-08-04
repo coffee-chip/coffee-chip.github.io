@@ -14,12 +14,15 @@ subscribeServiceWorker(() => { if (state.route === 'settings' && currentRender) 
 
 function el(tag, options = {}) { const node = document.createElement(tag); if (options.className) node.className = options.className; if (options.text) node.textContent = options.text; return node; }
 function toggle(label, checked, onChange) { const field = el('label', { className: 'toggle-field' }); const input = document.createElement('input'); input.type = 'checkbox'; input.checked = checked; input.addEventListener('change', () => onChange(input.checked)); field.append(input, el('span', { text: label })); return field; }
+function totalSavedQuestions(progress = state.progress) { return Object.values(progress.quizStats ?? {}).reduce((sum, stat) => sum + (stat.questionCount ?? 0), 0); }
 
 function persistResetProgress() {
   resetProgress();
   const writeSucceeded = saveProgress(state.progress);
   const stored = loadPersistentData().progress;
-  const cleared = stored.totalAnswered === 0 && stored.totalScore === 0 && Object.keys(stored.relationshipStats ?? {}).length === 0;
+  const cleared = totalSavedQuestions(stored) === 0
+    && Object.keys(stored.relationshipStats ?? {}).length === 0
+    && Object.keys(stored.pokemonRecognitionStats ?? {}).length === 0;
   resetStage = writeSucceeded && cleared ? 'complete' : 'error';
   resetMessage = resetStage === 'complete'
     ? 'Past statistics were cleared and saved.'
@@ -88,7 +91,21 @@ export function renderSettings(container, render) {
   developerPanel.append(el('h3', { text: 'Developer tools' }));
   developerPanel.append(el('p', { text: `Service worker: ${statusLabel()}` }));
   developerPanel.append(el('p', { className: 'muted', text: `Installed version: ${serviceWorkerState.version ?? 'Unknown'} · App caches: ${serviceWorkerState.cacheNames.length}` }));
-  developerPanel.append(toggle('Show developer status overlay', state.settings.developer.showOverlay, checked => { state.settings.developer.showOverlay = checked; saveSettings(state.settings); renderDeveloperOverlay(); }));
+  developerPanel.append(toggle('Show developer status overlay', state.settings.developer.showOverlay, checked => {
+    state.settings.developer.showOverlay = checked;
+    saveSettings(state.settings);
+    renderDeveloperOverlay();
+  }));
+  developerPanel.append(toggle('Show application errors in an overlay', state.settings.developer.showErrorOverlay, checked => {
+    state.settings.developer.showErrorOverlay = checked;
+    saveSettings(state.settings);
+    window.pokemonErrorOverlay?.setEnabled(checked);
+  }));
+  const testErrorButton = el('button', { className: 'secondary-button', text: 'Test error overlay' });
+  testErrorButton.type = 'button';
+  testErrorButton.disabled = !state.settings.developer.showErrorOverlay;
+  testErrorButton.addEventListener('click', () => window.pokemonErrorOverlay?.showTestError());
+  developerPanel.append(testErrorButton);
   developerPanel.append(toggle('Automatically check for and apply updates on launch', state.settings.developer.autoUpdateOnLaunch, checked => { state.settings.developer.autoUpdateOnLaunch = checked; saveSettings(state.settings); }));
 
   const updateActions = el('div', { className: 'actions' });
@@ -121,7 +138,7 @@ export function renderSettings(container, render) {
 
   const dataPanel = el('div', { className: 'panel danger-zone' });
   dataPanel.append(el('h3', { text: 'Statistics' }));
-  dataPanel.append(el('p', { text: `Saved questions answered: ${state.progress.totalAnswered}. Clearing statistics removes overall and relationship-level progress, but keeps quiz preferences and cached Pokémon.` }));
+  dataPanel.append(el('p', { text: `Saved questions answered: ${totalSavedQuestions()}. Clearing statistics removes quiz, matchup, and Pokémon recognition progress, but keeps quiz preferences and cached Pokémon.` }));
   if (resetStage === 'confirming') {
     const confirmPanel = el('div', { className: 'inline-confirmation' });
     confirmPanel.append(el('p', { text: 'Clear all saved quiz statistics? This cannot be undone.' }));
