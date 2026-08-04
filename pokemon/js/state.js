@@ -13,7 +13,7 @@ export const state = {
   settings: {
     paletteTheme: 'classic',
     appearance: 'system',
-    developer: { autoUpdateOnLaunch: false, showOverlay: false },
+    developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
     quiz: { defaultMode: 'select-all', common: {}, modes: { 'select-all': { questionCount: 10 } } }
   },
   study: {
