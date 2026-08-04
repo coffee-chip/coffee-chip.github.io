@@ -33,7 +33,7 @@ export function enhanceStudyTabs(root) {
     tabs.append(button);
   }
 
-  modeLabel.hidden = true;
   controls.prepend(tabs);
+  modeLabel.remove();
   controls.classList.add('study-controls-with-tabs');
 }
