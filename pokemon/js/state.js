@@ -161,3 +161,11 @@ export function advanceQuizSession() {
 export function endQuizSession() { state.quiz.status = 'complete'; resetQuestionState(); }
 export function returnToQuizSetup() { state.quiz.status = 'idle'; resetQuestionState(); }
 export function getSessionAverageScore() { const count = state.quiz.session.results.length; return count === 0 ? 0 : state.quiz.session.totalScore / count; }
+export function getAverageScore() {
+  const totals = Object.values(state.progress.quizStats ?? {}).reduce((sum, stat) => {
+    sum.questionCount += Number(stat?.questionCount) || 0;
+    sum.totalScore += Number(stat?.totalScore) || 0;
+    return sum;
+  }, { questionCount: 0, totalScore: 0 });
+  return totals.questionCount === 0 ? 0 : totals.totalScore / totals.questionCount;
+}
