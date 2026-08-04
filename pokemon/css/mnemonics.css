@@ -1,65 +1,8 @@
-.mnemonic-badge-button {
-  display: inline-flex;
-  align-items: center;
-  gap: .2rem;
-  min-height: 2.75rem;
-  padding: .15rem .35rem .15rem 0;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: inherit;
-}
-
-.mnemonic-badge-button .type-badge {
-  pointer-events: none;
-}
-
-.mnemonic-badge-button:hover,
-.mnemonic-badge-button:focus-visible,
-.mnemonic-badge-button[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  outline: none;
-}
-
-.mnemonic-lightbulb {
-  font-size: .9rem;
-  line-height: 1;
-}
-
-.mnemonic-banner {
-  position: fixed;
-  z-index: 40;
-  left: max(.75rem, env(safe-area-inset-left));
-  right: max(.75rem, env(safe-area-inset-right));
-  bottom: calc(5.4rem + env(safe-area-inset-bottom));
-  display: grid;
-  gap: .6rem;
-  max-width: 46rem;
-  margin: 0 auto;
-  padding: .85rem;
-  border: 1px solid var(--accent);
-  border-radius: .8rem;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 .4rem 1.4rem rgb(0 0 0 / .22);
-  text-align: left;
-}
-
-.mnemonic-banner-line {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: .4rem;
-}
-
-.mnemonic-text {
-  flex-basis: 100%;
-  font-weight: 650;
-}
-
-.mnemonic-dismiss-hint {
-  color: var(--muted);
-  font-size: .78rem;
-  text-align: right;
-}
+.mnemonic-badge-button { display: inline-flex; align-items: center; gap: .2rem; min-height: 2.75rem; padding: .15rem .35rem .15rem 0; border: 1px solid transparent; border-radius: 999px; background: transparent; color: inherit; }
+.mnemonic-badge-button .type-badge { pointer-events: none; }
+.mnemonic-badge-button:hover, .mnemonic-badge-button:focus-visible, .mnemonic-badge-button[aria-pressed="true"] { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
+.mnemonic-lightbulb { font-size: .9rem; line-height: 1; }
+.mnemonic-banner { position: fixed; z-index: 40; left: max(.75rem, env(safe-area-inset-left)); right: max(.75rem, env(safe-area-inset-right)); bottom: calc(5.4rem + env(safe-area-inset-bottom)); display: grid; gap: .6rem; max-width: 46rem; margin: 0 auto; padding: .85rem; border: 1px solid var(--action-primary); border-radius: .8rem; background: var(--panel-background); color: var(--text-primary); box-shadow: 0 .4rem 1.4rem rgb(0 0 0 / .22); text-align: left; }
+.mnemonic-banner-line { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.mnemonic-text { flex-basis: 100%; font-weight: 650; }
+.mnemonic-dismiss-hint { color: var(--text-muted); font-size: .78rem; text-align: right; }
