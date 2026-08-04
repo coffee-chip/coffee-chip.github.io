@@ -1,6 +1,7 @@
 import { TYPES, TYPE_META } from '../data/types.js';
 import { getMultiplier } from '../engine/effectiveness.js';
 import { createRelationship } from '../relationships.js';
+import { getPokemon } from '../data/pokemonRepository.js';
 
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
 function randomDistinctTypes(count) {
@@ -16,16 +17,12 @@ function labelTypes(types) { return types.map(type => TYPE_META[type].label).joi
 
 export const MOVE_CRITERIA = {
   'more-effective': {
-    id: 'more-effective',
-    label: 'more effective than neutral',
-    matches: multiplier => multiplier > 1,
+    id: 'more-effective', label: 'more effective than neutral', matches: multiplier => multiplier > 1,
     prompt: defendingTypes => `Which move types are more effective than neutral against ${labelTypes(defendingTypes)}?`,
     explanation: defendingTypes => `The highlighted move types deal more than 1× damage to ${labelTypes(defendingTypes)}.`
   },
   'not-very-effective': {
-    id: 'not-very-effective',
-    label: 'less effective than neutral',
-    matches: multiplier => multiplier < 1,
+    id: 'not-very-effective', label: 'less effective than neutral', matches: multiplier => multiplier < 1,
     prompt: defendingTypes => `Which move types are less effective than neutral against ${labelTypes(defendingTypes)}?`,
     explanation: defendingTypes => `The highlighted move types deal less than 1× damage to ${labelTypes(defendingTypes)}.`
   }
@@ -34,39 +31,22 @@ export const MOVE_CRITERIA = {
 export function createUnsafeSwitchQuestion({ defenderCount = 1 } = {}) {
   const attackingTypes = randomDistinctTypes(defenderCount);
   const isDual = attackingTypes.length === 2;
-  const correctAnswers = TYPES.filter(defendingType =>
-    attackingTypes.some(attackingType => getMultiplier(attackingType, [defendingType]) > 1)
-  );
+  const correctAnswers = TYPES.filter(defendingType => attackingTypes.some(attackingType => getMultiplier(attackingType, [defendingType]) > 1));
   const relationships = [];
   for (const defendingType of TYPES) {
-    const componentMatches = attackingTypes.map(attackingType => ({
-      attackingType,
-      matches: getMultiplier(attackingType, [defendingType]) > 1
-    }));
+    const componentMatches = attackingTypes.map(attackingType => ({ attackingType, matches: getMultiplier(attackingType, [defendingType]) > 1 }));
     const overallCorrect = componentMatches.some(item => item.matches);
     for (const item of componentMatches) {
-      if (item.matches) {
-        relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['correct', 'missed']));
-      } else if (!overallCorrect) {
-        relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['false-selection']));
-      }
+      if (item.matches) relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['correct', 'missed']));
+      else if (!overallCorrect) relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['false-selection']));
     }
   }
   return {
-    id: `choose-switch-unsafe:${attackingTypes.join('-')}`,
-    generatorId: 'choose-switch-unsafe',
-    objectiveId: 'choose-switch',
+    id: `choose-switch-unsafe:${attackingTypes.join('-')}`, generatorId: 'choose-switch-unsafe', objectiveId: 'choose-switch',
     formatId: 'type-multi-select',
-    prompt: isDual
-      ? `Which single Pokémon types are weak to at least one of ${labelTypes(attackingTypes)} attacks?`
-      : `Which Pokémon types are weak to ${labelTypes(attackingTypes)} attacks?`,
-    answerType: 'type-multi-select',
-    choices: [...TYPES],
-    correctAnswers,
-    relationships,
-    explanation: isDual
-      ? `The highlighted types take more than 1× damage from at least one of ${labelTypes(attackingTypes)}.`
-      : `${labelTypes(attackingTypes)} attacks deal 2× damage to the highlighted types, making them risky switch-ins.`,
+    prompt: isDual ? `Which single Pokémon types are weak to at least one of ${labelTypes(attackingTypes)} attacks?` : `Which Pokémon types are weak to ${labelTypes(attackingTypes)} attacks?`,
+    answerType: 'type-multi-select', choices: [...TYPES], correctAnswers, relationships,
+    explanation: isDual ? `The highlighted types take more than 1× damage from at least one of ${labelTypes(attackingTypes)}.` : `${labelTypes(attackingTypes)} attacks deal 2× damage to the highlighted types, making them risky switch-ins.`,
     metadata: { battleDecision: 'choose-switch', criterion: 'more-effective', outcome: 'unsafe', attackingTypes, attackerTypeCount: attackingTypes.length }
   };
 }
@@ -80,44 +60,44 @@ export function createChooseMoveQuestion({ criterion = 'more-effective', defende
   const relationships = [];
   for (const attackingType of TYPES) {
     const combinedMatches = criterionDefinition.matches(getMultiplier(attackingType, defendingTypes));
-    const components = defendingTypes.map(defendingType => ({
-      defendingType,
-      matches: criterionDefinition.matches(getMultiplier(attackingType, [defendingType]))
-    }));
+    const components = defendingTypes.map(defendingType => ({ defendingType, matches: criterionDefinition.matches(getMultiplier(attackingType, [defendingType])) }));
     for (const component of components) {
-      if (combinedMatches && component.matches) {
-        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['correct', 'missed']));
-      } else if (!combinedMatches && components.every(item => !item.matches)) {
-        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['false-selection']));
-      }
+      if (combinedMatches && component.matches) relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['correct', 'missed']));
+      else if (!combinedMatches && components.every(item => !item.matches)) relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['false-selection']));
     }
   }
   return {
-    id: `${generatorId}:${criterion}:${defendingTypes.join('-')}`,
-    generatorId,
-    objectiveId: 'choose-move',
-    formatId: 'type-multi-select',
-    prompt: criterionDefinition.prompt(defendingTypes),
-    answerType: 'type-multi-select',
-    choices: [...TYPES],
-    correctAnswers,
-    relationships,
+    id: `${generatorId}:${criterion}:${defendingTypes.join('-')}`, generatorId, objectiveId: 'choose-move', formatId: 'type-multi-select',
+    prompt: criterionDefinition.prompt(defendingTypes), answerType: 'type-multi-select', choices: [...TYPES], correctAnswers, relationships,
     explanation: criterionDefinition.explanation(defendingTypes),
     metadata: { battleDecision: 'choose-move', criterion, defendingTypes, defenderCount, threshold: criterion === 'more-effective' ? '>1' : '<1' }
+  };
+}
+
+export async function createPokemonTypeRecognitionQuestion({ minId = 1, maxId = 151 } = {}) {
+  const id = Math.floor(Math.random() * (maxId - minId + 1)) + minId;
+  const { pokemon } = await getPokemon(id);
+  return {
+    id: `recognize-pokemon-type:${pokemon.id}:${Date.now()}`,
+    generatorId: 'recognize-pokemon-type',
+    objectiveId: 'recognize-pokemon-type',
+    formatId: 'type-multi-select',
+    prompt: `What type or types is ${pokemon.displayName}?`,
+    answerType: 'type-multi-select',
+    choices: [...TYPES],
+    correctAnswers: [...pokemon.types],
+    relationships: [],
+    display: { kind: 'pokemon', pokemon },
+    metadata: { pokemonId: pokemon.id, pokemonName: pokemon.name, pool: 'generation-1' }
   };
 }
 
 const chooseMoveMoreEffectiveConfig = { criterion: 'more-effective', defenderCount: 1 };
 
 export const QUESTION_GENERATORS = {
-  'choose-switch-unsafe': {
-    id: 'choose-switch-unsafe', objectiveId: 'choose-switch', formatId: 'type-multi-select',
-    createQuestion: options => createUnsafeSwitchQuestion(options)
-  },
-  'choose-move-more-effective': {
-    id: 'choose-move-more-effective', objectiveId: 'choose-move', formatId: 'type-multi-select', config: chooseMoveMoreEffectiveConfig,
-    createQuestion: options => createChooseMoveQuestion({ ...chooseMoveMoreEffectiveConfig, ...options, generatorId: 'choose-move-more-effective' })
-  }
+  'choose-switch-unsafe': { id: 'choose-switch-unsafe', objectiveId: 'choose-switch', formatId: 'type-multi-select', createQuestion: options => createUnsafeSwitchQuestion(options) },
+  'choose-move-more-effective': { id: 'choose-move-more-effective', objectiveId: 'choose-move', formatId: 'type-multi-select', config: chooseMoveMoreEffectiveConfig, createQuestion: options => createChooseMoveQuestion({ ...chooseMoveMoreEffectiveConfig, ...options, generatorId: 'choose-move-more-effective' }) },
+  'recognize-pokemon-type': { id: 'recognize-pokemon-type', objectiveId: 'recognize-pokemon-type', formatId: 'type-multi-select', async: true, createQuestion: options => createPokemonTypeRecognitionQuestion(options) }
 };
 
 export function getQuestionGenerator(generatorId) {
