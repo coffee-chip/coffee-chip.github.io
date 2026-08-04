@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { serviceWorkerState, subscribeServiceWorker } from './serviceWorker.js';
 
-const APP_BUILD = '2026.08.03.17';
+const APP_BUILD = '2026.08.03.18';
 let overlay = null;
 let unsubscribe = null;
 
@@ -37,13 +37,9 @@ export function renderDeveloperOverlay() {
   if (!enabled) {
     overlay?.remove();
     overlay = null;
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
     return;
   }
-
   if (!overlay) {
     overlay = document.createElement('aside');
     overlay.className = 'developer-overlay';
