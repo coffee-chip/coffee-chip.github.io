@@ -1,6 +1,6 @@
 import { state, getQuizModeSettings } from '../state.js';
 import { saveSettings } from '../storage.js';
-import { POKEMON_POOLS, POKEMON_SAMPLING_STRATEGIES } from '../quiz/generators.js';
+import { POKEMON_POOLS, SAMPLING_STRATEGIES } from '../quiz/generators.js';
 
 function createSelect(options, value) {
   const select = document.createElement('select');
@@ -26,25 +26,26 @@ function createField(labelText, select, className) {
 export function enhanceQuizRecognitionSettings(root) {
   if (state.route !== 'quiz' || state.quiz.status !== 'idle') return;
   const form = root.querySelector('.quiz-setup');
-  if (!form || form.querySelector('.quiz-recognition-pool')) return;
+  if (!form || form.querySelector('.quiz-sampling-setting')) return;
 
   const modeSelect = form.querySelector('select');
   const startButton = form.querySelector('button');
   if (!modeSelect || !startButton) return;
 
-  const modeSettings = getQuizModeSettings('pokemon-type-recognition');
-  modeSettings.pokemonPool ??= 'gen-1';
-  modeSettings.samplingStrategy ??= 'adaptive';
+  const recognitionSettings = getQuizModeSettings('pokemon-type-recognition');
+  recognitionSettings.pokemonPool ??= 'gen-1';
 
-  const poolSelect = createSelect(POKEMON_POOLS, modeSettings.pokemonPool);
-  const strategySelect = createSelect(POKEMON_SAMPLING_STRATEGIES, modeSettings.samplingStrategy);
+  const poolSelect = createSelect(POKEMON_POOLS, recognitionSettings.pokemonPool);
+  const strategySelect = createSelect(SAMPLING_STRATEGIES, getQuizModeSettings(modeSelect.value).samplingStrategy ?? 'adaptive');
   const poolField = createField('Pokémon pool', poolSelect, 'quiz-recognition-pool');
-  const strategyField = createField('Sampling', strategySelect, 'quiz-recognition-sampling');
+  const strategyField = createField('Sampling', strategySelect, 'quiz-sampling-setting');
 
-  function updateVisibility() {
-    const visible = modeSelect.value === 'pokemon-type-recognition';
-    poolField.hidden = !visible;
-    strategyField.hidden = !visible;
+  function updateForMode() {
+    const modeId = modeSelect.value;
+    const settings = getQuizModeSettings(modeId);
+    settings.samplingStrategy ??= 'adaptive';
+    strategySelect.value = settings.samplingStrategy;
+    poolField.hidden = modeId !== 'pokemon-type-recognition';
   }
 
   poolSelect.addEventListener('change', () => {
@@ -52,12 +53,12 @@ export function enhanceQuizRecognitionSettings(root) {
     saveSettings(state.settings);
   });
   strategySelect.addEventListener('change', () => {
-    getQuizModeSettings('pokemon-type-recognition').samplingStrategy = strategySelect.value;
+    getQuizModeSettings(modeSelect.value).samplingStrategy = strategySelect.value;
     saveSettings(state.settings);
   });
-  modeSelect.addEventListener('change', updateVisibility);
+  modeSelect.addEventListener('change', updateForMode);
 
   form.insertBefore(poolField, startButton);
   form.insertBefore(strategyField, startButton);
-  updateVisibility();
+  updateForMode();
 }
