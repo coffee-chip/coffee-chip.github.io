@@ -16,16 +16,30 @@ function combinations(items, count, start = 0, prefix = [], result = []) {
   }
   return result;
 }
+function shuffled(items) {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+  return copy;
+}
 function weightedRandom(items, weightFor) {
-  let candidates = items.map(item => ({ item, weight: Math.max(0, weightFor(item)) }));
-  if (!candidates.some(candidate => candidate.weight > 0)) candidates = items.map(item => ({ item, weight: 1 }));
+  let candidates = shuffled(items).map(item => {
+    const rawWeight = Number(weightFor(item));
+    return { item, weight: Number.isFinite(rawWeight) ? Math.max(0, rawWeight) : 0 };
+  });
+  if (!candidates.some(candidate => candidate.weight > 0)) {
+    candidates = candidates.map(candidate => ({ ...candidate, weight: 1 }));
+  }
   const total = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+  if (!Number.isFinite(total) || total <= 0) return randomItem(items);
   let target = Math.random() * total;
   for (const candidate of candidates) {
+    if (target < candidate.weight) return candidate.item;
     target -= candidate.weight;
-    if (target <= 0) return candidate.item;
   }
-  return candidates[candidates.length - 1].item;
+  return randomItem(candidates).item;
 }
 function recencyMultiplier(key, recentKeys) {
   const distance = recentKeys.length - 1 - recentKeys.lastIndexOf(key);
