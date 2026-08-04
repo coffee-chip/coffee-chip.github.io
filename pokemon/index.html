@@ -42,12 +42,14 @@
 </head>
 <body>
   <div class="app-shell">
+    <header class="app-utility-header">
+      <a href="#settings" data-route="settings" class="settings-gear" aria-label="Settings" title="Settings">⚙</a>
+    </header>
     <main id="app-view" aria-live="polite"></main>
     <nav class="app-nav" aria-label="Primary navigation">
       <a href="#quiz" data-route="quiz">Quiz</a>
       <a href="#study" data-route="study">Study</a>
       <a href="#progress" data-route="progress">Progress</a>
-      <a href="#settings" data-route="settings">Settings</a>
     </nav>
   </div>
   <script type="module" src="./js/app.js"></script>
