@@ -65,6 +65,12 @@ export async function fetchEvolutionChain(url, options = {}) {
   return fetchJson(url, options);
 }
 
+function pokemonIdFromUrl(url) {
+  const match = typeof url === 'string' ? url.match(/\/pokemon\/(\d+)\/?$/) : null;
+  const id = Number(match?.[1]);
+  return Number.isInteger(id) && id > 0 ? id : Number.POSITIVE_INFINITY;
+}
+
 export async function fetchPokemonNameIndex(options = {}) {
   const summary = await fetchJson(`${API_BASE}/pokemon/?limit=1&offset=0`, options);
   const count = Number(summary?.count);
@@ -74,8 +80,9 @@ export async function fetchPokemonNameIndex(options = {}) {
 
   const fullList = await fetchJson(`${API_BASE}/pokemon/?limit=${count}&offset=0`, options);
   const names = (fullList?.results ?? [])
-    .map(entry => entry?.name)
-    .filter(name => typeof name === 'string' && name.length > 0);
+    .filter(entry => typeof entry?.name === 'string' && entry.name.length > 0)
+    .sort((a, b) => pokemonIdFromUrl(a.url) - pokemonIdFromUrl(b.url))
+    .map(entry => entry.name);
 
   if (!names.length) {
     throw new PokeApiError('PokéAPI returned an empty Pokémon name list.', { code: 'invalid-response' });
