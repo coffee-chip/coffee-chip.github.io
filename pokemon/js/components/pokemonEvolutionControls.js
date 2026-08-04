@@ -14,7 +14,7 @@ function submitLookup(name, root) {
   form.requestSubmit();
 }
 
-function createChooser(direction, names, root, anchor) {
+function createChooser(direction, names, root, card) {
   root.querySelector('.pokemon-evolution-chooser')?.remove();
   const chooser = document.createElement('section');
   chooser.className = 'panel pokemon-evolution-chooser';
@@ -41,16 +41,16 @@ function createChooser(direction, names, root, anchor) {
   close.textContent = 'Close';
   close.addEventListener('click', () => chooser.remove());
   chooser.append(actions, close);
-  anchor.after(chooser);
+  card.after(chooser);
 }
 
-function createDirectionButton(direction, names, root, anchor) {
+function createDirectionButton(direction, names, root, card) {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `pokemon-evolution-side pokemon-evolution-${direction}`;
+  button.className = `pokemon-evolution-button pokemon-evolution-${direction}`;
   button.setAttribute('aria-label', direction === 'previous' ? 'Show previous evolutions' : 'Show next evolutions');
-  button.textContent = direction === 'previous' ? '‹' : '›';
-  button.addEventListener('click', () => createChooser(direction, names, root, anchor));
+  button.textContent = direction === 'previous' ? '‹ Previous' : 'Next ›';
+  button.addEventListener('click', () => createChooser(direction, names, root, card));
   return button;
 }
 
@@ -58,23 +58,16 @@ export function enhancePokemonEvolutionControls(root) {
   if (state.route !== 'study' || state.study.mode !== 'pokemon') return;
   const pokemon = state.study.pokemonResult;
   const card = root.querySelector('.pokemon-result-card');
-  if (!pokemon || !card || card.closest('.pokemon-result-navigation')) return;
+  const visual = card?.querySelector('.pokemon-result-visual');
+  if (!pokemon || !card || !visual || visual.querySelector('.pokemon-evolution-controls')) return;
 
   const previous = pokemon.evolution?.previous ?? [];
   const next = pokemon.evolution?.next ?? [];
   if (!previous.length && !next.length) return;
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'pokemon-result-navigation';
-  card.replaceWith(wrapper);
-
-  const left = previous.length
-    ? createDirectionButton('previous', previous, root, wrapper)
-    : document.createElement('span');
-  const right = next.length
-    ? createDirectionButton('next', next, root, wrapper)
-    : document.createElement('span');
-  left.classList.add('pokemon-evolution-spacer');
-  right.classList.add('pokemon-evolution-spacer');
-  wrapper.append(left, card, right);
+  const controls = document.createElement('div');
+  controls.className = 'pokemon-evolution-controls';
+  if (previous.length) controls.append(createDirectionButton('previous', previous, root, card));
+  if (next.length) controls.append(createDirectionButton('next', next, root, card));
+  visual.append(controls);
 }
