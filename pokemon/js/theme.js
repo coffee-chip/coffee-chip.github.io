@@ -1,9 +1,8 @@
 export const PALETTE_THEMES = ['classic'];
 export const APPEARANCE_PREFERENCES = ['system', 'light', 'dark'];
-export const THEME_PREFERENCES = APPEARANCE_PREFERENCES;
 
-const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-let systemThemeListener = null;
+const systemAppearanceQuery = window.matchMedia('(prefers-color-scheme: dark)');
+let systemAppearanceListener = null;
 
 export function isPaletteTheme(value) {
   return PALETTE_THEMES.includes(value);
@@ -16,17 +15,10 @@ export function isAppearancePreference(value) {
 export function getResolvedAppearance(preference = 'system') {
   if (preference === 'dark') return 'dark';
   if (preference === 'light') return 'light';
-  return systemThemeQuery.matches ? 'dark' : 'light';
+  return systemAppearanceQuery.matches ? 'dark' : 'light';
 }
 
-export function applyTheme(paletteTheme = 'classic', appearance) {
-  // Backward compatibility: applyTheme('dark') means Classic + dark appearance.
-  if (appearance === undefined && isAppearancePreference(paletteTheme)) {
-    appearance = paletteTheme;
-    paletteTheme = 'classic';
-  }
-  appearance ??= 'system';
-
+export function applyTheme(paletteTheme = 'classic', appearance = 'system') {
   const safePalette = isPaletteTheme(paletteTheme) ? paletteTheme : 'classic';
   const safeAppearance = isAppearancePreference(appearance) ? appearance : 'system';
   const resolvedAppearance = getResolvedAppearance(safeAppearance);
@@ -35,15 +27,9 @@ export function applyTheme(paletteTheme = 'classic', appearance) {
   document.documentElement.dataset.appearancePreference = safeAppearance;
   document.documentElement.dataset.appearance = resolvedAppearance;
 
-  // Temporary compatibility for CSS that still checks data-theme.
-  document.documentElement.dataset.theme = resolvedAppearance;
-  document.documentElement.dataset.themePreference = safeAppearance;
-
   const themeColor = document.querySelector('meta[name="theme-color"]');
   if (themeColor) {
-    const computed = getComputedStyle(document.documentElement)
-      .getPropertyValue('--page-background')
-      .trim();
+    const computed = getComputedStyle(document.documentElement).getPropertyValue('--page-background').trim();
     themeColor.content = computed || (resolvedAppearance === 'dark' ? '#111827' : '#f7f7f8');
   }
 
@@ -51,21 +37,17 @@ export function applyTheme(paletteTheme = 'classic', appearance) {
 }
 
 export function watchSystemTheme(getSettings) {
-  if (systemThemeListener) systemThemeQuery.removeEventListener('change', systemThemeListener);
+  if (systemAppearanceListener) systemAppearanceQuery.removeEventListener('change', systemAppearanceListener);
 
-  systemThemeListener = () => {
+  systemAppearanceListener = () => {
     const settings = getSettings();
-    const appearance = typeof settings === 'string' ? settings : settings?.appearance;
-    if (appearance === 'system') {
-      const paletteTheme = typeof settings === 'object' ? settings.paletteTheme : 'classic';
-      applyTheme(paletteTheme, 'system');
-    }
+    if (settings?.appearance === 'system') applyTheme(settings.paletteTheme, 'system');
   };
-  systemThemeQuery.addEventListener('change', systemThemeListener);
+  systemAppearanceQuery.addEventListener('change', systemAppearanceListener);
 
   return () => {
-    if (!systemThemeListener) return;
-    systemThemeQuery.removeEventListener('change', systemThemeListener);
-    systemThemeListener = null;
+    if (!systemAppearanceListener) return;
+    systemAppearanceQuery.removeEventListener('change', systemAppearanceListener);
+    systemAppearanceListener = null;
   };
 }
