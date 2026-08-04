@@ -8,7 +8,7 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   settings: {
     paletteTheme: 'classic',
     appearance: 'system',
-    developer: { autoUpdateOnLaunch: false, showOverlay: false },
+    developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
     quiz: {
       defaultMode: 'select-all',
       common: {},
@@ -49,7 +49,8 @@ function normalizeSettings(value) {
     appearance: validAppearances.has(value.appearance) ? value.appearance : defaults.appearance,
     developer: {
       autoUpdateOnLaunch: developer.autoUpdateOnLaunch === true,
-      showOverlay: developer.showOverlay === true
+      showOverlay: developer.showOverlay === true,
+      showErrorOverlay: developer.showErrorOverlay === true
     },
     quiz: {
       defaultMode,
