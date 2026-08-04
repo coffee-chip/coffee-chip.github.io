@@ -1,6 +1,5 @@
 export const PALETTE_THEMES = ['classic'];
 export const APPEARANCE_PREFERENCES = ['system', 'light', 'dark'];
-// Compatibility export for callers not yet renamed.
 export const THEME_PREFERENCES = APPEARANCE_PREFERENCES;
 
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -20,7 +19,14 @@ export function getResolvedAppearance(preference = 'system') {
   return systemThemeQuery.matches ? 'dark' : 'light';
 }
 
-export function applyTheme(paletteTheme = 'classic', appearance = 'system') {
+export function applyTheme(paletteTheme = 'classic', appearance) {
+  // Backward compatibility: applyTheme('dark') means Classic + dark appearance.
+  if (appearance === undefined && isAppearancePreference(paletteTheme)) {
+    appearance = paletteTheme;
+    paletteTheme = 'classic';
+  }
+  appearance ??= 'system';
+
   const safePalette = isPaletteTheme(paletteTheme) ? paletteTheme : 'classic';
   const safeAppearance = isAppearancePreference(appearance) ? appearance : 'system';
   const resolvedAppearance = getResolvedAppearance(safeAppearance);
