@@ -15,32 +15,24 @@ function installStyles() {
     .pokemon-lookup-form label { position: relative; }
     .pokemon-autocomplete-list {
       position: absolute; z-index: 20; top: 100%; right: 0; left: 0;
-      overflow: hidden; margin-top: .25rem; border: 1px solid var(--border);
-      border-radius: .55rem; background: var(--surface);
+      overflow: hidden; margin-top: .25rem; border: 1px solid var(--border-default);
+      border-radius: .55rem; background: var(--panel-background);
       box-shadow: 0 .5rem 1.25rem rgb(0 0 0 / .16);
     }
     .pokemon-autocomplete-option {
       display: block; width: 100%; min-height: 2.5rem; padding: .55rem .7rem;
-      border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
-      background: var(--surface); color: var(--text); text-align: left;
+      border: 0; border-bottom: 1px solid var(--border-default); border-radius: 0;
+      background: var(--panel-background); color: var(--text-primary); text-align: left;
     }
     .pokemon-autocomplete-option:last-child { border-bottom: 0; }
     .pokemon-autocomplete-option:active,
-    .pokemon-autocomplete-option:focus-visible { background: var(--surface-subtle); }
+    .pokemon-autocomplete-option:focus-visible { background: var(--subtle-background); }
   `;
   document.head.append(style);
 }
 
-function displayName(name) {
-  return name.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ');
-}
-
-function closeSuggestions() {
-  suggestionList?.remove();
-  suggestionList = null;
-  activeInput?.setAttribute('aria-expanded', 'false');
-}
-
+function displayName(name) { return name.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' '); }
+function closeSuggestions() { suggestionList?.remove(); suggestionList = null; activeInput?.setAttribute('aria-expanded', 'false'); }
 function findMatches(query) {
   const normalized = query.trim().toLowerCase();
   if (!normalized || /^\d+$/.test(normalized)) return [];
@@ -55,14 +47,11 @@ function renderSuggestions(input) {
   input.removeAttribute('list');
   input.setAttribute('autocomplete', 'off');
   input.setAttribute('aria-autocomplete', 'list');
-
   const matches = findMatches(input.value);
   if (!matches.length) return;
-
   const list = document.createElement('div');
   list.className = 'pokemon-autocomplete-list';
   list.setAttribute('role', 'listbox');
-
   for (const name of matches) {
     const option = document.createElement('button');
     option.type = 'button';
@@ -78,36 +67,17 @@ function renderSuggestions(input) {
     });
     list.append(option);
   }
-
-  const label = input.closest('label');
-  (label ?? input.parentElement).append(list);
+  (input.closest('label') ?? input.parentElement).append(list);
   suggestionList = list;
   input.setAttribute('aria-expanded', 'true');
 }
 
 export function initializePokemonAutocomplete() {
   installStyles();
-
-  document.addEventListener('input', event => {
-    const input = event.target.closest?.(INPUT_SELECTOR);
-    if (!input) return;
-    renderSuggestions(input);
-  });
-
-  document.addEventListener('focusin', event => {
-    const input = event.target.closest?.(INPUT_SELECTOR);
-    if (!input) return;
-    renderSuggestions(input);
-  });
-
-  document.addEventListener('focusout', event => {
-    if (event.target === activeInput) window.setTimeout(closeSuggestions, 0);
-  });
-
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && event.target === activeInput) closeSuggestions();
-  });
-
+  document.addEventListener('input', event => { const input = event.target.closest?.(INPUT_SELECTOR); if (input) renderSuggestions(input); });
+  document.addEventListener('focusin', event => { const input = event.target.closest?.(INPUT_SELECTOR); if (input) renderSuggestions(input); });
+  document.addEventListener('focusout', event => { if (event.target === activeInput) window.setTimeout(closeSuggestions, 0); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && event.target === activeInput) closeSuggestions(); });
   document.addEventListener('pokemon-name-index-ready', event => {
     if (Array.isArray(event.detail?.names)) names = event.detail.names;
     if (activeInput?.isConnected && document.activeElement === activeInput) renderSuggestions(activeInput);
