@@ -21,21 +21,26 @@ export function getQuizMode(modeId) {
   return preset;
 }
 
-function recognitionOptions(modeId) {
-  if (modeId !== 'pokemon-type-recognition') return {};
+function recentMetadataValues(field) {
+  const completed = state.quiz.session.results
+    .map(result => result.metadata?.[field])
+    .filter(value => value !== undefined && value !== null);
+  const current = state.quiz.question?.metadata?.[field];
+  return [...completed, ...(current !== undefined && current !== null ? [current] : [])].slice(-5);
+}
+
+function presetOptions(modeId) {
   const settings = state.settings.quiz.modes[modeId] ?? {};
-  const completedIds = state.quiz.session.results
-    .map(result => Number(result.metadata?.pokemonId))
-    .filter(Number.isInteger);
-  const currentId = Number(state.quiz.question?.metadata?.pokemonId);
-  const recentPokemonIds = [
-    ...completedIds,
-    ...(Number.isInteger(currentId) ? [currentId] : [])
-  ].slice(-5);
+  if (modeId === 'pokemon-type-recognition') {
+    return {
+      poolId: settings.pokemonPool ?? 'gen-1',
+      samplingStrategy: settings.samplingStrategy ?? 'adaptive',
+      recentPokemonIds: recentMetadataValues('pokemonId').map(Number).filter(Number.isInteger)
+    };
+  }
   return {
-    poolId: settings.pokemonPool ?? 'gen-1',
     samplingStrategy: settings.samplingStrategy ?? 'adaptive',
-    recentPokemonIds
+    recentPromptKeys: recentMetadataValues('promptKey').filter(value => typeof value === 'string')
   };
 }
 
@@ -47,7 +52,7 @@ export async function createQuestionForMode(modeId, options = {}) {
   const useDualTypes = mixDualTypes && Math.random() < dualTypeChance;
   const question = await generator.createQuestion({
     ...options,
-    ...recognitionOptions(modeId),
+    ...presetOptions(modeId),
     defenderCount: useDualTypes ? 2 : 1
   });
 
