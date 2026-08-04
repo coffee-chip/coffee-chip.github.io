@@ -9,21 +9,13 @@ function result(name, passed, detail = '') { return { name, passed, detail }; }
 function validateRelationships(question) {
   if (!Array.isArray(question.relationships)) return 'Missing relationships array';
   for (const relationship of question.relationships) {
-    if (!relationship?.key || !relationship.attackingType || !relationship.defendingType || !relationship.answer) {
-      return 'Relationship missing key, types, or answer';
-    }
+    if (!relationship?.key || !relationship.attackingType || !relationship.defendingType || !relationship.answer) return 'Relationship missing key, types, or answer';
     try {
       const parsed = parseRelationshipKey(relationship.key);
-      if (parsed.attackingType !== relationship.attackingType || parsed.defendingType !== relationship.defendingType) {
-        return `Relationship fields do not match key ${relationship.key}`;
-      }
-    } catch (error) {
-      return error.message;
-    }
+      if (parsed.attackingType !== relationship.attackingType || parsed.defendingType !== relationship.defendingType) return `Relationship fields do not match key ${relationship.key}`;
+    } catch (error) { return error.message; }
     if (!question.choices.includes(relationship.answer)) return `Relationship answer is not a choice: ${relationship.answer}`;
-    if (relationship.allowedOutcomes && relationship.allowedOutcomes.some(value => !['correct', 'missed', 'false-selection'].includes(value))) {
-      return `Invalid allowed outcome for ${relationship.key}`;
-    }
+    if (relationship.allowedOutcomes && relationship.allowedOutcomes.some(value => !['correct', 'missed', 'false-selection'].includes(value))) return `Invalid allowed outcome for ${relationship.key}`;
   }
   return '';
 }
@@ -34,6 +26,10 @@ export function validateQuizArchitecture() {
     results.push(result(`Generator ${generator.id} has a registered objective`, Boolean(LEARNING_OBJECTIVES[generator.objectiveId]), generator.objectiveId));
     results.push(result(`Generator ${generator.id} has a registered format`, Boolean(INTERACTION_FORMATS[generator.formatId]), generator.formatId));
     if (generator.config?.criterion) results.push(result(`Generator ${generator.id} has a registered criterion`, Boolean(MOVE_CRITERIA[generator.config.criterion]), generator.config.criterion));
+    if (generator.async) {
+      results.push(result(`Generator ${generator.id} declares asynchronous generation`, true, 'Runtime validation deferred to quiz loading'));
+      continue;
+    }
     try {
       const question = generator.createQuestion();
       const required = ['id', 'generatorId', 'objectiveId', 'formatId', 'prompt', 'answerType', 'choices', 'correctAnswers', 'relationships'];
