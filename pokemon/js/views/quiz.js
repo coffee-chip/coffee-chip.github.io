@@ -18,6 +18,10 @@ import { parseRelationshipKey } from '../relationships.js';
 
 let questionLoadError = '';
 let questionLoadToken = 0;
+let prefetchedQuestion = null;
+let prefetchPromise = null;
+let prefetchMode = null;
+let prefetchSessionToken = 0;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -28,9 +32,62 @@ function el(tag, options = {}) {
 
 function formatPercent(score) { return `${Math.round(score * 100)}%`; }
 
-async function createNextQuestion(refreshQuiz) {
+function questionOptions(modeId) {
+  const modeSettings = getQuizModeSettings(modeId);
+  return { mixDualTypes: modeSettings.mixDualTypes === true };
+}
+
+function clearPrefetch() {
+  prefetchedQuestion = null;
+  prefetchPromise = null;
+  prefetchMode = null;
+  prefetchSessionToken += 1;
+}
+
+function hasAnotherQuestionAfterCurrent() {
+  const { length, questionNumber } = state.quiz.session;
+  return length === 0 || questionNumber < length;
+}
+
+function startQuestionPrefetch() {
+  if (!hasAnotherQuestionAfterCurrent() || prefetchPromise || prefetchedQuestion) return;
+  const modeId = state.quiz.session.mode;
+  const sessionToken = prefetchSessionToken;
+  prefetchMode = modeId;
+  prefetchPromise = Promise.resolve(createQuestionForMode(modeId, questionOptions(modeId)))
+    .then(question => {
+      if (sessionToken !== prefetchSessionToken || prefetchMode !== modeId) return null;
+      prefetchedQuestion = question;
+      return question;
+    })
+    .catch(error => {
+      console.warn('Could not prefetch the next quiz question.', error);
+      return null;
+    })
+    .finally(() => {
+      if (sessionToken === prefetchSessionToken) prefetchPromise = null;
+    });
+}
+
+async function consumePrefetchedQuestion(modeId) {
+  if (prefetchMode !== modeId) return null;
+  if (prefetchedQuestion) {
+    const question = prefetchedQuestion;
+    prefetchedQuestion = null;
+    prefetchMode = null;
+    return question;
+  }
+  if (!prefetchPromise) return null;
+  const question = await prefetchPromise;
+  if (!question || prefetchMode !== modeId) return null;
+  prefetchedQuestion = null;
+  prefetchMode = null;
+  return question;
+}
+
+async function createNextQuestion(refreshQuiz, { usePrefetch = false } = {}) {
   const token = ++questionLoadToken;
-  const modeSettings = getQuizModeSettings(state.quiz.session.mode);
+  const modeId = state.quiz.session.mode;
   state.quiz.question = null;
   state.quiz.selectedAnswers = new Set();
   state.quiz.result = null;
@@ -38,12 +95,12 @@ async function createNextQuestion(refreshQuiz) {
   questionLoadError = '';
   refreshQuiz();
   try {
-    const question = await createQuestionForMode(state.quiz.session.mode, {
-      mixDualTypes: modeSettings.mixDualTypes === true
-    });
+    let question = usePrefetch ? await consumePrefetchedQuestion(modeId) : null;
+    if (!question) question = await createQuestionForMode(modeId, questionOptions(modeId));
     if (token !== questionLoadToken) return;
     state.quiz.question = question;
     state.quiz.status = 'answering';
+    startQuestionPrefetch();
   } catch (error) {
     if (token !== questionLoadToken) return;
     questionLoadError = error?.message ?? 'Could not load the next question.';
@@ -53,6 +110,7 @@ async function createNextQuestion(refreshQuiz) {
 }
 
 function beginSession(length, refreshQuiz) {
+  clearPrefetch();
   startQuizSession(length);
   saveSettings(state.settings);
   createNextQuestion(refreshQuiz);
@@ -158,6 +216,7 @@ function buildQuizSetup(refreshQuiz) {
 
   populateModeOptions();
   modeSelect.addEventListener('change', () => {
+    clearPrefetch();
     state.quiz.mode = modeSelect.value;
     state.settings.quiz.defaultMode = modeSelect.value;
     getQuizModeSettings(modeSelect.value);
@@ -202,7 +261,7 @@ function buildQuestionDisplay(question) {
   return figure;
 }
 
-function buildLoadingQuestion(refreshQuiz) {
+function buildLoadingQuestion() {
   const fragment = document.createDocumentFragment();
   fragment.append(buildSessionHeader());
   const panel = el('div', { className: 'panel quiz-loading-panel' });
@@ -255,14 +314,19 @@ function buildActiveQuestion(refreshQuiz) {
     const isLast = state.quiz.session.length !== 0 && state.quiz.session.questionNumber >= state.quiz.session.length;
     const next = el('button', { text: isLast ? 'See summary' : 'Next question' });
     next.addEventListener('click', () => {
-      if (!advanceQuizSession()) { refreshQuiz(); return; }
-      createNextQuestion(refreshQuiz);
+      if (!advanceQuizSession()) { clearPrefetch(); refreshQuiz(); return; }
+      createNextQuestion(refreshQuiz, { usePrefetch: true });
     });
     actions.append(next);
   }
   if (state.quiz.session.length === 0) {
     const end = el('button', { className: 'secondary-button', text: 'End session' });
-    end.addEventListener('click', () => { questionLoadToken += 1; endQuizSession(); refreshQuiz(); });
+    end.addEventListener('click', () => {
+      questionLoadToken += 1;
+      clearPrefetch();
+      endQuizSession();
+      refreshQuiz();
+    });
     actions.append(end);
   }
   panel.append(actions);
@@ -280,7 +344,12 @@ function buildSessionSummary(refreshQuiz) {
   const again = el('button', { text: 'Quiz again' });
   again.addEventListener('click', () => beginSession(state.quiz.session.length, refreshQuiz));
   const setup = el('button', { className: 'secondary-button', text: 'Change setup' });
-  setup.addEventListener('click', () => { questionLoadToken += 1; returnToQuizSetup(); refreshQuiz(); });
+  setup.addEventListener('click', () => {
+    questionLoadToken += 1;
+    clearPrefetch();
+    returnToQuizSetup();
+    refreshQuiz();
+  });
   actions.append(again, setup);
   panel.append(actions);
   return panel;
@@ -294,7 +363,7 @@ export function renderQuiz(container) {
   function refreshQuiz() {
     if (state.quiz.status === 'idle') quizBody.replaceChildren(buildQuizSetup(refreshQuiz));
     else if (state.quiz.status === 'complete') quizBody.replaceChildren(buildSessionSummary(refreshQuiz));
-    else if (state.quiz.status === 'loading') quizBody.replaceChildren(buildLoadingQuestion(refreshQuiz));
+    else if (state.quiz.status === 'loading') quizBody.replaceChildren(buildLoadingQuestion());
     else if (state.quiz.status === 'load-error') quizBody.replaceChildren(buildLoadError(refreshQuiz));
     else quizBody.replaceChildren(buildActiveQuestion(refreshQuiz));
   }
