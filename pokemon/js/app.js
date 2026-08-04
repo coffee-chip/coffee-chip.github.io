@@ -11,6 +11,7 @@ import { enhancePokemonEvolutionControls } from './components/pokemonEvolutionCo
 import { enhanceStudyTabs } from './components/studyTabs.js';
 import { enhanceQuizRecognitionSettings } from './components/quizRecognitionSettings.js';
 import { enhanceQuizExitControl } from './components/quizExitControl.js';
+import { initializeQuizAutoScroll } from './components/quizAutoScroll.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
@@ -20,6 +21,7 @@ hydratePersistentState(loadPersistentData());
 applyTheme(state.settings.paletteTheme, state.settings.appearance);
 watchSystemTheme(() => ({ paletteTheme: state.settings.paletteTheme, appearance: state.settings.appearance }));
 initializePokemonAutocomplete();
+initializeQuizAutoScroll();
 
 const viewRoot = document.querySelector('#app-view');
 const navLinks = [...document.querySelectorAll('[data-route]')];
