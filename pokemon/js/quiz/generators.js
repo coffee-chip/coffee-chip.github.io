@@ -115,42 +115,105 @@ function choosePromptTypes(count, direction, samplingStrategy, recentPromptKeys)
 
 export const MOVE_CRITERIA = {
   'more-effective': {
-    id: 'more-effective', label: 'more effective than neutral', matches: multiplier => multiplier > 1,
-    prompt: defendingTypes => `Which move types are more effective than neutral against ${labelTypes(defendingTypes)}?`,
-    explanation: defendingTypes => `The highlighted move types deal more than 1× damage to ${labelTypes(defendingTypes)}.`
+    id: 'more-effective',
+    label: 'more effective than neutral',
+    matches: multiplier => multiplier > 1,
+    prompt: defendingTypes => `Which move types are more effective than neutral against ${labelTypes(defendingTypes)}?`
   },
-  'not-very-effective': {
-    id: 'not-very-effective', label: 'less effective than neutral', matches: multiplier => multiplier < 1,
-    prompt: defendingTypes => `Which move types are less effective than neutral against ${labelTypes(defendingTypes)}?`,
-    explanation: defendingTypes => `The highlighted move types deal less than 1× damage to ${labelTypes(defendingTypes)}.`
+  'less-effective': {
+    id: 'less-effective',
+    label: 'less effective than neutral',
+    matches: multiplier => multiplier < 1,
+    prompt: defendingTypes => `Which move types are less effective than neutral against ${labelTypes(defendingTypes)}?`
   }
 };
 
-export function createUnsafeSwitchQuestion({ defenderCount = 1, samplingStrategy = 'adaptive', recentPromptKeys = [] } = {}) {
-  const attackingTypes = choosePromptTypes(defenderCount, 'attacking', samplingStrategy, recentPromptKeys);
-  const isDual = attackingTypes.length === 2;
-  const correctAnswers = TYPES.filter(defendingType => attackingTypes.some(attackingType => getMultiplier(attackingType, [defendingType]) > 1));
+export const SWITCH_CRITERIA = {
+  unsafe: {
+    id: 'unsafe',
+    label: 'weak',
+    qualifies: multipliers => multipliers.some(multiplier => multiplier > 1),
+    componentMatches: multiplier => multiplier > 1,
+    prompt: attackingTypes => attackingTypes.length === 1
+      ? `Which Pokémon types are weak to ${labelTypes(attackingTypes)} attacks?`
+      : `Which single Pokémon types are weak to at least one of ${labelTypes(attackingTypes)} attacks?`
+  },
+  safe: {
+    id: 'safe',
+    label: 'resistant or immune',
+    qualifies: multipliers => multipliers.every(multiplier => multiplier < 1),
+    componentMatches: multiplier => multiplier < 1,
+    prompt: attackingTypes => attackingTypes.length === 1
+      ? `Which Pokémon types resist or are immune to ${labelTypes(attackingTypes)} attacks?`
+      : `Which single Pokémon types resist or are immune to all of ${labelTypes(attackingTypes)} attacks?`
+  }
+};
+
+export function createChooseSwitchQuestion({
+  criterion = 'unsafe',
+  attackerCount = 1,
+  defenderCount,
+  generatorId = criterion === 'safe' ? 'choose-switch-safe' : 'choose-switch-unsafe',
+  samplingStrategy = 'adaptive',
+  recentPromptKeys = []
+} = {}) {
+  const criterionDefinition = SWITCH_CRITERIA[criterion];
+  if (!criterionDefinition) throw new Error(`Unknown choose-switch criterion: ${criterion}`);
+  const count = defenderCount ?? attackerCount;
+  if (![1, 2].includes(count)) throw new Error('Choose-switch questions support one or two attacking types.');
+  const attackingTypes = choosePromptTypes(count, 'attacking', samplingStrategy, recentPromptKeys);
+  const correctAnswers = TYPES.filter(defendingType => {
+    const multipliers = attackingTypes.map(attackingType => getMultiplier(attackingType, [defendingType]));
+    return criterionDefinition.qualifies(multipliers);
+  });
   const relationships = [];
   for (const defendingType of TYPES) {
-    const componentMatches = attackingTypes.map(attackingType => ({ attackingType, matches: getMultiplier(attackingType, [defendingType]) > 1 }));
-    const overallCorrect = componentMatches.some(item => item.matches);
-    for (const item of componentMatches) {
-      if (item.matches) relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['correct', 'missed']));
-      else if (!overallCorrect) relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['false-selection']));
+    const components = attackingTypes.map(attackingType => {
+      const multiplier = getMultiplier(attackingType, [defendingType]);
+      return { attackingType, multiplier, matches: criterionDefinition.componentMatches(multiplier) };
+    });
+    const overallCorrect = criterionDefinition.qualifies(components.map(component => component.multiplier));
+    for (const component of components) {
+      if (overallCorrect && component.matches) {
+        relationships.push(questionRelationship(component.attackingType, defendingType, defendingType, ['correct', 'missed']));
+      } else if (!overallCorrect && !component.matches) {
+        relationships.push(questionRelationship(component.attackingType, defendingType, defendingType, ['false-selection']));
+      }
     }
   }
   const promptKey = `attacking:${attackingTypes.join('+')}`;
   return {
-    id: `choose-switch-unsafe:${attackingTypes.join('-')}`, generatorId: 'choose-switch-unsafe', objectiveId: 'choose-switch',
+    id: `${generatorId}:${criterion}:${attackingTypes.join('-')}`,
+    generatorId,
+    objectiveId: 'choose-switch',
     formatId: 'type-multi-select',
-    prompt: isDual ? `Which single Pokémon types are weak to at least one of ${labelTypes(attackingTypes)} attacks?` : `Which Pokémon types are weak to ${labelTypes(attackingTypes)} attacks?`,
-    answerType: 'type-multi-select', choices: [...TYPES], correctAnswers, relationships,
-    explanation: isDual ? `The highlighted types take more than 1× damage from at least one of ${labelTypes(attackingTypes)}.` : `${labelTypes(attackingTypes)} attacks deal 2× damage to the highlighted types, making them risky switch-ins.`,
-    metadata: { battleDecision: 'choose-switch', criterion: 'more-effective', outcome: 'unsafe', attackingTypes, attackerTypeCount: attackingTypes.length, promptKey, samplingStrategy }
+    prompt: criterionDefinition.prompt(attackingTypes),
+    answerType: 'type-multi-select',
+    choices: [...TYPES],
+    correctAnswers,
+    relationships,
+    metadata: {
+      battleDecision: 'choose-switch',
+      criterion,
+      attackingTypes,
+      attackerTypeCount: attackingTypes.length,
+      promptKey,
+      samplingStrategy
+    }
   };
 }
 
-export function createChooseMoveQuestion({ criterion = 'more-effective', defenderCount = 1, generatorId = 'choose-move-more-effective', samplingStrategy = 'adaptive', recentPromptKeys = [] } = {}) {
+export function createUnsafeSwitchQuestion(options = {}) {
+  return createChooseSwitchQuestion({ ...options, criterion: 'unsafe', generatorId: 'choose-switch-unsafe' });
+}
+
+export function createChooseMoveQuestion({
+  criterion = 'more-effective',
+  defenderCount = 1,
+  generatorId = criterion === 'less-effective' ? 'choose-move-less-effective' : 'choose-move-more-effective',
+  samplingStrategy = 'adaptive',
+  recentPromptKeys = []
+} = {}) {
   const criterionDefinition = MOVE_CRITERIA[criterion];
   if (!criterionDefinition) throw new Error(`Unknown choose-move criterion: ${criterion}`);
   if (![1, 2].includes(defenderCount)) throw new Error('Choose-move questions support one or two defending types.');
@@ -159,39 +222,94 @@ export function createChooseMoveQuestion({ criterion = 'more-effective', defende
   const relationships = [];
   for (const attackingType of TYPES) {
     const combinedMatches = criterionDefinition.matches(getMultiplier(attackingType, defendingTypes));
-    const components = defendingTypes.map(defendingType => ({ defendingType, matches: criterionDefinition.matches(getMultiplier(attackingType, [defendingType])) }));
+    const components = defendingTypes.map(defendingType => ({
+      defendingType,
+      matches: criterionDefinition.matches(getMultiplier(attackingType, [defendingType]))
+    }));
     for (const component of components) {
-      if (combinedMatches && component.matches) relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['correct', 'missed']));
-      else if (!combinedMatches && components.every(item => !item.matches)) relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['false-selection']));
+      if (combinedMatches && component.matches) {
+        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['correct', 'missed']));
+      } else if (!combinedMatches && components.every(item => !item.matches)) {
+        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['false-selection']));
+      }
     }
   }
   const promptKey = `defending:${defendingTypes.join('+')}`;
   return {
-    id: `${generatorId}:${criterion}:${defendingTypes.join('-')}`, generatorId, objectiveId: 'choose-move', formatId: 'type-multi-select',
-    prompt: criterionDefinition.prompt(defendingTypes), answerType: 'type-multi-select', choices: [...TYPES], correctAnswers, relationships,
-    explanation: criterionDefinition.explanation(defendingTypes),
-    metadata: { battleDecision: 'choose-move', criterion, defendingTypes, defenderCount, threshold: criterion === 'more-effective' ? '>1' : '<1', promptKey, samplingStrategy }
+    id: `${generatorId}:${criterion}:${defendingTypes.join('-')}`,
+    generatorId,
+    objectiveId: 'choose-move',
+    formatId: 'type-multi-select',
+    prompt: criterionDefinition.prompt(defendingTypes),
+    answerType: 'type-multi-select',
+    choices: [...TYPES],
+    correctAnswers,
+    relationships,
+    metadata: {
+      battleDecision: 'choose-move',
+      criterion,
+      defendingTypes,
+      defenderCount,
+      threshold: criterion === 'more-effective' ? '>1' : '<1',
+      promptKey,
+      samplingStrategy
+    }
   };
 }
 
 export async function createPokemonTypeRecognitionQuestion({ poolId = 'gen-1', samplingStrategy = 'adaptive', recentPokemonIds = [] } = {}) {
   const ids = idsForPool(poolId);
-  const id = samplingStrategy === 'random' ? randomItem(ids) : weightedRandom(ids, pokemonId => getPokemonSamplingWeight(pokemonId, recentPokemonIds));
+  const id = samplingStrategy === 'random'
+    ? randomItem(ids)
+    : weightedRandom(ids, pokemonId => getPokemonSamplingWeight(pokemonId, recentPokemonIds));
   const { pokemon } = await getPokemon(id);
   return {
     id: `recognize-pokemon-type:${pokemon.id}:${Date.now()}`,
-    generatorId: 'recognize-pokemon-type', objectiveId: 'recognize-pokemon-type', formatId: 'type-multi-select',
-    prompt: `What type or types is ${pokemon.displayName}?`, answerType: 'type-multi-select', choices: [...TYPES],
-    correctAnswers: [...pokemon.types], relationships: [], display: { kind: 'pokemon', pokemon },
-    metadata: { pokemonId: pokemon.id, pokemonName: pokemon.name, pool: poolId, samplingStrategy, promptKey: `pokemon:${pokemon.id}` }
+    generatorId: 'recognize-pokemon-type',
+    objectiveId: 'recognize-pokemon-type',
+    formatId: 'type-multi-select',
+    prompt: `What type or types is ${pokemon.displayName}?`,
+    answerType: 'type-multi-select',
+    choices: [...TYPES],
+    correctAnswers: [...pokemon.types],
+    relationships: [],
+    display: { kind: 'pokemon', pokemon },
+    metadata: {
+      pokemonId: pokemon.id,
+      pokemonName: pokemon.name,
+      pool: poolId,
+      samplingStrategy,
+      promptKey: `pokemon:${pokemon.id}`
+    }
   };
 }
 
+const chooseSwitchUnsafeConfig = { criterion: 'unsafe', attackerCount: 1 };
+const chooseSwitchSafeConfig = { criterion: 'safe', attackerCount: 1 };
 const chooseMoveMoreEffectiveConfig = { criterion: 'more-effective', defenderCount: 1 };
+const chooseMoveLessEffectiveConfig = { criterion: 'less-effective', defenderCount: 1 };
+
 export const QUESTION_GENERATORS = {
-  'choose-switch-unsafe': { id: 'choose-switch-unsafe', objectiveId: 'choose-switch', formatId: 'type-multi-select', createQuestion: options => createUnsafeSwitchQuestion(options) },
-  'choose-move-more-effective': { id: 'choose-move-more-effective', objectiveId: 'choose-move', formatId: 'type-multi-select', config: chooseMoveMoreEffectiveConfig, createQuestion: options => createChooseMoveQuestion({ ...chooseMoveMoreEffectiveConfig, ...options, generatorId: 'choose-move-more-effective' }) },
-  'recognize-pokemon-type': { id: 'recognize-pokemon-type', objectiveId: 'recognize-pokemon-type', formatId: 'type-multi-select', async: true, createQuestion: options => createPokemonTypeRecognitionQuestion(options) }
+  'choose-switch-unsafe': {
+    id: 'choose-switch-unsafe', objectiveId: 'choose-switch', formatId: 'type-multi-select', config: chooseSwitchUnsafeConfig,
+    createQuestion: options => createChooseSwitchQuestion({ ...chooseSwitchUnsafeConfig, ...options, generatorId: 'choose-switch-unsafe' })
+  },
+  'choose-switch-safe': {
+    id: 'choose-switch-safe', objectiveId: 'choose-switch', formatId: 'type-multi-select', config: chooseSwitchSafeConfig,
+    createQuestion: options => createChooseSwitchQuestion({ ...chooseSwitchSafeConfig, ...options, generatorId: 'choose-switch-safe' })
+  },
+  'choose-move-more-effective': {
+    id: 'choose-move-more-effective', objectiveId: 'choose-move', formatId: 'type-multi-select', config: chooseMoveMoreEffectiveConfig,
+    createQuestion: options => createChooseMoveQuestion({ ...chooseMoveMoreEffectiveConfig, ...options, generatorId: 'choose-move-more-effective' })
+  },
+  'choose-move-less-effective': {
+    id: 'choose-move-less-effective', objectiveId: 'choose-move', formatId: 'type-multi-select', config: chooseMoveLessEffectiveConfig,
+    createQuestion: options => createChooseMoveQuestion({ ...chooseMoveLessEffectiveConfig, ...options, generatorId: 'choose-move-less-effective' })
+  },
+  'recognize-pokemon-type': {
+    id: 'recognize-pokemon-type', objectiveId: 'recognize-pokemon-type', formatId: 'type-multi-select', async: true,
+    createQuestion: options => createPokemonTypeRecognitionQuestion(options)
+  }
 };
 
 export function getQuestionGenerator(generatorId) {
