@@ -9,7 +9,7 @@ import {
 } from '../relationships.js';
 
 const EXPANDED_LIMIT = 30;
-const RECOGNITION_POOL_SIZE = 151;
+const RECOGNITION_POOL_SIZE = 386;
 const expandedSections = new Set();
 
 function el(tag, options = {}) {
