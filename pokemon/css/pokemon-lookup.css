@@ -19,10 +19,12 @@
 .pokemon-result-details .type-badge-list { justify-content: center; }
 .pokemon-dex-number, .pokemon-source { color: var(--text-muted); }
 .pokemon-source { margin: .75rem 0 0; font-size: .84rem; }
-.pokemon-evolution-chooser h3 { margin-top: 0; }
+.pokemon-evolution-chooser-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+.pokemon-evolution-chooser-header h3 { margin: 0; }
+.pokemon-evolution-close { flex: 0 0 auto; width: 2rem; min-height: 2rem; padding: 0; border: 1px solid var(--border-default); border-radius: 999px; background: var(--panel-background); color: var(--text-primary); font-size: 1.25rem; line-height: 1; }
+.pokemon-evolution-close:hover, .pokemon-evolution-close:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
 .pokemon-evolution-options { display: flex; flex-wrap: wrap; gap: .5rem; }
-.pokemon-evolution-options button, .pokemon-evolution-close { min-height: 2.5rem; padding: 0 .75rem; }
-.pokemon-evolution-close { margin-top: .75rem; }
+.pokemon-evolution-options button { min-height: 2.5rem; padding: 0 .75rem; }
 .pokemon-matchups h3 { margin-top: 0; margin-bottom: .25rem; }
 .pokemon-matchups-intro { margin-top: 0; margin-bottom: .8rem; }
 .pokemon-matchup-group { margin-top: .75rem; }
