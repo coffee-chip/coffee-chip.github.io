@@ -1,33 +1,22 @@
 import { createRelationshipKey, parseRelationshipKey } from './relationships.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 4;
+export const STORAGE_VERSION = 5;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
   settings: {
-    theme: 'system',
-    developer: {
-      autoUpdateOnLaunch: false,
-      showOverlay: false
-    },
+    paletteTheme: 'classic',
+    appearance: 'system',
+    developer: { autoUpdateOnLaunch: false, showOverlay: false },
     quiz: {
       defaultMode: 'select-all',
       common: {},
-      modes: {
-        'select-all': { questionCount: 10 }
-      }
+      modes: { 'select-all': { questionCount: 10 } }
     }
   },
-  progress: {
-    totalAnswered: 0,
-    totalScore: 0,
-    relationshipStats: {}
-  },
-  cache: {
-    pokemon: {},
-    pokemonNameIndex: null
-  }
+  progress: { totalAnswered: 0, totalScore: 0, relationshipStats: {} },
+  cache: { pokemon: {}, pokemonNameIndex: null }
 });
 
 function cloneDefaults() { return structuredClone(DEFAULT_PERSISTENT_DATA); }
@@ -44,7 +33,8 @@ function normalizeModeSettings(value, fallback = {}) {
 function normalizeSettings(value) {
   const defaults = cloneDefaults().settings;
   if (!isObject(value)) return defaults;
-  const validThemes = new Set(['system', 'light', 'dark']);
+  const validPalettes = new Set(['classic']);
+  const validAppearances = new Set(['system', 'light', 'dark']);
   const quiz = isObject(value.quiz) ? value.quiz : {};
   const developer = isObject(value.developer) ? value.developer : {};
   const defaultMode = typeof quiz.defaultMode === 'string' ? quiz.defaultMode : defaults.quiz.defaultMode;
@@ -55,7 +45,8 @@ function normalizeSettings(value) {
     modes[modeId] = normalizeModeSettings(rawModes[modeId], defaults.quiz.modes[modeId] ?? defaults.quiz.modes['select-all']);
   }
   return {
-    theme: validThemes.has(value.theme) ? value.theme : defaults.theme,
+    paletteTheme: validPalettes.has(value.paletteTheme) ? value.paletteTheme : defaults.paletteTheme,
+    appearance: validAppearances.has(value.appearance) ? value.appearance : defaults.appearance,
     developer: {
       autoUpdateOnLaunch: developer.autoUpdateOnLaunch === true,
       showOverlay: developer.showOverlay === true
@@ -73,7 +64,6 @@ function normalizeRelationshipStats(value) {
   const normalized = {};
   for (const [storedKey, record] of Object.entries(value)) {
     if (!isObject(record)) continue;
-
     let relationship;
     try {
       relationship = parseRelationshipKey(storedKey);
@@ -84,18 +74,14 @@ function normalizeRelationshipStats(value) {
           attackingType: record.attackingType,
           defendingType: record.defendingType
         };
-      } catch {
-        continue;
-      }
+      } catch { continue; }
     }
-
     const attempts = Math.floor(nonnegativeNumber(record.attempts));
-    const earnedScore = Math.min(nonnegativeNumber(record.earnedScore), attempts);
     normalized[relationship.key] = {
       attackingType: relationship.attackingType,
       defendingType: relationship.defendingType,
       attempts,
-      earnedScore,
+      earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
       correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
       misses: Math.floor(nonnegativeNumber(record.misses)),
       falseSelections: Math.floor(nonnegativeNumber(record.falseSelections)),
@@ -135,10 +121,7 @@ function migrateV1(raw) {
   const oldLength = normalizeQuestionCount(oldSettings.quizLength, 10);
   return {
     version: STORAGE_VERSION,
-    settings: normalizeSettings({
-      theme: oldSettings.theme,
-      quiz: { defaultMode: oldMode, common: {}, modes: { [oldMode]: { questionCount: oldLength } } }
-    }),
+    settings: normalizeSettings({ quiz: { defaultMode: oldMode, common: {}, modes: { [oldMode]: { questionCount: oldLength } } } }),
     progress: normalizeProgress(raw.progress),
     cache: normalizeCache(raw.cache)
   };
@@ -146,7 +129,7 @@ function migrateV1(raw) {
 
 function migrate(raw) {
   if (!isObject(raw)) return cloneDefaults();
-  if ([2, 3, STORAGE_VERSION].includes(raw.version)) {
+  if ([2, 3, 4, STORAGE_VERSION].includes(raw.version)) {
     return {
       version: STORAGE_VERSION,
       settings: normalizeSettings(raw.settings),
@@ -172,43 +155,17 @@ export function loadPersistentData() {
 }
 
 function write(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    console.warn('Could not save data.', error);
-    return false;
-  }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
+  catch (error) { console.warn('Could not save data.', error); return false; }
 }
 
 export function savePersistentData({ settings, progress, cache }) {
   return write({ version: STORAGE_VERSION, settings: normalizeSettings(settings), progress: normalizeProgress(progress), cache: normalizeCache(cache) });
 }
-
-export function saveSettings(settings) {
-  const current = loadPersistentData();
-  current.settings = normalizeSettings(settings);
-  return write(current);
-}
-
-export function saveProgress(progress) {
-  const current = loadPersistentData();
-  current.progress = normalizeProgress(progress);
-  return write(current);
-}
-
-export function saveCache(cache) {
-  const current = loadPersistentData();
-  current.cache = normalizeCache(cache);
-  return write(current);
-}
-
+export function saveSettings(settings) { const current = loadPersistentData(); current.settings = normalizeSettings(settings); return write(current); }
+export function saveProgress(progress) { const current = loadPersistentData(); current.progress = normalizeProgress(progress); return write(current); }
+export function saveCache(cache) { const current = loadPersistentData(); current.cache = normalizeCache(cache); return write(current); }
 export function clearPersistentData() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-    return true;
-  } catch (error) {
-    console.warn('Could not clear saved data.', error);
-    return false;
-  }
+  try { localStorage.removeItem(STORAGE_KEY); return true; }
+  catch (error) { console.warn('Could not clear saved data.', error); return false; }
 }
