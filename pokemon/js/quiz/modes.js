@@ -3,13 +3,39 @@ import { state } from '../state.js';
 
 export const PRACTICE_PRESETS = {
   'select-all': {
-    id: 'select-all', label: 'Switch-in safety · Select all', objectiveIds: ['choose-switch'], formatIds: ['type-multi-select'], generatorIds: ['choose-switch-unsafe']
+    id: 'select-all',
+    label: 'Choose a switch-in · Weak',
+    objectiveIds: ['choose-switch'],
+    formatIds: ['type-multi-select'],
+    generatorIds: ['choose-switch-unsafe']
+  },
+  'choose-switch-safe': {
+    id: 'choose-switch-safe',
+    label: 'Choose a switch-in · Resistant or immune',
+    objectiveIds: ['choose-switch'],
+    formatIds: ['type-multi-select'],
+    generatorIds: ['choose-switch-safe']
   },
   'choose-move-select-all': {
-    id: 'choose-move-select-all', label: 'Choose a move · Select all', objectiveIds: ['choose-move'], formatIds: ['type-multi-select'], generatorIds: ['choose-move-more-effective']
+    id: 'choose-move-select-all',
+    label: 'Choose a move · More effective',
+    objectiveIds: ['choose-move'],
+    formatIds: ['type-multi-select'],
+    generatorIds: ['choose-move-more-effective']
+  },
+  'choose-move-less-effective': {
+    id: 'choose-move-less-effective',
+    label: 'Choose a move · Resisted or immune',
+    objectiveIds: ['choose-move'],
+    formatIds: ['type-multi-select'],
+    generatorIds: ['choose-move-less-effective']
   },
   'pokemon-type-recognition': {
-    id: 'pokemon-type-recognition', label: 'Recognize Pokémon types', objectiveIds: ['recognize-pokemon-type'], formatIds: ['type-multi-select'], generatorIds: ['recognize-pokemon-type']
+    id: 'pokemon-type-recognition',
+    label: 'Recognize Pokémon types',
+    objectiveIds: ['recognize-pokemon-type'],
+    formatIds: ['type-multi-select'],
+    generatorIds: ['recognize-pokemon-type']
   }
 };
 
@@ -53,7 +79,8 @@ export async function createQuestionForMode(modeId, options = {}) {
   const question = await generator.createQuestion({
     ...options,
     ...presetOptions(modeId),
-    defenderCount: useDualTypes ? 2 : 1
+    defenderCount: useDualTypes ? 2 : 1,
+    attackerCount: useDualTypes ? 2 : 1
   });
 
   if (!preset.objectiveIds.includes(question.objectiveId)) {
