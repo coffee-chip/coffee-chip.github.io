@@ -1,6 +1,6 @@
 import { LEARNING_OBJECTIVES } from './objectives.js';
 import { INTERACTION_FORMATS } from './formats.js';
-import { MOVE_CRITERIA, QUESTION_GENERATORS } from './generators.js';
+import { MOVE_CRITERIA, SWITCH_CRITERIA, QUESTION_GENERATORS } from './generators.js';
 import { PRACTICE_PRESETS } from './modes.js';
 import { parseRelationshipKey } from '../relationships.js';
 
@@ -20,12 +20,19 @@ function validateRelationships(question) {
   return '';
 }
 
+function criterionRegistryFor(generator) {
+  return generator.objectiveId === 'choose-switch' ? SWITCH_CRITERIA : MOVE_CRITERIA;
+}
+
 export function validateQuizArchitecture() {
   const results = [];
   for (const generator of Object.values(QUESTION_GENERATORS)) {
     results.push(result(`Generator ${generator.id} has a registered objective`, Boolean(LEARNING_OBJECTIVES[generator.objectiveId]), generator.objectiveId));
     results.push(result(`Generator ${generator.id} has a registered format`, Boolean(INTERACTION_FORMATS[generator.formatId]), generator.formatId));
-    if (generator.config?.criterion) results.push(result(`Generator ${generator.id} has a registered criterion`, Boolean(MOVE_CRITERIA[generator.config.criterion]), generator.config.criterion));
+    if (generator.config?.criterion) {
+      const criteria = criterionRegistryFor(generator);
+      results.push(result(`Generator ${generator.id} has a registered criterion`, Boolean(criteria[generator.config.criterion]), generator.config.criterion));
+    }
     if (generator.async) {
       results.push(result(`Generator ${generator.id} declares asynchronous generation`, true, 'Runtime validation deferred to quiz loading'));
       continue;
@@ -40,7 +47,7 @@ export function validateQuizArchitecture() {
       const relationshipError = validateRelationships(question);
       results.push(result(`Question relationships are valid for ${generator.id}`, !relationshipError, relationshipError || `${question.relationships.length} component relationships`));
       if (generator.config?.criterion) results.push(result(`Question criterion matches generator ${generator.id}`, question.metadata?.criterion === generator.config.criterion, question.metadata?.criterion ?? 'Missing criterion metadata'));
-      const dualQuestion = generator.createQuestion({ defenderCount: 2 });
+      const dualQuestion = generator.createQuestion({ defenderCount: 2, attackerCount: 2 });
       const dualError = validateRelationships(dualQuestion);
       results.push(result(`Generator ${generator.id} supports dual-type generation`, !dualError, dualError || `${dualQuestion.relationships.length} component relationships`));
     } catch (error) {
