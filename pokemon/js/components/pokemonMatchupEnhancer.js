@@ -57,6 +57,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
 export function enhancePokemonLookupResult(root) {
   dismissMnemonicBanner();
   if (state.route !== 'study' || state.study.mode !== 'pokemon' || !state.study.pokemonResult) return;
+  root.querySelector('.pokemon-source')?.remove();
   if (root.querySelector('.pokemon-matchups')) return;
   const card = root.querySelector('.pokemon-result-card');
   if (!card) return;
