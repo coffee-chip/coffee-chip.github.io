@@ -4,7 +4,6 @@ import {
   startQuizSession,
   recordQuestionResult,
   advanceQuizSession,
-  endQuizSession,
   returnToQuizSetup,
   getSessionAverageScore
 } from '../state.js';
@@ -42,6 +41,21 @@ function clearPrefetch() {
   prefetchPromise = null;
   prefetchMode = null;
   prefetchSessionToken += 1;
+}
+
+function exitQuiz(refreshQuiz) {
+  questionLoadToken += 1;
+  clearPrefetch();
+  dismissFeedbackMnemonic();
+  returnToQuizSetup();
+  refreshQuiz();
+}
+
+function createExitButton(refreshQuiz) {
+  const exit = el('button', { className: 'secondary-button', text: 'Exit quiz' });
+  exit.type = 'button';
+  exit.addEventListener('click', () => exitQuiz(refreshQuiz));
+  return exit;
 }
 
 function hasAnotherQuestionAfterCurrent() {
@@ -261,11 +275,14 @@ function buildQuestionDisplay(question) {
   return figure;
 }
 
-function buildLoadingQuestion() {
+function buildLoadingQuestion(refreshQuiz) {
   const fragment = document.createDocumentFragment();
   fragment.append(buildSessionHeader());
   const panel = el('div', { className: 'panel quiz-loading-panel' });
   panel.append(el('p', { text: 'Loading question…' }));
+  const actions = el('div', { className: 'actions' });
+  actions.append(createExitButton(refreshQuiz));
+  panel.append(actions);
   fragment.append(panel);
   return fragment;
 }
@@ -275,9 +292,11 @@ function buildLoadError(refreshQuiz) {
   fragment.append(buildSessionHeader());
   const panel = el('div', { className: 'panel quiz-loading-panel' });
   panel.append(el('p', { className: 'settings-status error', text: questionLoadError }));
+  const actions = el('div', { className: 'actions' });
   const retry = el('button', { text: 'Retry' });
   retry.addEventListener('click', () => createNextQuestion(refreshQuiz));
-  panel.append(retry);
+  actions.append(retry, createExitButton(refreshQuiz));
+  panel.append(actions);
   fragment.append(panel);
   return fragment;
 }
@@ -319,16 +338,7 @@ function buildActiveQuestion(refreshQuiz) {
     });
     actions.append(next);
   }
-  if (state.quiz.session.length === 0) {
-    const end = el('button', { className: 'secondary-button', text: 'End session' });
-    end.addEventListener('click', () => {
-      questionLoadToken += 1;
-      clearPrefetch();
-      endQuizSession();
-      refreshQuiz();
-    });
-    actions.append(end);
-  }
+  actions.append(createExitButton(refreshQuiz));
   panel.append(actions);
   fragment.append(panel);
   return fragment;
@@ -363,7 +373,7 @@ export function renderQuiz(container) {
   function refreshQuiz() {
     if (state.quiz.status === 'idle') quizBody.replaceChildren(buildQuizSetup(refreshQuiz));
     else if (state.quiz.status === 'complete') quizBody.replaceChildren(buildSessionSummary(refreshQuiz));
-    else if (state.quiz.status === 'loading') quizBody.replaceChildren(buildLoadingQuestion());
+    else if (state.quiz.status === 'loading') quizBody.replaceChildren(buildLoadingQuestion(refreshQuiz));
     else if (state.quiz.status === 'load-error') quizBody.replaceChildren(buildLoadError(refreshQuiz));
     else quizBody.replaceChildren(buildActiveQuestion(refreshQuiz));
   }
