@@ -1,4 +1,5 @@
 import { getQuestionGenerator } from './generators.js';
+import { state } from '../state.js';
 
 export const PRACTICE_PRESETS = {
   'select-all': {
@@ -20,6 +21,24 @@ export function getQuizMode(modeId) {
   return preset;
 }
 
+function recognitionOptions(modeId) {
+  if (modeId !== 'pokemon-type-recognition') return {};
+  const settings = state.settings.quiz.modes[modeId] ?? {};
+  const completedIds = state.quiz.session.results
+    .map(result => Number(result.metadata?.pokemonId))
+    .filter(Number.isInteger);
+  const currentId = Number(state.quiz.question?.metadata?.pokemonId);
+  const recentPokemonIds = [
+    ...completedIds,
+    ...(Number.isInteger(currentId) ? [currentId] : [])
+  ].slice(-5);
+  return {
+    poolId: settings.pokemonPool ?? 'gen-1',
+    samplingStrategy: settings.samplingStrategy ?? 'adaptive',
+    recentPokemonIds
+  };
+}
+
 export async function createQuestionForMode(modeId, options = {}) {
   const { mixDualTypes = false, dualTypeChance = 0.35 } = options;
   const preset = getQuizMode(modeId);
@@ -28,6 +47,7 @@ export async function createQuestionForMode(modeId, options = {}) {
   const useDualTypes = mixDualTypes && Math.random() < dualTypeChance;
   const question = await generator.createQuestion({
     ...options,
+    ...recognitionOptions(modeId),
     defenderCount: useDualTypes ? 2 : 1
   });
 
