@@ -1,5 +1,6 @@
-import { state, getAverageScore } from '../state.js';
+import { state } from '../state.js';
 import { TYPES } from '../data/types.js';
+import { PRACTICE_PRESETS } from '../quiz/modes.js';
 import { createTypeBadge } from '../components/typeBadge.js';
 import {
   createRelationship,
@@ -11,6 +12,7 @@ import {
 const EXPANDED_LIMIT = 30;
 const RECOGNITION_POOL_SIZE = 386;
 const expandedSections = new Set();
+const RECOGNITION_MODES = new Set(['pokemon-type-recognition']);
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -22,6 +24,55 @@ function el(tag, options = {}) {
 function formatPercent(value) { return `${Math.round(value * 100)}%`; }
 function titleCase(value) { return value.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' '); }
 function mastery(record) { return record.attempts ? record.earnedScore / record.attempts : 0; }
+function average(stat) { return stat.questionCount ? stat.totalScore / stat.questionCount : 0; }
+
+function sumQuizStats(modeIds) {
+  return modeIds.reduce((total, modeId) => {
+    const stat = state.progress.quizStats?.[modeId];
+    if (!stat) return total;
+    total.questionCount += stat.questionCount;
+    total.totalScore += stat.totalScore;
+    return total;
+  }, { questionCount: 0, totalScore: 0 });
+}
+
+function quizStatRow(label, stat, className = '') {
+  const row = el('div', { className: `quiz-stat-row ${className}`.trim() });
+  row.append(el('span', { text: label }));
+  row.append(el('strong', { text: String(stat.questionCount) }));
+  row.append(el('strong', { text: stat.questionCount ? formatPercent(average(stat)) : '—' }));
+  return row;
+}
+
+function quizStatsPanel() {
+  const panel = el('section', { className: 'panel progress-overview' });
+  panel.append(el('h3', { text: 'Quiz performance' }));
+  const table = el('div', { className: 'quiz-stats-table' });
+  const header = el('div', { className: 'quiz-stat-row quiz-stat-header' });
+  header.append(el('span', { text: 'Category or preset' }), el('strong', { text: 'Questions' }), el('strong', { text: 'Average' }));
+  table.append(header);
+
+  const presetIds = Object.keys(PRACTICE_PRESETS);
+  const recognitionIds = presetIds.filter(id => RECOGNITION_MODES.has(id));
+  const matchupIds = presetIds.filter(id => !RECOGNITION_MODES.has(id));
+  const recognitionTotal = sumQuizStats(recognitionIds);
+  const matchupTotal = sumQuizStats(matchupIds);
+  const overallTotal = sumQuizStats(presetIds);
+
+  table.append(quizStatRow('Pokémon recognition', recognitionTotal, 'quiz-stat-category'));
+  for (const modeId of recognitionIds) {
+    const stat = state.progress.quizStats?.[modeId] ?? { questionCount: 0, totalScore: 0 };
+    table.append(quizStatRow(PRACTICE_PRESETS[modeId].label, stat, 'quiz-stat-preset'));
+  }
+  table.append(quizStatRow('Type matchups', matchupTotal, 'quiz-stat-category'));
+  for (const modeId of matchupIds) {
+    const stat = state.progress.quizStats?.[modeId] ?? { questionCount: 0, totalScore: 0 };
+    table.append(quizStatRow(PRACTICE_PRESETS[modeId].label, stat, 'quiz-stat-preset'));
+  }
+  table.append(quizStatRow('Overall', overallTotal, 'quiz-stat-overall'));
+  panel.append(table);
+  return panel;
+}
 
 function matchupRow(record, rank) {
   const relationship = parseRelationshipKey(record.key);
@@ -127,12 +178,12 @@ export function renderProgress(container) {
   const recognitionRecords = getAllRecognitionRecords();
   const practicedPokemon = recognitionRecords.filter(record => record.attempts > 0);
 
-  const overview = el('section', { className: 'panel progress-overview' });
-  overview.append(el('h3', { text: 'Overall' }));
+  page.append(quizStatsPanel());
+
+  const coverage = el('section', { className: 'panel progress-overview' });
+  coverage.append(el('h3', { text: 'Practice coverage' }));
   const metrics = el('div', { className: 'progress-metrics' });
   for (const [label, value] of [
-    ['Questions', state.progress.totalAnswered],
-    ['Average score', formatPercent(getAverageScore())],
     ['Non-neutral matchups practiced', `${practicedNonNeutral.length} of ${nonNeutralRecords.length}`],
     ['Pokémon practiced', `${practicedPokemon.length} of ${RECOGNITION_POOL_SIZE}`]
   ]) {
@@ -140,8 +191,8 @@ export function renderProgress(container) {
     metric.append(el('strong', { text: String(value) }), el('span', { text: label }));
     metrics.append(metric);
   }
-  overview.append(metrics);
-  page.append(overview);
+  coverage.append(metrics);
+  page.append(coverage);
 
   const rerender = () => renderProgress(container);
   const matchupPanels = [
