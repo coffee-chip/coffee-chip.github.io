@@ -5,16 +5,42 @@ import { getPokemon } from '../data/pokemonRepository.js';
 import { state } from '../state.js';
 
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
-function randomDistinctTypes(count) {
-  const copy = [...TYPES];
-  const result = [];
-  while (result.length < count) result.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
-  return result;
-}
 function questionRelationship(attackingType, defendingType, answer, allowedOutcomes) {
   return createRelationship(attackingType, defendingType, { answer, allowedOutcomes });
 }
 function labelTypes(types) { return types.map(type => TYPE_META[type].label).join(' / '); }
+function combinations(items, count, start = 0, prefix = [], result = []) {
+  if (prefix.length === count) { result.push(prefix); return result; }
+  for (let index = start; index <= items.length - (count - prefix.length); index += 1) {
+    combinations(items, count, index + 1, [...prefix, items[index]], result);
+  }
+  return result;
+}
+function weightedRandom(items, weightFor) {
+  let candidates = items.map(item => ({ item, weight: Math.max(0, weightFor(item)) }));
+  if (!candidates.some(candidate => candidate.weight > 0)) candidates = items.map(item => ({ item, weight: 1 }));
+  const total = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+  let target = Math.random() * total;
+  for (const candidate of candidates) {
+    target -= candidate.weight;
+    if (target <= 0) return candidate.item;
+  }
+  return candidates[candidates.length - 1].item;
+}
+function recencyMultiplier(key, recentKeys) {
+  const distance = recentKeys.length - 1 - recentKeys.lastIndexOf(key);
+  if (distance < 0) return 1;
+  if (distance === 0) return 0;
+  if (distance <= 2) return 0.15;
+  if (distance <= 4) return 0.5;
+  return 1;
+}
+
+export const SAMPLING_STRATEGIES = {
+  adaptive: { id: 'adaptive', label: 'Adaptive' },
+  random: { id: 'random', label: 'Random' }
+};
+export const POKEMON_SAMPLING_STRATEGIES = SAMPLING_STRATEGIES;
 
 export const POKEMON_POOLS = {
   'gen-1': { id: 'gen-1', label: 'Generation 1', minId: 1, maxId: 151 },
@@ -23,52 +49,54 @@ export const POKEMON_POOLS = {
   'gen-1-3': { id: 'gen-1-3', label: 'Generations 1–3', minId: 1, maxId: 386 }
 };
 
-export const POKEMON_SAMPLING_STRATEGIES = {
-  adaptive: { id: 'adaptive', label: 'Adaptive' },
-  random: { id: 'random', label: 'Random' }
-};
-
 function idsForPool(poolId) {
   const pool = POKEMON_POOLS[poolId] ?? POKEMON_POOLS['gen-1'];
   return Array.from({ length: pool.maxId - pool.minId + 1 }, (_, index) => pool.minId + index);
-}
-
-function recencyMultiplier(pokemonId, recentPokemonIds) {
-  const distance = recentPokemonIds.length - 1 - recentPokemonIds.lastIndexOf(pokemonId);
-  if (distance < 0) return 1;
-  if (distance === 0) return 0;
-  if (distance <= 2) return 0.15;
-  if (distance <= 4) return 0.5;
-  return 1;
 }
 
 export function getPokemonSamplingWeight(pokemonId, recentPokemonIds = []) {
   const stats = state.progress.pokemonRecognitionStats?.[String(pokemonId)];
   const attempts = stats?.attempts ?? 0;
   const earnedScore = stats?.earnedScore ?? 0;
-  const alpha = 1;
-  const beta = 1;
-  const mastery = (earnedScore + alpha) / (attempts + alpha + beta);
-  const base = 0.15;
-  const unseenBonus = 2 / (attempts + 1);
-  const errorPriority = 3 * (1 - mastery);
-  const uncertaintyPriority = 1.5 / Math.sqrt(attempts + 1);
-  return (base + unseenBonus + errorPriority + uncertaintyPriority)
-    * recencyMultiplier(pokemonId, recentPokemonIds);
+  const mastery = (earnedScore + 1) / (attempts + 2);
+  const priority = 0.15 + 2 / (attempts + 1) + 3 * (1 - mastery) + 1.5 / Math.sqrt(attempts + 1);
+  return priority * recencyMultiplier(pokemonId, recentPokemonIds);
 }
 
-function weightedRandomId(ids, recentPokemonIds) {
-  let candidates = ids.map(id => ({ id, weight: getPokemonSamplingWeight(id, recentPokemonIds) }));
-  if (!candidates.some(candidate => candidate.weight > 0)) {
-    candidates = ids.map(id => ({ id, weight: getPokemonSamplingWeight(id, []) }));
+function relationshipPriority(attackingType, defendingType) {
+  if (getMultiplier(attackingType, [defendingType]) === 1) return null;
+  const relationship = createRelationship(attackingType, defendingType);
+  const stats = state.progress.relationshipStats?.[relationship.key];
+  const attempts = stats?.attempts ?? 0;
+  const earnedScore = stats?.earnedScore ?? 0;
+  const mastery = (earnedScore + 1) / (attempts + 2);
+  return 0.15 + 2 / (attempts + 1) + 3 * (1 - mastery) + 1.5 / Math.sqrt(attempts + 1);
+}
+
+function matchupCandidateWeight(types, direction, recentPromptKeys) {
+  const priorities = [];
+  if (direction === 'attacking') {
+    for (const attackingType of types) for (const defendingType of TYPES) {
+      const priority = relationshipPriority(attackingType, defendingType);
+      if (priority !== null) priorities.push(priority);
+    }
+  } else {
+    for (const defendingType of types) for (const attackingType of TYPES) {
+      const priority = relationshipPriority(attackingType, defendingType);
+      if (priority !== null) priorities.push(priority);
+    }
   }
-  const total = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
-  let target = Math.random() * total;
-  for (const candidate of candidates) {
-    target -= candidate.weight;
-    if (target <= 0) return candidate.id;
-  }
-  return candidates[candidates.length - 1].id;
+  const promptKey = `${direction}:${types.join('+')}`;
+  if (!priorities.length) return 0.15 * recencyMultiplier(promptKey, recentPromptKeys);
+  const mean = priorities.reduce((sum, value) => sum + value, 0) / priorities.length;
+  const weakest = Math.max(...priorities);
+  return (0.65 * mean + 0.35 * weakest) * recencyMultiplier(promptKey, recentPromptKeys);
+}
+
+function choosePromptTypes(count, direction, samplingStrategy, recentPromptKeys) {
+  const candidates = combinations(TYPES, count);
+  if (samplingStrategy === 'random') return randomItem(candidates);
+  return weightedRandom(candidates, types => matchupCandidateWeight(types, direction, recentPromptKeys));
 }
 
 export const MOVE_CRITERIA = {
@@ -84,8 +112,8 @@ export const MOVE_CRITERIA = {
   }
 };
 
-export function createUnsafeSwitchQuestion({ defenderCount = 1 } = {}) {
-  const attackingTypes = randomDistinctTypes(defenderCount);
+export function createUnsafeSwitchQuestion({ defenderCount = 1, samplingStrategy = 'adaptive', recentPromptKeys = [] } = {}) {
+  const attackingTypes = choosePromptTypes(defenderCount, 'attacking', samplingStrategy, recentPromptKeys);
   const isDual = attackingTypes.length === 2;
   const correctAnswers = TYPES.filter(defendingType => attackingTypes.some(attackingType => getMultiplier(attackingType, [defendingType]) > 1));
   const relationships = [];
@@ -97,21 +125,22 @@ export function createUnsafeSwitchQuestion({ defenderCount = 1 } = {}) {
       else if (!overallCorrect) relationships.push(questionRelationship(item.attackingType, defendingType, defendingType, ['false-selection']));
     }
   }
+  const promptKey = `attacking:${attackingTypes.join('+')}`;
   return {
     id: `choose-switch-unsafe:${attackingTypes.join('-')}`, generatorId: 'choose-switch-unsafe', objectiveId: 'choose-switch',
     formatId: 'type-multi-select',
     prompt: isDual ? `Which single Pokémon types are weak to at least one of ${labelTypes(attackingTypes)} attacks?` : `Which Pokémon types are weak to ${labelTypes(attackingTypes)} attacks?`,
     answerType: 'type-multi-select', choices: [...TYPES], correctAnswers, relationships,
     explanation: isDual ? `The highlighted types take more than 1× damage from at least one of ${labelTypes(attackingTypes)}.` : `${labelTypes(attackingTypes)} attacks deal 2× damage to the highlighted types, making them risky switch-ins.`,
-    metadata: { battleDecision: 'choose-switch', criterion: 'more-effective', outcome: 'unsafe', attackingTypes, attackerTypeCount: attackingTypes.length }
+    metadata: { battleDecision: 'choose-switch', criterion: 'more-effective', outcome: 'unsafe', attackingTypes, attackerTypeCount: attackingTypes.length, promptKey, samplingStrategy }
   };
 }
 
-export function createChooseMoveQuestion({ criterion = 'more-effective', defenderCount = 1, generatorId = 'choose-move-more-effective' } = {}) {
+export function createChooseMoveQuestion({ criterion = 'more-effective', defenderCount = 1, generatorId = 'choose-move-more-effective', samplingStrategy = 'adaptive', recentPromptKeys = [] } = {}) {
   const criterionDefinition = MOVE_CRITERIA[criterion];
   if (!criterionDefinition) throw new Error(`Unknown choose-move criterion: ${criterion}`);
   if (![1, 2].includes(defenderCount)) throw new Error('Choose-move questions support one or two defending types.');
-  const defendingTypes = randomDistinctTypes(defenderCount);
+  const defendingTypes = choosePromptTypes(defenderCount, 'defending', samplingStrategy, recentPromptKeys);
   const correctAnswers = TYPES.filter(attackingType => criterionDefinition.matches(getMultiplier(attackingType, defendingTypes)));
   const relationships = [];
   for (const attackingType of TYPES) {
@@ -122,37 +151,29 @@ export function createChooseMoveQuestion({ criterion = 'more-effective', defende
       else if (!combinedMatches && components.every(item => !item.matches)) relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['false-selection']));
     }
   }
+  const promptKey = `defending:${defendingTypes.join('+')}`;
   return {
     id: `${generatorId}:${criterion}:${defendingTypes.join('-')}`, generatorId, objectiveId: 'choose-move', formatId: 'type-multi-select',
     prompt: criterionDefinition.prompt(defendingTypes), answerType: 'type-multi-select', choices: [...TYPES], correctAnswers, relationships,
     explanation: criterionDefinition.explanation(defendingTypes),
-    metadata: { battleDecision: 'choose-move', criterion, defendingTypes, defenderCount, threshold: criterion === 'more-effective' ? '>1' : '<1' }
+    metadata: { battleDecision: 'choose-move', criterion, defendingTypes, defenderCount, threshold: criterion === 'more-effective' ? '>1' : '<1', promptKey, samplingStrategy }
   };
 }
 
 export async function createPokemonTypeRecognitionQuestion({ poolId = 'gen-1', samplingStrategy = 'adaptive', recentPokemonIds = [] } = {}) {
   const ids = idsForPool(poolId);
-  const id = samplingStrategy === 'random'
-    ? randomItem(ids)
-    : weightedRandomId(ids, recentPokemonIds);
+  const id = samplingStrategy === 'random' ? randomItem(ids) : weightedRandom(ids, pokemonId => getPokemonSamplingWeight(pokemonId, recentPokemonIds));
   const { pokemon } = await getPokemon(id);
   return {
     id: `recognize-pokemon-type:${pokemon.id}:${Date.now()}`,
-    generatorId: 'recognize-pokemon-type',
-    objectiveId: 'recognize-pokemon-type',
-    formatId: 'type-multi-select',
-    prompt: `What type or types is ${pokemon.displayName}?`,
-    answerType: 'type-multi-select',
-    choices: [...TYPES],
-    correctAnswers: [...pokemon.types],
-    relationships: [],
-    display: { kind: 'pokemon', pokemon },
-    metadata: { pokemonId: pokemon.id, pokemonName: pokemon.name, pool: poolId, samplingStrategy }
+    generatorId: 'recognize-pokemon-type', objectiveId: 'recognize-pokemon-type', formatId: 'type-multi-select',
+    prompt: `What type or types is ${pokemon.displayName}?`, answerType: 'type-multi-select', choices: [...TYPES],
+    correctAnswers: [...pokemon.types], relationships: [], display: { kind: 'pokemon', pokemon },
+    metadata: { pokemonId: pokemon.id, pokemonName: pokemon.name, pool: poolId, samplingStrategy, promptKey: `pokemon:${pokemon.id}` }
   };
 }
 
 const chooseMoveMoreEffectiveConfig = { criterion: 'more-effective', defenderCount: 1 };
-
 export const QUESTION_GENERATORS = {
   'choose-switch-unsafe': { id: 'choose-switch-unsafe', objectiveId: 'choose-switch', formatId: 'type-multi-select', createQuestion: options => createUnsafeSwitchQuestion(options) },
   'choose-move-more-effective': { id: 'choose-move-more-effective', objectiveId: 'choose-move', formatId: 'type-multi-select', config: chooseMoveMoreEffectiveConfig, createQuestion: options => createChooseMoveQuestion({ ...chooseMoveMoreEffectiveConfig, ...options, generatorId: 'choose-move-more-effective' }) },
