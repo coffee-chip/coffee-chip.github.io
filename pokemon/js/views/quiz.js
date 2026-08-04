@@ -195,8 +195,9 @@ function buildActiveQuestion(refreshQuiz) {
   if (state.quiz.result) panel.append(renderFeedback(state.quiz.result, question));
   const actions = el('div', { className: 'actions' });
   if (!state.quiz.result) {
-    const submit = el('button', { text: 'Submit answer' });
-    submit.disabled = state.quiz.selectedAnswers.size === 0;
+    const submit = el('button', {
+      text: state.quiz.selectedAnswers.size === 0 ? 'Submit no types' : 'Submit answer'
+    });
     submit.addEventListener('click', () => {
       const result = scoreQuestion(question, state.quiz.selectedAnswers);
       state.quiz.result = result;
