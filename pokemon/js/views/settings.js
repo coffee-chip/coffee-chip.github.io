@@ -100,6 +100,7 @@ export function renderSettings(container, render) {
     state.settings.developer.showErrorOverlay = checked;
     saveSettings(state.settings);
     window.pokemonErrorOverlay?.setEnabled(checked);
+    testErrorButton.disabled = !checked;
   }));
   const testErrorButton = el('button', { className: 'secondary-button', text: 'Test error overlay' });
   testErrorButton.type = 'button';
