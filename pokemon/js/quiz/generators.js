@@ -2,6 +2,7 @@ import { TYPES, TYPE_META } from '../data/types.js';
 import { getMultiplier } from '../engine/effectiveness.js';
 import { createRelationship } from '../relationships.js';
 import { getPokemon } from '../data/pokemonRepository.js';
+import { state } from '../state.js';
 
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
 function randomDistinctTypes(count) {
@@ -14,6 +15,61 @@ function questionRelationship(attackingType, defendingType, answer, allowedOutco
   return createRelationship(attackingType, defendingType, { answer, allowedOutcomes });
 }
 function labelTypes(types) { return types.map(type => TYPE_META[type].label).join(' / '); }
+
+export const POKEMON_POOLS = {
+  'gen-1': { id: 'gen-1', label: 'Generation 1', minId: 1, maxId: 151 },
+  'gen-2': { id: 'gen-2', label: 'Generation 2', minId: 152, maxId: 251 },
+  'gen-3': { id: 'gen-3', label: 'Generation 3', minId: 252, maxId: 386 },
+  'gen-1-3': { id: 'gen-1-3', label: 'Generations 1–3', minId: 1, maxId: 386 }
+};
+
+export const POKEMON_SAMPLING_STRATEGIES = {
+  adaptive: { id: 'adaptive', label: 'Adaptive' },
+  random: { id: 'random', label: 'Random' }
+};
+
+function idsForPool(poolId) {
+  const pool = POKEMON_POOLS[poolId] ?? POKEMON_POOLS['gen-1'];
+  return Array.from({ length: pool.maxId - pool.minId + 1 }, (_, index) => pool.minId + index);
+}
+
+function recencyMultiplier(pokemonId, recentPokemonIds) {
+  const distance = recentPokemonIds.length - 1 - recentPokemonIds.lastIndexOf(pokemonId);
+  if (distance < 0) return 1;
+  if (distance === 0) return 0;
+  if (distance <= 2) return 0.15;
+  if (distance <= 4) return 0.5;
+  return 1;
+}
+
+export function getPokemonSamplingWeight(pokemonId, recentPokemonIds = []) {
+  const stats = state.progress.pokemonRecognitionStats?.[String(pokemonId)];
+  const attempts = stats?.attempts ?? 0;
+  const earnedScore = stats?.earnedScore ?? 0;
+  const alpha = 1;
+  const beta = 1;
+  const mastery = (earnedScore + alpha) / (attempts + alpha + beta);
+  const base = 0.15;
+  const unseenBonus = 2 / (attempts + 1);
+  const errorPriority = 3 * (1 - mastery);
+  const uncertaintyPriority = 1.5 / Math.sqrt(attempts + 1);
+  return (base + unseenBonus + errorPriority + uncertaintyPriority)
+    * recencyMultiplier(pokemonId, recentPokemonIds);
+}
+
+function weightedRandomId(ids, recentPokemonIds) {
+  let candidates = ids.map(id => ({ id, weight: getPokemonSamplingWeight(id, recentPokemonIds) }));
+  if (!candidates.some(candidate => candidate.weight > 0)) {
+    candidates = ids.map(id => ({ id, weight: getPokemonSamplingWeight(id, []) }));
+  }
+  const total = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+  let target = Math.random() * total;
+  for (const candidate of candidates) {
+    target -= candidate.weight;
+    if (target <= 0) return candidate.id;
+  }
+  return candidates[candidates.length - 1].id;
+}
 
 export const MOVE_CRITERIA = {
   'more-effective': {
@@ -74,8 +130,11 @@ export function createChooseMoveQuestion({ criterion = 'more-effective', defende
   };
 }
 
-export async function createPokemonTypeRecognitionQuestion({ minId = 1, maxId = 151 } = {}) {
-  const id = Math.floor(Math.random() * (maxId - minId + 1)) + minId;
+export async function createPokemonTypeRecognitionQuestion({ poolId = 'gen-1', samplingStrategy = 'adaptive', recentPokemonIds = [] } = {}) {
+  const ids = idsForPool(poolId);
+  const id = samplingStrategy === 'random'
+    ? randomItem(ids)
+    : weightedRandomId(ids, recentPokemonIds);
   const { pokemon } = await getPokemon(id);
   return {
     id: `recognize-pokemon-type:${pokemon.id}:${Date.now()}`,
@@ -88,7 +147,7 @@ export async function createPokemonTypeRecognitionQuestion({ minId = 1, maxId = 
     correctAnswers: [...pokemon.types],
     relationships: [],
     display: { kind: 'pokemon', pokemon },
-    metadata: { pokemonId: pokemon.id, pokemonName: pokemon.name, pool: 'generation-1' }
+    metadata: { pokemonId: pokemon.id, pokemonName: pokemon.name, pool: poolId, samplingStrategy }
   };
 }
 
