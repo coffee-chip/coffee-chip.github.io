@@ -13,7 +13,7 @@ let currentRender = null;
 subscribeServiceWorker(() => { if (state.route === 'settings' && currentRender) currentRender(); });
 
 function el(tag, options = {}) { const node = document.createElement(tag); if (options.className) node.className = options.className; if (options.text) node.textContent = options.text; return node; }
-function toggle(label, checked, onChange) { const field = el('label', { className: 'toggle-field' }); const input = document.createElement('input'); input.type = 'checkbox'; input.checked = checked; input.addEventListener('change', () => onChange(input.checked)); field.append(input, el('span', { text: label })); return field; }
+function toggle(label, checked, onChange) { const field = el('label', { className: 'toggle-field' }); const input = document.createElement('input'); input.type = 'checkbox'; input.setAttribute('role', 'switch'); input.checked = checked; input.addEventListener('change', () => onChange(input.checked)); field.append(input, el('span', { text: label })); return field; }
 function totalSavedQuestions(progress = state.progress) { return Object.values(progress.quizStats ?? {}).reduce((sum, stat) => sum + (stat.questionCount ?? 0), 0); }
 
 function persistResetProgress() {
@@ -76,7 +76,6 @@ function appendAppearanceControls(panel) {
 export function renderSettings(container, render) {
   currentRender = render;
   const page = el('section', { className: 'page' });
-  page.append(el('h2', { text: 'Settings' }));
 
   const preferences = el('div', { className: 'panel settings-section' });
   preferences.append(el('h3', { text: 'Preferences' }));
