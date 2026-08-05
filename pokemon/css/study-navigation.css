@@ -1,19 +1,28 @@
+.selector-field { min-width: 0; margin: 0; padding: 0; border: 0; }
+.selector-field legend { margin-bottom: .35rem; padding: 0; }
+.button-selector { display: grid; gap: .35rem; }
+.button-selector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.button-selector-three-column { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.button-selector-option { min-width: 0; padding: .55rem .65rem; border-color: var(--border-default); background: var(--panel-background); color: var(--text-primary); font-weight: 400; line-height: 1.2; }
+.button-selector-option:hover, .button-selector-option:focus-visible { border-color: var(--border-strong); background: var(--subtle-background); color: var(--text-primary); }
+.button-selector-option[aria-selected="true"], .button-selector-option[aria-checked="true"] { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); font-weight: 700; }
+
 .study-controls-with-tabs { margin-top: 0; }
-.study-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem; grid-column: 1 / -1; }
-.study-tab { min-height: 2.75rem; padding: .45rem .35rem; border: 1px solid var(--border-default); border-radius: .5rem; background: var(--panel-background); color: var(--text-primary); font-weight: 400; }
-.study-tab:hover, .study-tab:focus-visible { border-color: var(--border-strong); background: var(--subtle-background); color: var(--text-primary); }
-.study-tab[aria-selected="true"] { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); font-weight: 700; }
+.study-tabs { grid-column: 1 / -1; }
+
+.quiz-setup { grid-template-columns: 1fr; margin-top: 0; }
+.quiz-type-field, .quiz-start-area { grid-column: 1 / -1; }
+.quiz-dual-toggle { margin: 0; }
+.quiz-start-area { display: grid; gap: .5rem; }
+.quiz-start-area p { margin: 0; }
+.quiz-start-area button { width: 100%; }
+
 .pokemon-evolution-chooser h3 { margin-top: 0; }
 .pokemon-evolution-options { display: flex; flex-wrap: wrap; gap: .5rem; }
 .pokemon-evolution-options button, .pokemon-evolution-close { min-height: 2.5rem; padding: 0 .75rem; }
 .pokemon-evolution-close { margin-top: .75rem; }
 
-/* Persistent navigation uses a restrained tab-style selected state. */
-.app-nav a[aria-current="page"] {
-  border-color: transparent;
-  background: transparent;
-  color: var(--action-primary);
-  font-weight: 700;
-}
+.app-nav a[aria-current="page"] { border-color: transparent; background: transparent; color: var(--action-primary); font-weight: 700; }
 
-@media (max-width: 25rem) { .study-tab { font-size: .86rem; } }
+@media (max-width: 25rem) { .button-selector-option { font-size: .86rem; } }
+@media (min-width: 36rem) { .quiz-setup { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; } }
