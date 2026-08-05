@@ -41,7 +41,6 @@ function createTypeSelect(value, includeNone = false) {
     none.textContent = 'None';
     select.append(none);
   }
-
   for (const type of TYPES) {
     const option = document.createElement('option');
     option.value = type;
@@ -56,27 +55,19 @@ function dismissMnemonicBanner() {
   activeMnemonicBanner?.remove();
   activeMnemonicBanner = null;
   activeMnemonicKey = null;
-  for (const button of document.querySelectorAll('.mnemonic-badge-button[aria-pressed="true"]')) {
-    button.setAttribute('aria-pressed', 'false');
-  }
+  for (const button of document.querySelectorAll('.mnemonic-badge-button[aria-pressed="true"]')) button.setAttribute('aria-pressed', 'false');
 }
 
 function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   const selectionKey = relationshipKeys.join('|');
-  if (activeMnemonicKey === selectionKey) {
-    dismissMnemonicBanner();
-    return;
-  }
-
+  if (activeMnemonicKey === selectionKey) { dismissMnemonicBanner(); return; }
   dismissMnemonicBanner();
   activeMnemonicKey = selectionKey;
   button.setAttribute('aria-pressed', 'true');
-
   const banner = el('button', { className: 'mnemonic-banner' });
   banner.type = 'button';
   banner.setAttribute('aria-label', 'Dismiss mnemonic');
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
-
   for (const mnemonic of mnemonics) {
     const { attackingType, defendingType } = parseRelationshipKey(mnemonic.relationshipKey);
     const line = el('span', { className: 'mnemonic-banner-line' });
@@ -86,7 +77,6 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
     line.append(el('span', { className: 'mnemonic-text', text: mnemonic.text }));
     banner.append(line);
   }
-
   banner.append(el('span', { className: 'mnemonic-dismiss-hint', text: 'Tap to dismiss' }));
   banner.addEventListener('click', dismissMnemonicBanner);
   document.body.append(banner);
@@ -95,9 +85,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
 
 function createMnemonicList(types, relationshipKeysForType) {
   const list = el('span', { className: 'type-badge-list' });
-  for (const type of types) {
-    list.append(createMnemonicTypeBadge(type, relationshipKeysForType(type), showMnemonicBanner));
-  }
+  for (const type of types) list.append(createMnemonicTypeBadge(type, relationshipKeysForType(type), showMnemonicBanner));
   return list;
 }
 
@@ -111,18 +99,14 @@ function renderGroup(multiplier, types, relationshipKeysForType) {
 
 function renderTypeResults(page) {
   const results = el('div', { className: 'study-results' });
-
   if (state.study.mode === 'offense') {
     const attackingType = state.study.primaryType;
     const groups = getOffensiveMatchups(attackingType);
     const heading = el('div', { className: 'study-heading' });
-    heading.append(createTypeBadge(attackingType));
-    heading.append(el('span', { text: 'attacks against each defending type' }));
+    heading.append(createTypeBadge(attackingType), el('span', { text: 'attacks against each defending type' }));
     results.append(heading);
     for (const multiplier of [2, 1, 0.5, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier], defendingType => [
-        createRelationshipKey(attackingType, defendingType)
-      ]);
+      const group = renderGroup(multiplier, groups[multiplier], defendingType => [createRelationshipKey(attackingType, defendingType)]);
       if (group) results.append(group);
     }
   } else {
@@ -130,33 +114,21 @@ function renderTypeResults(page) {
     if (state.study.secondaryType) defendingTypes.push(state.study.secondaryType);
     const groups = getDefensiveMatchups(defendingTypes);
     const heading = el('div', { className: 'study-heading' });
-    heading.append(el('span', { text: 'Damage taken by' }));
-    heading.append(createTypeList(defendingTypes));
+    heading.append(el('span', { text: 'Damage taken by' }), createTypeList(defendingTypes));
     results.append(heading);
     for (const multiplier of [4, 2, 1, 0.5, 0.25, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier], attackingType =>
-        defendingTypes.map(defendingType => createRelationshipKey(attackingType, defendingType))
-      );
+      const group = renderGroup(multiplier, groups[multiplier], attackingType => defendingTypes.map(defendingType => createRelationshipKey(attackingType, defendingType)));
       if (group) results.append(group);
     }
   }
-
   page.append(results);
 }
 
 function renderPokemonResult(page) {
-  if (state.study.pokemonStatus === 'loading') {
-    page.append(el('p', { className: 'muted pokemon-lookup-status', text: 'Looking up Pokémon…' }));
-    return;
-  }
-
-  if (state.study.pokemonError) {
-    page.append(el('p', { className: 'pokemon-lookup-error', text: state.study.pokemonError }));
-  }
-
+  if (state.study.pokemonStatus === 'loading') { page.append(el('p', { className: 'muted pokemon-lookup-status', text: 'Looking up Pokémon…' })); return; }
+  if (state.study.pokemonError) page.append(el('p', { className: 'pokemon-lookup-error', text: state.study.pokemonError }));
   const pokemon = state.study.pokemonResult;
   if (!pokemon) return;
-
   const card = el('section', { className: 'panel pokemon-result-card' });
   const visual = el('div', { className: 'pokemon-result-visual' });
   if (pokemon.spriteUrl) {
@@ -165,19 +137,12 @@ function renderPokemonResult(page) {
     image.alt = pokemon.displayName;
     image.loading = 'lazy';
     visual.append(image);
-  } else {
-    visual.append(el('div', { className: 'pokemon-sprite-placeholder', text: 'No image' }));
-  }
-
+  } else visual.append(el('div', { className: 'pokemon-sprite-placeholder', text: 'No image' }));
   const details = el('div', { className: 'pokemon-result-details' });
   details.append(el('div', { className: 'pokemon-dex-number', text: `#${String(pokemon.id).padStart(4, '0')}` }));
   details.append(el('h3', { text: pokemon.displayName }));
   details.append(createTypeList(pokemon.types));
-  details.append(el('p', {
-    className: 'muted pokemon-source',
-    text: SOURCE_LABELS[state.study.pokemonSource] ?? 'Loaded Pokémon data'
-  }));
-
+  details.append(el('p', { className: 'muted pokemon-source', text: SOURCE_LABELS[state.study.pokemonSource] ?? 'Loaded Pokémon data' }));
   card.append(visual, details);
   page.append(card);
 }
@@ -187,7 +152,6 @@ function populatePokemonDatalist(datalist, names) {
   datalist.replaceChildren();
   let index = 0;
   const batchSize = 100;
-
   function appendBatch() {
     if (token !== datalistPopulationToken || datalist !== activePokemonDatalist || !datalist.isConnected) return;
     const fragment = document.createDocumentFragment();
@@ -200,7 +164,6 @@ function populatePokemonDatalist(datalist, names) {
     datalist.append(fragment);
     if (index < names.length) window.setTimeout(appendBatch, 0);
   }
-
   window.setTimeout(appendBatch, 0);
 }
 
@@ -208,6 +171,8 @@ function renderPokemonLookup(page, render) {
   const form = el('form', { className: 'panel pokemon-lookup-form' });
   const label = el('label');
   label.append(el('span', { text: 'Pokémon name or Pokédex number' }));
+
+  const searchField = el('div', { className: 'search-field' });
   const input = document.createElement('input');
   input.type = 'search';
   input.autocomplete = 'off';
@@ -217,7 +182,18 @@ function renderPokemonLookup(page, render) {
   input.value = state.study.pokemonQuery;
   input.setAttribute('list', 'pokemon-name-options');
   input.addEventListener('input', () => { state.study.pokemonQuery = input.value; });
-  label.append(input);
+
+  const clear = el('button', { className: 'icon-button search-field-clear', text: '×' });
+  clear.type = 'button';
+  clear.setAttribute('aria-label', 'Clear Pokémon search');
+  clear.addEventListener('click', () => {
+    input.value = '';
+    state.study.pokemonQuery = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+  });
+  searchField.append(input, clear);
+  label.append(searchField);
 
   const datalist = document.createElement('datalist');
   datalist.id = 'pokemon-name-options';
@@ -238,9 +214,7 @@ function renderPokemonLookup(page, render) {
       const result = await getPokemon(state.study.pokemonQuery);
       state.study.pokemonResult = result.pokemon;
       state.study.pokemonSource = result.source;
-      state.study.pokemonError = result.stale
-        ? 'The live lookup failed, so this result may be out of date.'
-        : null;
+      state.study.pokemonError = result.stale ? 'The live lookup failed, so this result may be out of date.' : null;
       state.study.pokemonStatus = 'success';
     } catch (error) {
       state.study.pokemonResult = null;
@@ -250,7 +224,6 @@ function renderPokemonLookup(page, render) {
     }
     render();
   });
-
   page.append(form);
   renderPokemonResult(page);
 }
@@ -261,29 +234,20 @@ export function renderStudy(container, render) {
   datalistPopulationToken += 1;
   const page = el('section', { className: 'page' });
   page.append(el('h2', { text: 'Study' }));
-
   const controls = el('div', { className: 'panel study-controls' });
   const modeLabel = el('label');
   modeLabel.append(el('span', { text: 'Lookup' }));
   const modeSelect = el('select');
-  for (const [value, label] of [
-    ['offense', 'Attacking with a type'],
-    ['defense', 'Defending as a type'],
-    ['pokemon', 'Pokémon by name or number']
-  ]) {
+  for (const [value, label] of [['offense', 'Attacking with a type'], ['defense', 'Defending as a type'], ['pokemon', 'Pokémon by name or number']]) {
     const option = document.createElement('option');
     option.value = value;
     option.textContent = label;
     option.selected = state.study.mode === value;
     modeSelect.append(option);
   }
-  modeSelect.addEventListener('change', () => {
-    state.study.mode = modeSelect.value;
-    render();
-  });
+  modeSelect.addEventListener('change', () => { state.study.mode = modeSelect.value; render(); });
   modeLabel.append(modeSelect);
   controls.append(modeLabel);
-
   if (state.study.mode !== 'pokemon') {
     const primaryLabel = el('label');
     primaryLabel.append(el('span', { text: state.study.mode === 'offense' ? 'Attacking type' : 'First defending type' }));
@@ -296,7 +260,6 @@ export function renderStudy(container, render) {
     primaryLabel.append(primarySelect);
     controls.append(primaryLabel);
   }
-
   if (state.study.mode === 'defense') {
     const secondaryLabel = el('label');
     secondaryLabel.append(el('span', { text: 'Second defending type' }));
@@ -309,7 +272,6 @@ export function renderStudy(container, render) {
     secondaryLabel.append(secondarySelect);
     controls.append(secondaryLabel);
   }
-
   page.append(controls);
   if (state.study.mode === 'pokemon') renderPokemonLookup(page, render);
   else renderTypeResults(page);
@@ -317,11 +279,6 @@ export function renderStudy(container, render) {
 }
 
 document.addEventListener('pokemon-name-index-ready', event => {
-  if (activePokemonDatalist && Array.isArray(event.detail?.names)) {
-    populatePokemonDatalist(activePokemonDatalist, event.detail.names);
-  }
+  if (activePokemonDatalist && Array.isArray(event.detail?.names)) populatePokemonDatalist(activePokemonDatalist, event.detail.names);
 });
-
-window.addEventListener('hashchange', () => {
-  if (location.hash !== '#study') dismissMnemonicBanner();
-});
+window.addEventListener('hashchange', () => { if (location.hash !== '#study') dismissMnemonicBanner(); });
