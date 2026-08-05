@@ -24,6 +24,11 @@ function createField(labelText, select, className) {
   return label;
 }
 
+function setFieldVisible(field, visible) {
+  field.hidden = !visible;
+  field.style.display = visible ? '' : 'none';
+}
+
 const EFFECTIVENESS_OPTIONS = {
   'choose-switch': [
     { id: 'weak', label: 'Weak' },
@@ -81,14 +86,17 @@ export function enhanceQuizRecognitionSettings(root) {
     const settings = getQuizModeSettings(modeId);
     settings.samplingStrategy ??= 'adaptive';
     strategySelect.value = settings.samplingStrategy;
-    poolField.hidden = modeId !== 'pokemon-type-recognition';
-    effectivenessField.hidden = modeId === 'pokemon-type-recognition';
-    if (!effectivenessField.hidden) {
+
+    setFieldVisible(poolField, modeId === 'pokemon-type-recognition');
+    setFieldVisible(effectivenessField, modeId === 'choose-switch' || modeId === 'choose-move');
+
+    if (modeId === 'choose-switch' || modeId === 'choose-move') {
       settings.effectiveness ??= 'both';
       populateEffectivenessSelect(effectivenessSelect, modeId, settings.effectiveness);
     }
+
     const dualNote = root.querySelector('.quiz-dual-note');
-    if (dualNote) dualNote.textContent = 'When enabled, about one in five questions uses dual types; single-type questions remain mixed in.';
+    if (dualNote) dualNote.textContent = 'When enabled, about one in five questions uses dual types.';
   }
 
   poolSelect.addEventListener('change', () => {
