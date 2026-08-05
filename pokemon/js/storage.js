@@ -135,6 +135,12 @@ function write(data) {
   catch (error) { console.warn('Could not save data.', error); return false; }
 }
 
+function updateSection(section, value, normalize) {
+  const data = loadPersistentData();
+  data[section] = normalize(value);
+  return write(data);
+}
+
 export function loadPersistentData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -151,9 +157,9 @@ export function loadPersistentData() {
 export function savePersistentData({ settings, progress, cache }) {
   return write({ version: STORAGE_VERSION, settings: normalizeSettings(settings), progress: normalizeProgress(progress), cache: normalizeCache(cache) });
 }
-export function saveSettings(settings) { const data = loadPersistentData(); data.settings = normalizeSettings(settings); return write(data); }
-export function saveProgress(progress) { const data = loadPersistentData(); data.progress = normalizeProgress(progress); return write(data); }
-export function saveCache(cache) { const data = loadPersistentData(); data.cache = normalizeCache(cache); return write(data); }
+export function saveSettings(settings) { return updateSection('settings', settings, normalizeSettings); }
+export function saveProgress(progress) { return updateSection('progress', progress, normalizeProgress); }
+export function saveCache(cache) { return updateSection('cache', cache, normalizeCache); }
 export function clearPersistentData() {
   try { localStorage.removeItem(STORAGE_KEY); return true; }
   catch (error) { console.warn('Could not clear saved data.', error); return false; }
