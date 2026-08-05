@@ -159,9 +159,8 @@ function renderRecentPokemon(page, render) {
   const recent = getRecentPokemonLookups();
   if (!recent.length) return;
   const section = el('section', { className: 'pokemon-recent' });
-  section.append(el('h3', { text: 'Recent Pokémon' }));
+  section.setAttribute('aria-label', 'Recently viewed Pokémon');
   const list = el('div', { className: 'pokemon-recent-list' });
-  list.setAttribute('aria-label', 'Recently viewed Pokémon');
   for (const pokemon of recent) {
     const button = el('button', { className: 'pokemon-recent-button' });
     button.type = 'button';
