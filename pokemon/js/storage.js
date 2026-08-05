@@ -1,7 +1,7 @@
 import { parseRelationshipKey } from './relationships.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 8;
+export const STORAGE_VERSION = 9;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -11,7 +11,6 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
     quiz: {
       defaultMode: 'choose-switch',
-      common: {},
       modes: { 'choose-switch': {} }
     }
   },
@@ -45,11 +44,7 @@ function normalizeSettings(value) {
       showOverlay: developer.showOverlay === true,
       showErrorOverlay: developer.showErrorOverlay === true
     },
-    quiz: {
-      defaultMode,
-      common: isObject(quiz.common) ? { ...quiz.common } : {},
-      modes
-    }
+    quiz: { defaultMode, modes }
   };
 }
 
@@ -86,9 +81,7 @@ function normalizePokemonRecognitionStats(value) {
     const attempts = Math.floor(nonnegativeNumber(record.attempts));
     normalized[String(pokemonId)] = {
       pokemonId,
-      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName.length > 0
-        ? record.pokemonName
-        : `pokemon-${pokemonId}`,
+      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName.length > 0 ? record.pokemonName : `pokemon-${pokemonId}`,
       attempts,
       earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
       exactAnswers: Math.min(Math.floor(nonnegativeNumber(record.exactAnswers)), attempts),
