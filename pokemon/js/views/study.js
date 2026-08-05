@@ -4,21 +4,11 @@ import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiven
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { createRelationshipKey, parseRelationshipKey } from '../relationships.js';
-import { getCachedPokemonNameIndex, getPokemon } from '../data/pokemonRepository.js';
+import { getCachedPokemonNameIndex, getPokemon, getRecentPokemonLookups, rememberPokemonLookup } from '../data/pokemonRepository.js';
 
 const MULTIPLIER_LABELS = {
-  4: '4× — extremely effective',
-  2: '2× — super effective',
-  1: '1× — neutral',
-  0.5: '½× — resisted',
-  0.25: '¼× — strongly resisted',
-  0: '0× — no effect'
-};
-
-const SOURCE_LABELS = {
-  network: 'Loaded from PokéAPI',
-  cache: 'Loaded from local cache',
-  'stale-cache': 'Loaded from stale local cache'
+  4: '4× — extremely effective', 2: '2× — super effective', 1: '1× — neutral',
+  0.5: '½× — resisted', 0.25: '¼× — strongly resisted', 0: '0× — no effect'
 };
 
 let activeMnemonicKey = null;
@@ -36,10 +26,10 @@ function el(tag, options = {}) {
 function createTypeSelect(value, includeNone = false) {
   const select = el('select');
   if (includeNone) {
-    const none = document.createElement('option');
-    none.value = '';
-    none.textContent = 'None';
-    select.append(none);
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'None';
+    select.append(option);
   }
   for (const type of TYPES) {
     const option = document.createElement('option');
@@ -71,10 +61,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   for (const mnemonic of mnemonics) {
     const { attackingType, defendingType } = parseRelationshipKey(mnemonic.relationshipKey);
     const line = el('span', { className: 'mnemonic-banner-line' });
-    line.append(createTypeBadge(attackingType));
-    line.append(el('span', { className: 'relationship-arrow', text: '→' }));
-    line.append(createTypeBadge(defendingType));
-    line.append(el('span', { className: 'mnemonic-text', text: mnemonic.text }));
+    line.append(createTypeBadge(attackingType), el('span', { className: 'relationship-arrow', text: '→' }), createTypeBadge(defendingType), el('span', { className: 'mnemonic-text', text: mnemonic.text }));
     banner.append(line);
   }
   banner.append(el('span', { className: 'mnemonic-dismiss-hint', text: 'Tap to dismiss' }));
@@ -92,8 +79,7 @@ function createMnemonicList(types, relationshipKeysForType) {
 function renderGroup(multiplier, types, relationshipKeysForType) {
   if (!types.length) return null;
   const group = el('section', { className: 'matchup-group' });
-  group.append(el('h3', { text: MULTIPLIER_LABELS[multiplier] }));
-  group.append(createMnemonicList(types, relationshipKeysForType));
+  group.append(el('h3', { text: MULTIPLIER_LABELS[multiplier] }), createMnemonicList(types, relationshipKeysForType));
   return group;
 }
 
@@ -125,7 +111,10 @@ function renderTypeResults(page) {
 }
 
 function renderPokemonResult(page) {
-  if (state.study.pokemonStatus === 'loading') { page.append(el('p', { className: 'muted pokemon-lookup-status', text: 'Looking up Pokémon…' })); return; }
+  if (state.study.pokemonStatus === 'loading') {
+    page.append(el('p', { className: 'muted pokemon-lookup-status', text: 'Looking up Pokémon…' }));
+    return;
+  }
   if (state.study.pokemonError) page.append(el('p', { className: 'pokemon-lookup-error', text: state.study.pokemonError }));
   const pokemon = state.study.pokemonResult;
   if (!pokemon) return;
@@ -139,23 +128,68 @@ function renderPokemonResult(page) {
     visual.append(image);
   } else visual.append(el('div', { className: 'pokemon-sprite-placeholder', text: 'No image' }));
   const details = el('div', { className: 'pokemon-result-details' });
-  details.append(el('div', { className: 'pokemon-dex-number', text: `#${String(pokemon.id).padStart(4, '0')}` }));
-  details.append(el('h3', { text: pokemon.displayName }));
-  details.append(createTypeList(pokemon.types));
-  details.append(el('p', { className: 'muted pokemon-source', text: SOURCE_LABELS[state.study.pokemonSource] ?? 'Loaded Pokémon data' }));
+  details.append(el('div', { className: 'pokemon-dex-number', text: `#${String(pokemon.id).padStart(4, '0')}` }), el('h3', { text: pokemon.displayName }), createTypeList(pokemon.types));
   card.append(visual, details);
   page.append(card);
+}
+
+async function lookupPokemon(identifier, render) {
+  state.study.pokemonQuery = String(identifier);
+  state.study.pokemonStatus = 'loading';
+  state.study.pokemonError = null;
+  render();
+  try {
+    const result = await getPokemon(identifier);
+    state.study.pokemonResult = result.pokemon;
+    state.study.pokemonSource = result.source;
+    state.study.pokemonError = result.stale ? 'The live lookup failed, so this result may be out of date.' : null;
+    state.study.pokemonStatus = 'success';
+    state.study.pokemonQuery = result.pokemon.displayName;
+    rememberPokemonLookup(result.pokemon);
+  } catch (error) {
+    state.study.pokemonResult = null;
+    state.study.pokemonSource = null;
+    state.study.pokemonError = error?.message ?? 'Could not look up that Pokémon.';
+    state.study.pokemonStatus = 'error';
+  }
+  render();
+}
+
+function renderRecentPokemon(page, render) {
+  const recent = getRecentPokemonLookups();
+  if (!recent.length) return;
+  const section = el('section', { className: 'pokemon-recent' });
+  section.append(el('h3', { text: 'Recent Pokémon' }));
+  const list = el('div', { className: 'pokemon-recent-list' });
+  list.setAttribute('aria-label', 'Recently viewed Pokémon');
+  for (const pokemon of recent) {
+    const button = el('button', { className: 'pokemon-recent-button' });
+    button.type = 'button';
+    button.title = pokemon.displayName;
+    button.setAttribute('aria-label', `Open ${pokemon.displayName}`);
+    if (pokemon.spriteUrl) {
+      const image = document.createElement('img');
+      image.src = pokemon.spriteUrl;
+      image.alt = '';
+      image.loading = 'lazy';
+      button.append(image);
+    } else button.append(el('span', { className: 'pokemon-recent-placeholder', text: `#${pokemon.id}` }));
+    button.append(el('span', { text: pokemon.displayName }));
+    button.addEventListener('click', () => lookupPokemon(pokemon.id, render));
+    list.append(button);
+  }
+  section.append(list);
+  page.append(section);
 }
 
 function populatePokemonDatalist(datalist, names) {
   const token = ++datalistPopulationToken;
   datalist.replaceChildren();
   let index = 0;
-  const batchSize = 100;
   function appendBatch() {
     if (token !== datalistPopulationToken || datalist !== activePokemonDatalist || !datalist.isConnected) return;
     const fragment = document.createDocumentFragment();
-    const end = Math.min(index + batchSize, names.length);
+    const end = Math.min(index + 100, names.length);
     for (; index < end; index += 1) {
       const option = document.createElement('option');
       option.value = names[index];
@@ -168,10 +202,10 @@ function populatePokemonDatalist(datalist, names) {
 }
 
 function renderPokemonLookup(page, render) {
+  renderRecentPokemon(page, render);
   const form = el('form', { className: 'panel pokemon-lookup-form' });
   const label = el('label');
   label.append(el('span', { text: 'Pokémon name or Pokédex number' }));
-
   const searchField = el('div', { className: 'search-field' });
   const input = document.createElement('input');
   input.type = 'search';
@@ -182,7 +216,6 @@ function renderPokemonLookup(page, render) {
   input.value = state.study.pokemonQuery;
   input.setAttribute('list', 'pokemon-name-options');
   input.addEventListener('input', () => { state.study.pokemonQuery = input.value; });
-
   const clear = el('button', { className: 'icon-button search-field-clear', text: '×' });
   clear.type = 'button';
   clear.setAttribute('aria-label', 'Clear Pokémon search');
@@ -194,35 +227,18 @@ function renderPokemonLookup(page, render) {
   });
   searchField.append(input, clear);
   label.append(searchField);
-
   const datalist = document.createElement('datalist');
   datalist.id = 'pokemon-name-options';
   activePokemonDatalist = datalist;
   const cachedIndex = getCachedPokemonNameIndex();
   if (cachedIndex) populatePokemonDatalist(datalist, cachedIndex.names);
-
   const submit = el('button', { text: 'Search' });
   submit.type = 'submit';
   submit.disabled = state.study.pokemonStatus === 'loading';
   form.append(label, datalist, submit);
-  form.addEventListener('submit', async event => {
+  form.addEventListener('submit', event => {
     event.preventDefault();
-    state.study.pokemonStatus = 'loading';
-    state.study.pokemonError = null;
-    render();
-    try {
-      const result = await getPokemon(state.study.pokemonQuery);
-      state.study.pokemonResult = result.pokemon;
-      state.study.pokemonSource = result.source;
-      state.study.pokemonError = result.stale ? 'The live lookup failed, so this result may be out of date.' : null;
-      state.study.pokemonStatus = 'success';
-    } catch (error) {
-      state.study.pokemonResult = null;
-      state.study.pokemonSource = null;
-      state.study.pokemonError = error?.message ?? 'Could not look up that Pokémon.';
-      state.study.pokemonStatus = 'error';
-    }
-    render();
+    lookupPokemon(state.study.pokemonQuery, render);
   });
   page.append(form);
   renderPokemonResult(page);
