@@ -14,7 +14,7 @@ export const state = {
     paletteTheme: 'classic',
     appearance: 'system',
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
-    quiz: { defaultMode: 'choose-switch', common: {}, modes: { 'choose-switch': {} } }
+    quiz: { defaultMode: 'choose-switch', modes: { 'choose-switch': {} } }
   },
   study: {
     mode: 'pokemon', primaryType: 'fire', secondaryType: null,
@@ -37,7 +37,6 @@ export function hydratePersistentState(persistentData) {
     quiz: {
       ...state.settings.quiz,
       ...persistentData.settings.quiz,
-      common: { ...persistentData.settings.quiz.common },
       modes: structuredClone(persistentData.settings.quiz.modes)
     }
   };
@@ -62,7 +61,6 @@ export function getPersistentSnapshot() {
       developer: { ...state.settings.developer },
       quiz: {
         defaultMode: state.settings.quiz.defaultMode,
-        common: { ...state.settings.quiz.common },
         modes: structuredClone(state.settings.quiz.modes)
       }
     },
