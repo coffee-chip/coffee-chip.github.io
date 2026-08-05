@@ -15,9 +15,12 @@ function row(label, value, status = '') {
   return node;
 }
 
+function savedQuestionCount(progress) {
+  return Object.values(progress.quizStats ?? {}).reduce((sum, stat) => sum + (stat.questionCount ?? 0), 0);
+}
+
 export async function renderDebug(container) {
   const page = el('section', { className: 'page' });
-  page.append(el('h2', { text: 'Developer diagnostics' }));
   const back = el('a', { className: 'back-link', text: '← Back to settings' });
   back.href = '#settings';
   page.append(back);
@@ -40,7 +43,7 @@ export async function renderDebug(container) {
   storage.append(el('h3', { text: 'Persistent data' }));
   storage.append(row('Schema version', STORAGE_VERSION, 'ok'));
   storage.append(row('Auto-update on launch', state.settings.developer.autoUpdateOnLaunch ? 'On' : 'Off'));
-  storage.append(row('Saved questions', saved.progress.totalAnswered));
+  storage.append(row('Saved questions', savedQuestionCount(saved.progress)));
   storage.append(row('Cached Pokémon', Object.keys(saved.cache.pokemon ?? {}).length));
   page.append(storage);
 
