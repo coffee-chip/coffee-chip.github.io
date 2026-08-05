@@ -8,7 +8,7 @@ export const state = {
   route: 'quiz',
   quiz: {
     mode: 'choose-switch', status: 'idle', question: null, selectedAnswers: new Set(), result: null,
-    session: { mode: 'choose-switch', length: 0, questionNumber: 0, totalScore: 0, results: [] }
+    session: { mode: 'choose-switch', questionNumber: 0, totalScore: 0, results: [] }
   },
   settings: {
     paletteTheme: 'classic',
@@ -52,7 +52,6 @@ export function hydratePersistentState(persistentData) {
   state.quiz.mode = state.settings.quiz.defaultMode;
   getQuizModeSettings(state.quiz.mode);
   state.quiz.session.mode = state.quiz.mode;
-  state.quiz.session.length = 0;
 }
 
 export function getPersistentSnapshot() {
@@ -86,7 +85,7 @@ export function resetQuestionState() { state.quiz.selectedAnswers = new Set(); s
 export function startQuizSession() {
   state.settings.quiz.defaultMode = state.quiz.mode;
   state.quiz.status = 'answering';
-  state.quiz.session = { mode: state.quiz.mode, length: 0, questionNumber: 1, totalScore: 0, results: [] };
+  state.quiz.session = { mode: state.quiz.mode, questionNumber: 1, totalScore: 0, results: [] };
   resetQuestionState();
 }
 
@@ -152,16 +151,7 @@ export function advanceQuizSession() {
   state.quiz.session.questionNumber += 1;
   resetQuestionState();
   state.quiz.status = 'answering';
-  return true;
 }
 export function endQuizSession() { state.quiz.status = 'complete'; resetQuestionState(); }
 export function returnToQuizSetup() { state.quiz.status = 'idle'; resetQuestionState(); }
 export function getSessionAverageScore() { const count = state.quiz.session.results.length; return count === 0 ? 0 : state.quiz.session.totalScore / count; }
-export function getAverageScore() {
-  const totals = Object.values(state.progress.quizStats ?? {}).reduce((sum, stat) => {
-    sum.questionCount += Number(stat?.questionCount) || 0;
-    sum.totalScore += Number(stat?.totalScore) || 0;
-    return sum;
-  }, { questionCount: 0, totalScore: 0 });
-  return totals.questionCount === 0 ? 0 : totals.totalScore / totals.questionCount;
-}
