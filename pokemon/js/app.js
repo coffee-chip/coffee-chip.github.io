@@ -16,6 +16,14 @@ import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
 import { registerServiceWorker, subscribeServiceWorker, serviceWorkerState, applyWaitingUpdate } from './serviceWorker.js';
 
+const ROUTE_TITLES = Object.freeze({
+  quiz: 'Quiz',
+  study: 'Study',
+  progress: 'Progress',
+  settings: 'Settings',
+  debug: 'Developer diagnostics'
+});
+
 hydratePersistentState(loadPersistentData());
 applyTheme(state.settings.paletteTheme, state.settings.appearance);
 watchSystemTheme(() => ({ paletteTheme: state.settings.paletteTheme, appearance: state.settings.appearance }));
@@ -23,6 +31,7 @@ initializePokemonAutocomplete();
 initializeQuizAutoScroll();
 
 const viewRoot = document.querySelector('#app-view');
+const pageTitle = document.querySelector('#page-title');
 const navLinks = [...document.querySelectorAll('[data-route]')];
 
 function renderUpdateBanner() {
@@ -54,9 +63,22 @@ function enhanceSwitchControls(root) {
   }
 }
 
+function renderPageHeader() {
+  const title = ROUTE_TITLES[state.route] ?? '';
+  pageTitle.textContent = title;
+  pageTitle.hidden = !title;
+  document.title = title ? `${title} · Pokémon Type Trainer` : 'Pokémon Type Trainer';
+}
+
+function removeLegacyViewHeading() {
+  viewRoot.querySelector('.page > h2:first-child')?.remove();
+}
+
 function render() {
+  renderPageHeader();
   const view = VIEWS[state.route] ?? VIEWS.quiz;
   view(viewRoot, render);
+  removeLegacyViewHeading();
   enhanceStudyTabs(viewRoot);
   enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
