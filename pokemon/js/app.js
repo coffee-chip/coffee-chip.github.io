@@ -57,10 +57,6 @@ function renderUpdateBanner() {
   }
 }
 
-function enhanceSwitchControls(root) {
-  for (const input of root.querySelectorAll('.toggle-field input[type="checkbox"]')) input.setAttribute('role', 'switch');
-}
-
 function renderPageHeader() {
   const title = ROUTE_TITLES[state.route] ?? '';
   pageTitle.textContent = title;
@@ -68,19 +64,13 @@ function renderPageHeader() {
   document.title = title ? `${title} · Pokémon Type Trainer` : 'Pokémon Type Trainer';
 }
 
-function removeLegacyViewHeading() {
-  viewRoot.querySelector('.page > h2:first-child')?.remove();
-}
-
 function render() {
   renderPageHeader();
   const view = VIEWS[state.route] ?? VIEWS.quiz;
   view(viewRoot, render);
-  removeLegacyViewHeading();
   enhanceStudyTabs(viewRoot);
   enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
-  enhanceSwitchControls(viewRoot);
   for (const link of navLinks) {
     if (link.dataset.route === state.route) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
