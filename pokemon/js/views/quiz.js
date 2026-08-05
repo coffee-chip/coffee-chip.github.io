@@ -9,7 +9,7 @@ import {
   getSessionAverageScore
 } from '../state.js';
 import { saveSettings, saveProgress } from '../storage.js';
-import { createQuestionForMode, QUIZ_MODES } from '../quiz/modes.js';
+import { createQuestionForMode, PRACTICE_PRESETS } from '../quiz/modes.js';
 import { POKEMON_POOLS, SAMPLING_STRATEGIES } from '../quiz/generators.js';
 import { scoreQuestion } from '../quiz/scoring.js';
 import { renderAnswerDisplay } from '../quiz/displays.js';
@@ -230,7 +230,7 @@ function buildQuizTypeSelector(refreshQuiz) {
   selector.setAttribute('role', 'radiogroup');
   selector.setAttribute('aria-label', 'Quiz type');
 
-  for (const mode of Object.values(QUIZ_MODES)) {
+  for (const mode of Object.values(PRACTICE_PRESETS)) {
     const button = el('button', { className: 'button-selector-option', text: mode.label });
     button.type = 'button';
     button.setAttribute('role', 'radio');
@@ -293,6 +293,7 @@ function buildMatchupFields(modeId) {
   const dualLabel = el('label', { className: 'toggle-field quiz-dual-toggle' });
   const dualCheckbox = document.createElement('input');
   dualCheckbox.type = 'checkbox';
+  dualCheckbox.setAttribute('role', 'switch');
   dualCheckbox.checked = settings.mixDualTypes === true;
   dualCheckbox.addEventListener('change', () => {
     settings.mixDualTypes = dualCheckbox.checked;
@@ -433,7 +434,6 @@ function buildSessionSummary(refreshQuiz) {
 
 export function renderQuiz(container) {
   const page = el('section', { className: 'page' });
-  page.append(el('h2', { text: 'Quiz' }));
   const quizBody = el('div', { className: 'quiz-body' });
   page.append(quizBody);
   function refreshQuiz() {
