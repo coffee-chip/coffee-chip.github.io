@@ -1,6 +1,6 @@
-.pokemon-recent { margin: 0 0 1rem; }
+.pokemon-recent { min-width: 0; max-width: 100%; margin: 0 0 1rem; overflow: hidden; }
 .pokemon-recent h3 { margin: 0 0 .5rem; font-size: .95rem; color: var(--text-muted); }
-.pokemon-recent-list { display: flex; gap: .5rem; overflow-x: auto; padding: .1rem .05rem .45rem; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.pokemon-recent-list { display: flex; min-width: 0; max-width: 100%; gap: .5rem; overflow-x: auto; overflow-y: hidden; padding: .1rem .05rem .45rem; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 .pokemon-recent-button { flex: 0 0 4.75rem; min-height: 5.5rem; padding: .3rem; display: grid; grid-template-rows: 3.5rem auto; place-items: center; gap: .15rem; border-color: var(--border-default); background: var(--panel-background); color: var(--text-primary); font-size: .72rem; font-weight: 600; line-height: 1.1; text-align: center; }
 .pokemon-recent-button:hover, .pokemon-recent-button:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
 .pokemon-recent-button img { display: block; width: 3.5rem; height: 3.5rem; object-fit: contain; }
