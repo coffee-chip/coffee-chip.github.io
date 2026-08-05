@@ -5,6 +5,7 @@ import { fetchEvolutionChain, fetchPokemon, fetchPokemonNameIndex, fetchPokemonS
 
 const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const NAME_INDEX_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const RECENT_POKEMON_LIMIT = 10;
 
 function titleCase(value) { return value.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' '); }
 function normalizeApiPokemon(raw) {
@@ -54,6 +55,16 @@ export async function getPokemon(identifier, { forceRefresh = false } = {}) {
   try { const raw = await fetchPokemon(normalized); const pokemon = await enrichWithEvolution(normalizeApiPokemon(raw)); cachePokemon(pokemon); return { pokemon, source: 'network', stale: false }; }
   catch (error) { if (cached) return { pokemon: cached, source: 'stale-cache', stale: true, error }; throw error; }
 }
+export function rememberPokemonLookup(pokemon) {
+  if (!isValidCachedPokemon(pokemon)) return false;
+  const current = Array.isArray(state.cache.recentPokemonIds) ? state.cache.recentPokemonIds : [];
+  state.cache.recentPokemonIds = [pokemon.id, ...current.filter(id => id !== pokemon.id)].slice(0, RECENT_POKEMON_LIMIT);
+  return saveCache(state.cache);
+}
+export function getRecentPokemonLookups() {
+  const ids = Array.isArray(state.cache.recentPokemonIds) ? state.cache.recentPokemonIds : [];
+  return ids.map(id => getCached(String(id))).filter(isValidCachedPokemon);
+}
 export function getCachedPokemonNameIndex() { return isValidNameIndex(state.cache.pokemonNameIndex) ? state.cache.pokemonNameIndex : null; }
 export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
   const cached = getCachedPokemonNameIndex();
@@ -62,4 +73,4 @@ export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
   catch (error) { if (cached) return { names: cached.names, source: 'stale-cache', stale: true, error }; throw error; }
 }
 export function getPokemonCacheEntryCount() { return new Set(Object.values(state.cache.pokemon ?? {}).filter(isValidCachedPokemon).map(record => record.id)).size; }
-export function clearPokemonCache() { state.cache.pokemon = {}; state.cache.pokemonNameIndex = null; return saveCache(state.cache); }
+export function clearPokemonCache() { state.cache.pokemon = {}; state.cache.pokemonNameIndex = null; state.cache.recentPokemonIds = []; return saveCache(state.cache); }
