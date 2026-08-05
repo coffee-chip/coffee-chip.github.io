@@ -33,6 +33,7 @@
   <link rel="apple-touch-icon" href="./icons/app-icon.svg">
   <link rel="stylesheet" href="./css/color-tokens.css">
   <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="./css/page-header.css">
   <link rel="stylesheet" href="./css/service-worker.css">
   <link rel="stylesheet" href="./css/developer-overlay.css">
   <link rel="stylesheet" href="./css/progress.css">
@@ -44,10 +45,13 @@
 </head>
 <body>
   <div class="app-shell">
-    <header class="app-utility-header">
-      <a href="#settings" data-route="settings" class="settings-gear" aria-label="Settings" title="Settings">⚙</a>
+    <header class="page-header" aria-label="Page header">
+      <h1 class="page-header-title" id="page-title"></h1>
+      <div class="page-header-actions">
+        <a href="#settings" data-route="settings" class="settings-gear" aria-label="Settings" title="Settings">⚙</a>
+      </div>
     </header>
-    <main id="app-view" aria-live="polite"></main>
+    <main id="app-view" aria-live="polite" aria-labelledby="page-title"></main>
     <nav class="app-nav" aria-label="Primary navigation">
       <a href="#quiz" data-route="quiz">Quiz</a>
       <a href="#study" data-route="study">Study</a>
