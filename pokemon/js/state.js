@@ -8,13 +8,13 @@ export const state = {
   route: 'quiz',
   quiz: {
     mode: 'select-all', status: 'idle', question: null, selectedAnswers: new Set(), result: null,
-    session: { mode: 'select-all', length: 10, questionNumber: 0, totalScore: 0, results: [] }
+    session: { mode: 'select-all', length: 0, questionNumber: 0, totalScore: 0, results: [] }
   },
   settings: {
     paletteTheme: 'classic',
     appearance: 'system',
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
-    quiz: { defaultMode: 'select-all', common: {}, modes: { 'select-all': { questionCount: 10 } } }
+    quiz: { defaultMode: 'select-all', common: {}, modes: { 'select-all': {} } }
   },
   study: {
     mode: 'pokemon', primaryType: 'fire', secondaryType: null,
@@ -25,7 +25,7 @@ export const state = {
 };
 
 export function getQuizModeSettings(modeId = state.quiz.mode) {
-  if (!state.settings.quiz.modes[modeId]) state.settings.quiz.modes[modeId] = { questionCount: 10 };
+  if (!state.settings.quiz.modes[modeId]) state.settings.quiz.modes[modeId] = {};
   return state.settings.quiz.modes[modeId];
 }
 
@@ -50,9 +50,9 @@ export function hydratePersistentState(persistentData) {
   };
   state.cache = { ...state.cache, ...persistentData.cache };
   state.quiz.mode = state.settings.quiz.defaultMode;
-  const modeSettings = getQuizModeSettings(state.quiz.mode);
+  getQuizModeSettings(state.quiz.mode);
   state.quiz.session.mode = state.quiz.mode;
-  state.quiz.session.length = modeSettings.questionCount;
+  state.quiz.session.length = 0;
 }
 
 export function getPersistentSnapshot() {
@@ -83,12 +83,10 @@ export function getPersistentSnapshot() {
 export function resetProgress() { state.progress = emptyProgress(); }
 export function resetQuestionState() { state.quiz.selectedAnswers = new Set(); state.quiz.result = null; state.quiz.question = null; }
 
-export function startQuizSession(length = getQuizModeSettings().questionCount) {
-  const modeSettings = getQuizModeSettings();
-  modeSettings.questionCount = length;
+export function startQuizSession() {
   state.settings.quiz.defaultMode = state.quiz.mode;
   state.quiz.status = 'answering';
-  state.quiz.session = { mode: state.quiz.mode, length, questionNumber: 1, totalScore: 0, results: [] };
+  state.quiz.session = { mode: state.quiz.mode, length: 0, questionNumber: 1, totalScore: 0, results: [] };
   resetQuestionState();
 }
 
@@ -151,8 +149,6 @@ export function recordQuestionResult(question, result) {
 }
 
 export function advanceQuizSession() {
-  const { length, questionNumber } = state.quiz.session;
-  if (length !== 0 && questionNumber >= length) { state.quiz.status = 'complete'; resetQuestionState(); return false; }
   state.quiz.session.questionNumber += 1;
   resetQuestionState();
   state.quiz.status = 'answering';
