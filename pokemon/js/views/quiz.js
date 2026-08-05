@@ -10,6 +10,7 @@ import {
 } from '../state.js';
 import { saveSettings, saveProgress } from '../storage.js';
 import { createQuestionForMode, QUIZ_MODES } from '../quiz/modes.js';
+import { POKEMON_POOLS, SAMPLING_STRATEGIES } from '../quiz/generators.js';
 import { scoreQuestion } from '../quiz/scoring.js';
 import { renderAnswerDisplay } from '../quiz/displays.js';
 import { createTypeBadge } from '../components/typeBadge.js';
@@ -23,6 +24,19 @@ let prefetchPromise = null;
 let prefetchMode = null;
 let prefetchSessionToken = 0;
 
+const EFFECTIVENESS_OPTIONS = {
+  'choose-switch': [
+    { id: 'weak', label: 'Weak' },
+    { id: 'resistant', label: 'Resistant or immune' },
+    { id: 'both', label: 'Both' }
+  ],
+  'choose-move': [
+    { id: 'more', label: 'More effective' },
+    { id: 'less', label: 'Resisted or immune' },
+    { id: 'both', label: 'Both' }
+  ]
+};
+
 function el(tag, options = {}) {
   const node = document.createElement(tag);
   if (options.className) node.className = options.className;
@@ -31,6 +45,24 @@ function el(tag, options = {}) {
 }
 
 function formatPercent(score) { return `${Math.round(score * 100)}%`; }
+
+function createSelect(options, value) {
+  const select = document.createElement('select');
+  for (const definition of options) {
+    const option = document.createElement('option');
+    option.value = definition.id;
+    option.textContent = definition.label;
+    option.selected = definition.id === value;
+    select.append(option);
+  }
+  return select;
+}
+
+function createField(labelText, control, className = '') {
+  const label = el('label', { className });
+  label.append(el('span', { text: labelText }), control);
+  return label;
+}
 
 function questionOptions(modeId) {
   const modeSettings = getQuizModeSettings(modeId);
@@ -181,55 +213,96 @@ function renderFeedback(result, question) {
   return feedback;
 }
 
-function buildQuizSetup(refreshQuiz) {
-  const panel = el('div', { className: 'panel' });
-  panel.append(el('p', { text: 'Choose a quiz type and practice until you finish the session.' }));
-  const form = el('div', { className: 'quiz-setup' });
-  const modeLabel = el('label');
-  modeLabel.append(el('span', { text: 'Quiz type' }));
-  const modeSelect = el('select');
-  for (const mode of Object.values(QUIZ_MODES)) {
-    const option = document.createElement('option');
-    option.value = mode.id;
-    option.textContent = mode.label;
-    option.selected = mode.id === state.quiz.mode;
-    modeSelect.append(option);
-  }
-  modeLabel.append(modeSelect);
-  form.append(modeLabel);
-
-  const dualLabel = el('label', { className: 'toggle-field quiz-dual-toggle' });
-  const dualCheckbox = document.createElement('input');
-  dualCheckbox.type = 'checkbox';
-  dualLabel.append(dualCheckbox, el('span', { text: 'Mix in dual-type questions' }));
-  const dualNote = el('p', { className: 'muted quiz-dual-note', text: 'When enabled, about one in five questions uses dual types; single-type questions remain mixed in.' });
-
-  function populateModeOptions() {
-    const modeSettings = getQuizModeSettings(state.quiz.mode);
-    dualCheckbox.checked = modeSettings.mixDualTypes === true;
-    const supportsDualMix = state.quiz.mode !== 'pokemon-type-recognition';
-    dualLabel.hidden = !supportsDualMix;
-    dualNote.hidden = !supportsDualMix;
-  }
-
-  populateModeOptions();
+function buildQuizTypeField(refreshQuiz) {
+  const modeSelect = createSelect(Object.values(QUIZ_MODES), state.quiz.mode);
   modeSelect.addEventListener('change', () => {
     clearPrefetch();
     state.quiz.mode = modeSelect.value;
     state.settings.quiz.defaultMode = modeSelect.value;
     getQuizModeSettings(modeSelect.value);
-    populateModeOptions();
+    saveSettings(state.settings);
+    refreshQuiz();
+  });
+  return createField('Quiz type', modeSelect);
+}
+
+function buildRecognitionFields() {
+  const fragment = document.createDocumentFragment();
+  const settings = getQuizModeSettings('pokemon-type-recognition');
+  settings.pokemonPool ??= 'gen-1';
+  settings.samplingStrategy ??= 'adaptive';
+
+  const poolSelect = createSelect(Object.values(POKEMON_POOLS), settings.pokemonPool);
+  poolSelect.addEventListener('change', () => {
+    settings.pokemonPool = poolSelect.value;
     saveSettings(state.settings);
   });
+
+  const samplingSelect = createSelect(Object.values(SAMPLING_STRATEGIES), settings.samplingStrategy);
+  samplingSelect.addEventListener('change', () => {
+    settings.samplingStrategy = samplingSelect.value;
+    saveSettings(state.settings);
+  });
+
+  fragment.append(
+    createField('Pokémon pool', poolSelect, 'quiz-recognition-pool'),
+    createField('Sampling', samplingSelect, 'quiz-sampling-setting')
+  );
+  return fragment;
+}
+
+function buildMatchupFields(modeId) {
+  const fragment = document.createDocumentFragment();
+  const settings = getQuizModeSettings(modeId);
+  settings.samplingStrategy ??= 'adaptive';
+
+  if (modeId === 'choose-switch' || modeId === 'choose-move') {
+    settings.effectiveness ??= 'both';
+    const effectivenessSelect = createSelect(EFFECTIVENESS_OPTIONS[modeId], settings.effectiveness);
+    effectivenessSelect.addEventListener('change', () => {
+      settings.effectiveness = effectivenessSelect.value;
+      saveSettings(state.settings);
+    });
+    fragment.append(createField('Effectiveness', effectivenessSelect, 'quiz-effectiveness-setting'));
+  }
+
+  const samplingSelect = createSelect(Object.values(SAMPLING_STRATEGIES), settings.samplingStrategy);
+  samplingSelect.addEventListener('change', () => {
+    settings.samplingStrategy = samplingSelect.value;
+    saveSettings(state.settings);
+  });
+  fragment.append(createField('Sampling', samplingSelect, 'quiz-sampling-setting'));
+
+  const dualLabel = el('label', { className: 'toggle-field quiz-dual-toggle' });
+  const dualCheckbox = document.createElement('input');
+  dualCheckbox.type = 'checkbox';
+  dualCheckbox.checked = settings.mixDualTypes === true;
   dualCheckbox.addEventListener('change', () => {
-    getQuizModeSettings(state.quiz.mode).mixDualTypes = dualCheckbox.checked;
+    settings.mixDualTypes = dualCheckbox.checked;
     saveSettings(state.settings);
   });
-  form.append(dualLabel);
+  dualLabel.append(dualCheckbox, el('span', { text: 'Mix in dual-type questions' }));
+  fragment.append(dualLabel, el('p', {
+    className: 'muted quiz-dual-note',
+    text: 'When enabled, about one in five questions uses dual types.'
+  }));
+  return fragment;
+}
+
+function buildQuizSetup(refreshQuiz) {
+  const panel = el('div', { className: 'panel' });
+  panel.append(el('p', { text: 'Choose a quiz type and practice until you finish the session.' }));
+  const form = el('div', { className: 'quiz-setup' });
+
+  form.append(buildQuizTypeField(refreshQuiz));
+  if (state.quiz.mode === 'pokemon-type-recognition') form.append(buildRecognitionFields());
+  else form.append(buildMatchupFields(state.quiz.mode));
+
   const start = el('button', { text: 'Start quiz' });
+  start.type = 'button';
   start.addEventListener('click', () => beginSession(refreshQuiz));
   form.append(start);
-  panel.append(form, dualNote);
+  panel.append(form);
   return panel;
 }
 
