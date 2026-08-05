@@ -4,6 +4,7 @@ import {
   startQuizSession,
   recordQuestionResult,
   advanceQuizSession,
+  endQuizSession,
   returnToQuizSetup,
   getSessionAverageScore
 } from '../state.js';
@@ -43,28 +44,23 @@ function clearPrefetch() {
   prefetchSessionToken += 1;
 }
 
-function exitQuiz(refreshQuiz) {
+function finishSession(refreshQuiz) {
   questionLoadToken += 1;
   clearPrefetch();
   dismissFeedbackMnemonic();
-  returnToQuizSetup();
+  endQuizSession();
   refreshQuiz();
 }
 
-function createExitButton(refreshQuiz) {
-  const exit = el('button', { className: 'secondary-button', text: 'Exit quiz' });
-  exit.type = 'button';
-  exit.addEventListener('click', () => exitQuiz(refreshQuiz));
-  return exit;
-}
-
-function hasAnotherQuestionAfterCurrent() {
-  const { length, questionNumber } = state.quiz.session;
-  return length === 0 || questionNumber < length;
+function createFinishButton(refreshQuiz) {
+  const finish = el('button', { className: 'secondary-button', text: 'Finish session' });
+  finish.type = 'button';
+  finish.addEventListener('click', () => finishSession(refreshQuiz));
+  return finish;
 }
 
 function startQuestionPrefetch() {
-  if (!hasAnotherQuestionAfterCurrent() || prefetchPromise || prefetchedQuestion) return;
+  if (prefetchPromise || prefetchedQuestion) return;
   const modeId = state.quiz.session.mode;
   const sessionToken = prefetchSessionToken;
   prefetchMode = modeId;
@@ -123,9 +119,9 @@ async function createNextQuestion(refreshQuiz, { usePrefetch = false } = {}) {
   refreshQuiz();
 }
 
-function beginSession(length, refreshQuiz) {
+function beginSession(refreshQuiz) {
   clearPrefetch();
-  startQuizSession(length);
+  startQuizSession();
   saveSettings(state.settings);
   createNextQuestion(refreshQuiz);
 }
@@ -187,10 +183,10 @@ function renderFeedback(result, question) {
 
 function buildQuizSetup(refreshQuiz) {
   const panel = el('div', { className: 'panel' });
-  panel.append(el('p', { text: 'Choose a practice preset and session length. Each preset remembers its own setup.' }));
+  panel.append(el('p', { text: 'Choose a quiz type and practice until you finish the session.' }));
   const form = el('div', { className: 'quiz-setup' });
   const modeLabel = el('label');
-  modeLabel.append(el('span', { text: 'Practice preset' }));
+  modeLabel.append(el('span', { text: 'Quiz type' }));
   const modeSelect = el('select');
   for (const mode of Object.values(QUIZ_MODES)) {
     const option = document.createElement('option');
@@ -202,26 +198,14 @@ function buildQuizSetup(refreshQuiz) {
   modeLabel.append(modeSelect);
   form.append(modeLabel);
 
-  const lengthLabel = el('label');
-  lengthLabel.append(el('span', { text: 'Questions' }));
-  const lengthSelect = el('select');
-  const lengths = [5, 10, 20, 0];
   const dualLabel = el('label', { className: 'toggle-field quiz-dual-toggle' });
   const dualCheckbox = document.createElement('input');
   dualCheckbox.type = 'checkbox';
   dualLabel.append(dualCheckbox, el('span', { text: 'Mix in dual-type questions' }));
-  const dualNote = el('p', { className: 'muted quiz-dual-note', text: 'When enabled, about one-third of questions use dual types; single-type questions remain mixed in.' });
+  const dualNote = el('p', { className: 'muted quiz-dual-note', text: 'When enabled, about one in five questions uses dual types; single-type questions remain mixed in.' });
 
   function populateModeOptions() {
     const modeSettings = getQuizModeSettings(state.quiz.mode);
-    lengthSelect.replaceChildren();
-    for (const length of lengths) {
-      const option = document.createElement('option');
-      option.value = String(length);
-      option.textContent = length === 0 ? 'Endless' : String(length);
-      option.selected = length === modeSettings.questionCount;
-      lengthSelect.append(option);
-    }
     dualCheckbox.checked = modeSettings.mixDualTypes === true;
     const supportsDualMix = state.quiz.mode !== 'pokemon-type-recognition';
     dualLabel.hidden = !supportsDualMix;
@@ -237,18 +221,13 @@ function buildQuizSetup(refreshQuiz) {
     populateModeOptions();
     saveSettings(state.settings);
   });
-  lengthSelect.addEventListener('change', () => {
-    getQuizModeSettings(state.quiz.mode).questionCount = Number(lengthSelect.value);
-    saveSettings(state.settings);
-  });
   dualCheckbox.addEventListener('change', () => {
     getQuizModeSettings(state.quiz.mode).mixDualTypes = dualCheckbox.checked;
     saveSettings(state.settings);
   });
-  lengthLabel.append(lengthSelect);
-  form.append(lengthLabel, dualLabel);
+  form.append(dualLabel);
   const start = el('button', { text: 'Start quiz' });
-  start.addEventListener('click', () => beginSession(Number(lengthSelect.value), refreshQuiz));
+  start.addEventListener('click', () => beginSession(refreshQuiz));
   form.append(start);
   panel.append(form, dualNote);
   return panel;
@@ -257,8 +236,7 @@ function buildQuizSetup(refreshQuiz) {
 function buildSessionHeader() {
   const session = state.quiz.session;
   const header = el('div', { className: 'session-header' });
-  const questionLabel = session.length === 0 ? `Question ${session.questionNumber}` : `Question ${session.questionNumber} of ${session.length}`;
-  header.append(el('span', { text: questionLabel }));
+  header.append(el('span', { text: `Question ${session.questionNumber}` }));
   header.append(el('span', { text: `Session average: ${formatPercent(getSessionAverageScore())}` }));
   return header;
 }
@@ -281,7 +259,7 @@ function buildLoadingQuestion(refreshQuiz) {
   const panel = el('div', { className: 'panel quiz-loading-panel' });
   panel.append(el('p', { text: 'Loading question…' }));
   const actions = el('div', { className: 'actions' });
-  actions.append(createExitButton(refreshQuiz));
+  actions.append(createFinishButton(refreshQuiz));
   panel.append(actions);
   fragment.append(panel);
   return fragment;
@@ -295,7 +273,7 @@ function buildLoadError(refreshQuiz) {
   const actions = el('div', { className: 'actions' });
   const retry = el('button', { text: 'Retry' });
   retry.addEventListener('click', () => createNextQuestion(refreshQuiz));
-  actions.append(retry, createExitButton(refreshQuiz));
+  actions.append(retry, createFinishButton(refreshQuiz));
   panel.append(actions);
   fragment.append(panel);
   return fragment;
@@ -330,15 +308,14 @@ function buildActiveQuestion(refreshQuiz) {
     });
     actions.append(submit);
   } else {
-    const isLast = state.quiz.session.length !== 0 && state.quiz.session.questionNumber >= state.quiz.session.length;
-    const next = el('button', { text: isLast ? 'See summary' : 'Next question' });
+    const next = el('button', { text: 'Next question' });
     next.addEventListener('click', () => {
-      if (!advanceQuizSession()) { clearPrefetch(); refreshQuiz(); return; }
+      advanceQuizSession();
       createNextQuestion(refreshQuiz, { usePrefetch: true });
     });
     actions.append(next);
   }
-  actions.append(createExitButton(refreshQuiz));
+  actions.append(createFinishButton(refreshQuiz));
   panel.append(actions);
   fragment.append(panel);
   return fragment;
@@ -352,7 +329,7 @@ function buildSessionSummary(refreshQuiz) {
   panel.append(el('p', { className: 'summary-score', text: `Average score: ${formatPercent(getSessionAverageScore())}` }));
   const actions = el('div', { className: 'actions' });
   const again = el('button', { text: 'Quiz again' });
-  again.addEventListener('click', () => beginSession(state.quiz.session.length, refreshQuiz));
+  again.addEventListener('click', () => beginSession(refreshQuiz));
   const setup = el('button', { className: 'secondary-button', text: 'Change setup' });
   setup.addEventListener('click', () => {
     questionLoadToken += 1;
