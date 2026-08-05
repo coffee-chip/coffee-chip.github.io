@@ -13,6 +13,15 @@ function installStyles() {
   style.id = 'pokemon-autocomplete-styles';
   style.textContent = `
     .pokemon-lookup-form label { position: relative; }
+    .pokemon-lookup-form input[type="search"] { padding-left: 2.6rem; }
+    .pokemon-search-clear {
+      position: absolute; z-index: 2; bottom: .38rem; left: .38rem;
+      display: grid; place-items: center; width: 1.85rem; min-width: 1.85rem; height: 1.85rem;
+      padding: 0; border: 0; border-radius: 50%; background: transparent;
+      color: var(--text-muted); font-size: 1.25rem; line-height: 1;
+    }
+    .pokemon-search-clear:hover,
+    .pokemon-search-clear:focus-visible { background: var(--subtle-background); color: var(--text-primary); }
     .pokemon-autocomplete-list {
       position: absolute; z-index: 20; top: 100%; right: 0; left: 0;
       overflow: hidden; margin-top: .25rem; border: 1px solid var(--border-default);
@@ -41,7 +50,26 @@ function findMatches(query) {
   return [...prefix, ...contains].slice(0, MAX_SUGGESTIONS);
 }
 
+function ensureClearButton(input) {
+  const label = input.closest('label') ?? input.parentElement;
+  if (!label || label.querySelector('.pokemon-search-clear')) return;
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'pokemon-search-clear';
+  clear.textContent = '×';
+  clear.setAttribute('aria-label', 'Clear Pokémon search');
+  clear.addEventListener('click', () => {
+    input.value = '';
+    state.study.pokemonQuery = '';
+    closeSuggestions();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+  });
+  label.insertBefore(clear, input);
+}
+
 function renderSuggestions(input) {
+  ensureClearButton(input);
   closeSuggestions();
   activeInput = input;
   input.removeAttribute('list');
