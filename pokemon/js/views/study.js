@@ -233,7 +233,6 @@ export function renderStudy(container, render) {
   activePokemonDatalist = null;
   datalistPopulationToken += 1;
   const page = el('section', { className: 'page' });
-  page.append(el('h2', { text: 'Study' }));
   const controls = el('div', { className: 'panel study-controls' });
   const modeLabel = el('label');
   modeLabel.append(el('span', { text: 'Lookup' }));
