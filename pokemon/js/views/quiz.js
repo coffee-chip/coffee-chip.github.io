@@ -213,17 +213,34 @@ function renderFeedback(result, question) {
   return feedback;
 }
 
-function buildQuizTypeField(refreshQuiz) {
-  const modeSelect = createSelect(Object.values(QUIZ_MODES), state.quiz.mode);
-  modeSelect.addEventListener('change', () => {
-    clearPrefetch();
-    state.quiz.mode = modeSelect.value;
-    state.settings.quiz.defaultMode = modeSelect.value;
-    getQuizModeSettings(modeSelect.value);
-    saveSettings(state.settings);
-    refreshQuiz();
-  });
-  return createField('Quiz type', modeSelect);
+function selectQuizMode(modeId, refreshQuiz) {
+  if (state.quiz.mode === modeId) return;
+  clearPrefetch();
+  state.quiz.mode = modeId;
+  state.settings.quiz.defaultMode = modeId;
+  getQuizModeSettings(modeId);
+  saveSettings(state.settings);
+  refreshQuiz();
+}
+
+function buildQuizTypeSelector(refreshQuiz) {
+  const fieldset = el('fieldset', { className: 'selector-field quiz-type-field' });
+  fieldset.append(el('legend', { text: 'Quiz type' }));
+  const selector = el('div', { className: 'button-selector button-selector-grid quiz-type-selector' });
+  selector.setAttribute('role', 'radiogroup');
+  selector.setAttribute('aria-label', 'Quiz type');
+
+  for (const mode of Object.values(QUIZ_MODES)) {
+    const button = el('button', { className: 'button-selector-option', text: mode.label });
+    button.type = 'button';
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(mode.id === state.quiz.mode));
+    button.addEventListener('click', () => selectQuizMode(mode.id, refreshQuiz));
+    selector.append(button);
+  }
+
+  fieldset.append(selector);
+  return fieldset;
 }
 
 function buildRecognitionFields() {
@@ -282,26 +299,25 @@ function buildMatchupFields(modeId) {
     saveSettings(state.settings);
   });
   dualLabel.append(dualCheckbox, el('span', { text: 'Mix in dual-type questions' }));
-  fragment.append(dualLabel, el('p', {
-    className: 'muted quiz-dual-note',
-    text: 'When enabled, about one in five questions uses dual types.'
-  }));
+  fragment.append(dualLabel);
   return fragment;
 }
 
 function buildQuizSetup(refreshQuiz) {
-  const panel = el('div', { className: 'panel' });
-  panel.append(el('p', { text: 'Choose a quiz type and practice until you finish the session.' }));
+  const panel = el('div', { className: 'panel quiz-setup-panel' });
   const form = el('div', { className: 'quiz-setup' });
 
-  form.append(buildQuizTypeField(refreshQuiz));
+  form.append(buildQuizTypeSelector(refreshQuiz));
   if (state.quiz.mode === 'pokemon-type-recognition') form.append(buildRecognitionFields());
   else form.append(buildMatchupFields(state.quiz.mode));
 
+  const startArea = el('div', { className: 'quiz-start-area' });
+  startArea.append(el('p', { className: 'muted', text: 'Practice for as long as you want; you can end the quiz at any time.' }));
   const start = el('button', { text: 'Start quiz' });
   start.type = 'button';
   start.addEventListener('click', () => beginSession(refreshQuiz));
-  form.append(start);
+  startArea.append(start);
+  form.append(startArea);
   panel.append(form);
   return panel;
 }
