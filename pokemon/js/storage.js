@@ -1,7 +1,7 @@
-import { createRelationshipKey, parseRelationshipKey } from './relationships.js';
+import { parseRelationshipKey } from './relationships.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 7;
+export const STORAGE_VERSION = 8;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -23,22 +23,6 @@ function cloneDefaults() { return structuredClone(DEFAULT_PERSISTENT_DATA); }
 function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function nonnegativeNumber(value, fallback = 0) { return Number.isFinite(value) && value >= 0 ? value : fallback; }
 
-function normalizeModeSettings(value) {
-  const normalized = isObject(value) ? { ...value } : {};
-  delete normalized.questionCount;
-  return normalized;
-}
-
-function normalizeModeId(modeId) {
-  const aliases = {
-    'select-all': 'choose-switch',
-    'choose-switch-safe': 'choose-switch',
-    'choose-move-select-all': 'choose-move',
-    'choose-move-less-effective': 'choose-move'
-  };
-  return aliases[modeId] ?? modeId;
-}
-
 function normalizeSettings(value) {
   const defaults = cloneDefaults().settings;
   if (!isObject(value)) return defaults;
@@ -46,13 +30,11 @@ function normalizeSettings(value) {
   const validAppearances = new Set(['system', 'light', 'dark']);
   const quiz = isObject(value.quiz) ? value.quiz : {};
   const developer = isObject(value.developer) ? value.developer : {};
-  const rawDefaultMode = typeof quiz.defaultMode === 'string' ? quiz.defaultMode : defaults.quiz.defaultMode;
-  const defaultMode = normalizeModeId(rawDefaultMode);
+  const defaultMode = typeof quiz.defaultMode === 'string' ? quiz.defaultMode : defaults.quiz.defaultMode;
   const rawModes = isObject(quiz.modes) ? quiz.modes : {};
   const modes = {};
-  for (const [rawModeId, rawSettings] of Object.entries(rawModes)) {
-    const modeId = normalizeModeId(rawModeId);
-    modes[modeId] = { ...(modes[modeId] ?? {}), ...normalizeModeSettings(rawSettings) };
+  for (const [modeId, modeSettings] of Object.entries(rawModes)) {
+    if (typeof modeId === 'string' && modeId && isObject(modeSettings)) modes[modeId] = { ...modeSettings };
   }
   modes[defaultMode] ??= {};
   return {
@@ -77,17 +59,8 @@ function normalizeRelationshipStats(value) {
   for (const [storedKey, record] of Object.entries(value)) {
     if (!isObject(record)) continue;
     let relationship;
-    try {
-      relationship = parseRelationshipKey(storedKey);
-    } catch {
-      try {
-        relationship = {
-          key: createRelationshipKey(record.attackingType, record.defendingType),
-          attackingType: record.attackingType,
-          defendingType: record.defendingType
-        };
-      } catch { continue; }
-    }
+    try { relationship = parseRelationshipKey(storedKey); }
+    catch { continue; }
     const attempts = Math.floor(nonnegativeNumber(record.attempts));
     normalized[relationship.key] = {
       attackingType: relationship.attackingType,
@@ -165,39 +138,23 @@ function normalizeCache(value) {
   };
 }
 
-function migrateV1(raw) {
-  const defaults = cloneDefaults();
-  const oldSettings = isObject(raw.settings) ? raw.settings : {};
-  const oldMode = typeof oldSettings.quizMode === 'string' ? oldSettings.quizMode : defaults.settings.quiz.defaultMode;
+function normalizeCurrentData(raw) {
+  if (!isObject(raw) || raw.version !== STORAGE_VERSION) return cloneDefaults();
   return {
     version: STORAGE_VERSION,
-    settings: normalizeSettings({ quiz: { defaultMode: oldMode, common: {}, modes: { [oldMode]: {} } } }),
+    settings: normalizeSettings(raw.settings),
     progress: normalizeProgress(raw.progress),
     cache: normalizeCache(raw.cache)
   };
-}
-
-function migrate(raw) {
-  if (!isObject(raw)) return cloneDefaults();
-  if ([2, 3, 4, 5, 6, STORAGE_VERSION].includes(raw.version)) {
-    return {
-      version: STORAGE_VERSION,
-      settings: normalizeSettings(raw.settings),
-      progress: normalizeProgress(raw.progress),
-      cache: normalizeCache(raw.cache)
-    };
-  }
-  if (raw.version === 1) return migrateV1(raw);
-  return cloneDefaults();
 }
 
 export function loadPersistentData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return cloneDefaults();
-    const migrated = migrate(JSON.parse(raw));
-    write(migrated);
-    return migrated;
+    const normalized = normalizeCurrentData(JSON.parse(raw));
+    write(normalized);
+    return normalized;
   } catch (error) {
     console.warn('Could not load saved data. Using defaults.', error);
     return cloneDefaults();
