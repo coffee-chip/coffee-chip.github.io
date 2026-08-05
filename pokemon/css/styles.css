@@ -7,20 +7,23 @@ body { margin: 0; min-height: 100%; background: var(--page-background); color: v
 button, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: var(--action-primary); }
-.app-shell { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; max-width: 48rem; margin: 0 auto; background: var(--app-background); }
-.app-utility-header { display: flex; justify-content: flex-end; padding: calc(.45rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right)) .25rem calc(1rem + env(safe-area-inset-left)); }
+.app-shell { position: relative; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-rows: 1fr auto; max-width: 48rem; margin: 0 auto; background: var(--app-background); }
+.app-utility-header { position: absolute; z-index: 10; top: calc(.7rem + env(safe-area-inset-top)); right: calc(1rem + env(safe-area-inset-right)); display: flex; justify-content: flex-end; padding: 0; }
 .settings-gear { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border: 1px solid transparent; border-radius: 999px; color: var(--text-muted); font-size: 1.45rem; line-height: 1; text-decoration: none; }
 .settings-gear:hover, .settings-gear:focus-visible, .settings-gear[aria-current="page"] { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); outline: none; }
 .page, .app-nav { padding: 1rem; }
-.page { padding-left: calc(1rem + env(safe-area-inset-left)); padding-right: calc(1rem + env(safe-area-inset-right)); }
-.page h2 { margin-top: 0; color: var(--heading-color); }
+.page { padding-top: calc(1rem + env(safe-area-inset-top)); padding-left: calc(1rem + env(safe-area-inset-left)); padding-right: calc(1rem + env(safe-area-inset-right)); }
+.page h2 { min-height: 2.65rem; margin-top: 0; margin-bottom: 1rem; padding-right: 3.25rem; display: flex; align-items: center; color: var(--heading-color); }
 .muted { color: var(--text-muted); }
 .panel { border: 1px solid var(--border-default); border-radius: .75rem; padding: 1rem; margin-bottom: 1rem; background: var(--panel-background); }
+.panel > :first-child { margin-top: 0; }
+.panel > :last-child { margin-bottom: 0; }
+.panel > h3:first-child { margin-top: 0; }
 .app-nav { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; padding-left: calc(1rem + env(safe-area-inset-left)); padding-right: calc(1rem + env(safe-area-inset-right)); padding-bottom: calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border-default); background: var(--panel-background); }
 .app-nav a { position: relative; text-align: center; text-decoration: none; color: var(--text-muted); padding: .75rem .25rem; border: 1px solid transparent; border-radius: .5rem; }
 .app-nav a[aria-current="page"] { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); font-weight: 750; }
 .app-nav a[aria-current="page"]::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: .32rem; height: .18rem; border-radius: 999px; background: currentColor; }
-.quiz-setup, .study-controls { display: grid; gap: .75rem; margin-top: 1rem; }
+.quiz-setup, .study-controls { display: grid; gap: .75rem; margin-top: .75rem; }
 .quiz-setup label, .study-controls label, .settings-field { display: grid; gap: .25rem; }
 select { min-height: 2.75rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }
 .quiz-setup button { min-height: 2.75rem; }
@@ -39,8 +42,11 @@ select { min-height: 2.75rem; border: 1px solid var(--border-default); border-ra
 .type-badge-list, .type-chip-list { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
 .type-label { line-height: 1; }
 .actions { display: flex; gap: .75rem; margin-top: 1rem; flex-wrap: wrap; }
-.actions button { min-height: 2.75rem; padding: 0 1rem; }
-.secondary-button { background: var(--panel-background); border: 1px solid var(--border-default); border-radius: .45rem; color: var(--text-primary); }
+.actions button, .quiz-setup > button, .settings-section > button, .danger-zone > button, .inline-confirmation button, .update-banner button { min-height: 2.75rem; padding: 0 1rem; border-radius: .45rem; }
+.actions button:not(.secondary-button):not(.danger-button), .quiz-setup > button:not(.secondary-button), .update-banner button:not(.secondary-button) { border: 1px solid var(--action-primary); background: var(--action-primary); color: var(--neutral-1); font-weight: 700; }
+.actions button:not(.secondary-button):not(.danger-button):hover, .actions button:not(.secondary-button):not(.danger-button):focus-visible, .quiz-setup > button:not(.secondary-button):hover, .quiz-setup > button:not(.secondary-button):focus-visible { border-color: var(--action-primary-strong); background: var(--action-primary-strong); }
+button:disabled { cursor: not-allowed; opacity: .55; }
+.secondary-button { min-height: 2.75rem; padding: 0 1rem; background: var(--panel-background); border: 1px solid var(--border-default); border-radius: .45rem; color: var(--text-primary); }
 .feedback { display: grid; gap: .8rem; margin-top: 1rem; padding: .75rem; border-left: .25rem solid var(--action-primary); background: var(--subtle-background); }
 .feedback h4 { margin: 0; }
 .feedback-row { display: grid; gap: .35rem; }
@@ -62,6 +68,12 @@ select { min-height: 2.75rem; border: 1px solid var(--border-default); border-ra
 .diagnostic-row.ok strong { color: var(--status-success); }
 .diagnostic-row.bad strong { color: var(--status-error); }
 .settings-section h3 { margin-top: 0; }
+.toggle-field { position: relative; display: flex !important; grid-template-columns: none; align-items: center; gap: .75rem !important; min-height: 2.75rem; cursor: pointer; }
+.toggle-field input[type="checkbox"] { appearance: none; position: relative; flex: 0 0 auto; width: 2.75rem; height: 1.55rem; margin: 0; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--subtle-background); transition: background-color .15s ease, border-color .15s ease; }
+.toggle-field input[type="checkbox"]::before { content: ''; position: absolute; top: .17rem; left: .17rem; width: 1.08rem; height: 1.08rem; border-radius: 50%; background: var(--panel-background); box-shadow: 0 1px 3px rgb(0 0 0 / 25%); transition: transform .15s ease; }
+.toggle-field input[type="checkbox"]:checked { border-color: var(--action-primary); background: var(--action-primary); }
+.toggle-field input[type="checkbox"]:checked::before { transform: translateX(1.18rem); }
+.toggle-field input[type="checkbox"]:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .danger-zone { border-color: color-mix(in srgb, var(--status-error) 55%, var(--border-default)); }
 .danger-zone h3 { color: var(--status-error); }
 .danger-button { min-height: 2.75rem; padding: 0 1rem; border: 1px solid var(--status-error); border-radius: .5rem; background: var(--panel-background); color: var(--status-error); font-weight: 700; }
@@ -71,4 +83,7 @@ select { min-height: 2.75rem; border: 1px solid var(--border-default); border-ra
 .settings-status { margin: .85rem 0 0; padding: .7rem .8rem; border-radius: .5rem; font-weight: 650; }
 .settings-status.success { color: var(--status-success); background: var(--status-success-soft); }
 .settings-status.error { color: var(--status-error); background: var(--status-error-soft); }
+.pokemon-lookup-form input[type="search"] { padding-left: .7rem !important; padding-right: 2.7rem !important; }
+.pokemon-search-clear { top: auto !important; right: .42rem !important; bottom: .42rem !important; left: auto !important; width: 1.85rem !important; min-width: 1.85rem !important; height: 1.85rem !important; min-height: 1.85rem !important; padding: 0 !important; }
+@media (prefers-reduced-motion: reduce) { .toggle-field input[type="checkbox"], .toggle-field input[type="checkbox"]::before { transition: none; } }
 @media (min-width: 36rem) { .type-grid { grid-template-columns: repeat(6, 1fr); } .quiz-setup { grid-template-columns: 1fr 1fr auto; align-items: end; } .study-controls { grid-template-columns: repeat(3, 1fr); } }
