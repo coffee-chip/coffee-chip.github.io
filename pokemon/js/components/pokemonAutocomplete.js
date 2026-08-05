@@ -68,6 +68,10 @@ function ensureClearButton(input) {
   label.insertBefore(clear, input);
 }
 
+function ensureVisibleClearButtons(root = document) {
+  for (const input of root.querySelectorAll?.(INPUT_SELECTOR) ?? []) ensureClearButton(input);
+}
+
 function renderSuggestions(input) {
   ensureClearButton(input);
   closeSuggestions();
@@ -102,6 +106,9 @@ function renderSuggestions(input) {
 
 export function initializePokemonAutocomplete() {
   installStyles();
+  ensureVisibleClearButtons();
+  const root = document.querySelector('#app-view');
+  if (root) new MutationObserver(() => ensureVisibleClearButtons(root)).observe(root, { childList: true, subtree: true });
   document.addEventListener('input', event => { const input = event.target.closest?.(INPUT_SELECTOR); if (input) renderSuggestions(input); });
   document.addEventListener('focusin', event => { const input = event.target.closest?.(INPUT_SELECTOR); if (input) renderSuggestions(input); });
   document.addEventListener('focusout', event => { if (event.target === activeInput) window.setTimeout(closeSuggestions, 0); });
