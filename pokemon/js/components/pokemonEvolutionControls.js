@@ -14,27 +14,96 @@ function submitLookup(name, root) {
   form.requestSubmit();
 }
 
-function createChooser(direction, names, root, card) {
+function compactConditionLabel(target) {
+  const conditions = target.conditions ?? [];
+  if (conditions.length !== 1) return '↑ Details';
+  const condition = conditions[0];
+  if (condition.minLevel) return `↑ Lv. ${condition.minLevel}`;
+  if (condition.trigger === 'use-item') return '↑ Stone';
+  if (condition.trigger === 'trade') return '↑ Trade';
+  if (condition.minHappiness || condition.minAffection) return '↑ Friendship';
+  return '↑ Details';
+}
+
+function conditionDescription(condition) {
+  const parts = [];
+  if (condition.trigger === 'level-up') parts.push(condition.minLevel ? `Level ${condition.minLevel}` : 'Level up');
+  else if (condition.trigger === 'use-item') parts.push(condition.item ? `Use ${displayName(condition.item)}` : 'Use an evolution item');
+  else if (condition.trigger === 'trade') parts.push(condition.tradeSpecies ? `Trade for ${displayName(condition.tradeSpecies)}` : 'Trade');
+  else if (condition.trigger && condition.trigger !== 'unknown') parts.push(displayName(condition.trigger));
+
+  if (condition.heldItem) parts.push(`holding ${displayName(condition.heldItem)}`);
+  if (condition.knownMove) parts.push(`knowing ${displayName(condition.knownMove)}`);
+  if (condition.knownMoveType) parts.push(`knowing a ${displayName(condition.knownMoveType)}-type move`);
+  if (condition.location) parts.push(`at ${displayName(condition.location)}`);
+  if (condition.minHappiness) parts.push(`with high friendship`);
+  if (condition.minBeauty) parts.push(`with Beauty ${condition.minBeauty}+`);
+  if (condition.minAffection) parts.push(`with affection ${condition.minAffection}+`);
+  if (condition.timeOfDay) parts.push(`during the ${displayName(condition.timeOfDay)}`);
+  if (condition.gender === 1) parts.push('if female');
+  if (condition.gender === 2) parts.push('if male');
+  if (condition.needsOverworldRain) parts.push('while it is raining');
+  if (condition.partySpecies) parts.push(`with ${displayName(condition.partySpecies)} in the party`);
+  if (condition.partyType) parts.push(`with a ${displayName(condition.partyType)}-type Pokémon in the party`);
+  if (condition.relativePhysicalStats === 1) parts.push('when Attack is higher than Defense');
+  if (condition.relativePhysicalStats === 0) parts.push('when Attack equals Defense');
+  if (condition.relativePhysicalStats === -1) parts.push('when Defense is higher than Attack');
+  if (condition.turnUpsideDown) parts.push('while the device is upside down');
+  return parts.length ? parts.join(', ') : 'Special evolution condition';
+}
+
+function createPanelHeader(title, onClose) {
+  const header = document.createElement('div');
+  header.className = 'pokemon-evolution-chooser-header';
+  const heading = document.createElement('h3');
+  heading.textContent = title;
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'pokemon-evolution-close';
+  close.setAttribute('aria-label', 'Close evolution details');
+  close.textContent = '×';
+  close.addEventListener('click', onClose);
+  header.append(heading, close);
+  return header;
+}
+
+function showEvolutionDetails(targets, root, card) {
+  root.querySelector('.pokemon-evolution-chooser')?.remove();
+  const panel = document.createElement('section');
+  panel.className = 'panel pokemon-evolution-chooser';
+  panel.setAttribute('aria-label', 'Evolution requirements');
+  panel.append(createPanelHeader('Evolution requirements', () => panel.remove()));
+
+  const list = document.createElement('div');
+  list.className = 'pokemon-evolution-requirements';
+  for (const target of targets) {
+    const item = document.createElement('div');
+    item.className = 'pokemon-evolution-requirement';
+    const name = document.createElement('strong');
+    name.textContent = displayName(target.name);
+    item.append(name);
+    for (const condition of target.conditions ?? []) {
+      const description = document.createElement('span');
+      description.textContent = conditionDescription(condition);
+      item.append(description);
+    }
+    list.append(item);
+  }
+  panel.append(list);
+  card.after(panel);
+}
+
+function createChooser(direction, entries, root, card) {
   root.querySelector('.pokemon-evolution-chooser')?.remove();
   const chooser = document.createElement('section');
   chooser.className = 'panel pokemon-evolution-chooser';
   chooser.setAttribute('aria-label', direction === 'previous' ? 'Previous evolutions' : 'Next evolutions');
-
-  const header = document.createElement('div');
-  header.className = 'pokemon-evolution-chooser-header';
-  const heading = document.createElement('h3');
-  heading.textContent = direction === 'previous' ? 'Evolves from' : 'Evolves to';
-  const close = document.createElement('button');
-  close.type = 'button';
-  close.className = 'pokemon-evolution-close';
-  close.setAttribute('aria-label', 'Close evolution choices');
-  close.textContent = '×';
-  close.addEventListener('click', () => chooser.remove());
-  header.append(heading, close);
+  chooser.append(createPanelHeader(direction === 'previous' ? 'Evolves from' : 'Evolves to', () => chooser.remove()));
 
   const actions = document.createElement('div');
   actions.className = 'pokemon-evolution-options';
-  for (const name of names) {
+  for (const entry of entries) {
+    const name = typeof entry === 'string' ? entry : entry.name;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'secondary-button';
@@ -43,21 +112,35 @@ function createChooser(direction, names, root, card) {
     actions.append(button);
   }
 
-  chooser.append(header, actions);
+  chooser.append(actions);
   card.after(chooser);
 }
 
-function createDirectionButton(direction, names, root, card) {
+function createDirectionButton(direction, entries, root, card) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `pokemon-evolution-button pokemon-evolution-${direction}`;
   button.setAttribute('aria-label', direction === 'previous' ? 'Go to previous evolution' : 'Go to next evolution');
   button.textContent = direction === 'previous' ? '‹' : '›';
   button.addEventListener('click', () => {
-    if (names.length === 1) submitLookup(names[0], root);
-    else createChooser(direction, names, root, card);
+    if (entries.length === 1) submitLookup(typeof entries[0] === 'string' ? entries[0] : entries[0].name, root);
+    else createChooser(direction, entries, root, card);
   });
   return button;
+}
+
+function createNextControls(targets, root, card) {
+  const controls = document.createElement('div');
+  controls.className = 'pokemon-evolution-next-controls';
+  controls.append(createDirectionButton('next', targets, root, card));
+  const condition = document.createElement('button');
+  condition.type = 'button';
+  condition.className = 'pokemon-evolution-condition';
+  condition.textContent = targets.length === 1 ? compactConditionLabel(targets[0]) : '↑ Options';
+  condition.setAttribute('aria-label', 'Show evolution requirements');
+  condition.addEventListener('click', () => showEvolutionDetails(targets, root, card));
+  controls.append(condition);
+  return controls;
 }
 
 function createSpacer() {
@@ -89,7 +172,7 @@ export function enhancePokemonEvolutionControls(root) {
   identityRow.append(
     previous.length ? createDirectionButton('previous', previous, root, card) : createSpacer(),
     details,
-    next.length ? createDirectionButton('next', next, root, card) : createSpacer()
+    next.length ? createNextControls(next, root, card) : createSpacer()
   );
 
   card.replaceChildren(visual, identityRow);
