@@ -174,7 +174,10 @@ function renderRecentPokemon(page, render) {
       button.append(image);
     } else button.append(el('span', { className: 'pokemon-recent-placeholder', text: `#${pokemon.id}` }));
     button.append(el('span', { text: pokemon.displayName }));
-    button.addEventListener('click', () => lookupPokemon(pokemon.id, render));
+    button.addEventListener('click', () => {
+      button.blur();
+      lookupPokemon(pokemon.id, render);
+    });
     list.append(button);
   }
   section.append(list);
