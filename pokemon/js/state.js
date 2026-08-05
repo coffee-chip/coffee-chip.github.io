@@ -21,7 +21,7 @@ export const state = {
     pokemonQuery: '', pokemonStatus: 'idle', pokemonResult: null, pokemonSource: null, pokemonError: null
   },
   progress: emptyProgress(),
-  cache: { pokemon: {}, pokemonNameIndex: null }
+  cache: { pokemon: {}, pokemonNameIndex: null, recentPokemonIds: [] }
 };
 
 export function getQuizModeSettings(modeId = state.quiz.mode) {
@@ -47,7 +47,11 @@ export function hydratePersistentState(persistentData) {
     relationshipStats: structuredClone(persistentData.progress.relationshipStats ?? {}),
     pokemonRecognitionStats: structuredClone(persistentData.progress.pokemonRecognitionStats ?? {})
   };
-  state.cache = { ...state.cache, ...persistentData.cache };
+  state.cache = {
+    ...state.cache,
+    ...persistentData.cache,
+    recentPokemonIds: [...(persistentData.cache.recentPokemonIds ?? [])]
+  };
   state.quiz.mode = state.settings.quiz.defaultMode;
   getQuizModeSettings(state.quiz.mode);
   state.quiz.session.mode = state.quiz.mode;
@@ -72,7 +76,8 @@ export function getPersistentSnapshot() {
     },
     cache: {
       pokemon: { ...state.cache.pokemon },
-      pokemonNameIndex: state.cache.pokemonNameIndex ? structuredClone(state.cache.pokemonNameIndex) : null
+      pokemonNameIndex: state.cache.pokemonNameIndex ? structuredClone(state.cache.pokemonNameIndex) : null,
+      recentPokemonIds: [...state.cache.recentPokemonIds]
     }
   };
 }
