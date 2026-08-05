@@ -78,7 +78,10 @@ else window.setTimeout(warmPokemonNameIndex, 0);
 
 const contractResults = validateApplicationContracts();
 console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
-if (contractResults.some(test => !test.passed)) console.error('Application contract validation failed.');
+const failedContracts = contractResults.filter(test => !test.passed);
+if (failedContracts.length) {
+  throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
+}
 const engineResults = runEngineSelfTests();
 console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
 if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
