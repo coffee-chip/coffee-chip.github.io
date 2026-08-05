@@ -1,6 +1,7 @@
 .study-controls-with-tabs { margin-top: 0; }
 .study-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem; grid-column: 1 / -1; }
-.study-tab { min-height: 2.75rem; padding: .45rem .35rem; border: 1px solid var(--border-default); border-radius: .5rem; background: var(--panel-background); }
+.study-tab { min-height: 2.75rem; padding: .45rem .35rem; border: 1px solid var(--border-default); border-radius: .5rem; background: var(--panel-background); color: var(--text-primary); font-weight: 400; }
+.study-tab:hover, .study-tab:focus-visible { border-color: var(--border-strong); background: var(--subtle-background); color: var(--text-primary); }
 .study-tab[aria-selected="true"] { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); font-weight: 700; }
 .pokemon-evolution-chooser h3 { margin-top: 0; }
 .pokemon-evolution-options { display: flex; flex-wrap: wrap; gap: .5rem; }
