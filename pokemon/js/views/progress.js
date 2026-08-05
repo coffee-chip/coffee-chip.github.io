@@ -172,7 +172,6 @@ function getAllRecognitionRecords() {
 
 export function renderProgress(container) {
   const page = el('section', { className: 'page' });
-  page.append(el('h2', { text: 'Progress' }));
   const nonNeutralRecords = getAllNonNeutralMatchupRecords();
   const practicedNonNeutral = nonNeutralRecords.filter(record => record.attempts > 0);
   const recognitionRecords = getAllRecognitionRecords();
