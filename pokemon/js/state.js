@@ -7,14 +7,14 @@ function emptyProgress() {
 export const state = {
   route: 'quiz',
   quiz: {
-    mode: 'select-all', status: 'idle', question: null, selectedAnswers: new Set(), result: null,
-    session: { mode: 'select-all', length: 0, questionNumber: 0, totalScore: 0, results: [] }
+    mode: 'choose-switch', status: 'idle', question: null, selectedAnswers: new Set(), result: null,
+    session: { mode: 'choose-switch', length: 0, questionNumber: 0, totalScore: 0, results: [] }
   },
   settings: {
     paletteTheme: 'classic',
     appearance: 'system',
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
-    quiz: { defaultMode: 'select-all', common: {}, modes: { 'select-all': {} } }
+    quiz: { defaultMode: 'choose-switch', common: {}, modes: { 'choose-switch': {} } }
   },
   study: {
     mode: 'pokemon', primaryType: 'fire', secondaryType: null,
