@@ -14,14 +14,14 @@ export function enhanceStudyTabs(root) {
   if (!controls || !modeSelect || !modeLabel || controls.querySelector('.study-tabs')) return;
 
   const tabs = document.createElement('div');
-  tabs.className = 'study-tabs';
+  tabs.className = 'button-selector button-selector-three-column study-tabs';
   tabs.setAttribute('role', 'tablist');
   tabs.setAttribute('aria-label', 'Study mode');
 
   for (const mode of ['pokemon', 'offense', 'defense']) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'study-tab';
+    button.className = 'button-selector-option study-tab';
     button.textContent = TAB_LABELS[mode];
     button.setAttribute('role', 'tab');
     button.setAttribute('aria-selected', String(state.study.mode === mode));
