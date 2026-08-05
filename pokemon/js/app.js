@@ -2,6 +2,7 @@ import { startRouter } from './router.js';
 import { state, hydratePersistentState } from './state.js';
 import { loadPersistentData } from './storage.js';
 import { VIEWS } from './views/index.js';
+import { validateApplicationContracts } from './appValidation.js';
 import { runEngineSelfTests } from './engine/effectiveness.js';
 import { validateQuizArchitecture } from './quiz/validation.js';
 import { validateTypeIcons } from './components/typeBadge.js';
@@ -75,6 +76,9 @@ registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch 
 if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
 else window.setTimeout(warmPokemonNameIndex, 0);
 
+const contractResults = validateApplicationContracts();
+console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
+if (contractResults.some(test => !test.passed)) console.error('Application contract validation failed.');
 const engineResults = runEngineSelfTests();
 console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
 if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
