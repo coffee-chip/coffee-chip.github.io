@@ -37,22 +37,8 @@ export const PRACTICE_PRESETS = {
   }
 };
 
-export const QUIZ_MODES = PRACTICE_PRESETS;
-
-const MODE_ALIASES = {
-  'select-all': 'choose-switch',
-  'choose-switch-safe': 'choose-switch',
-  'choose-move-select-all': 'choose-move',
-  'choose-move-less-effective': 'choose-move'
-};
-
-export function normalizeQuizModeId(modeId) {
-  return MODE_ALIASES[modeId] ?? modeId;
-}
-
 export function getQuizMode(modeId) {
-  const normalizedModeId = normalizeQuizModeId(modeId);
-  const preset = PRACTICE_PRESETS[normalizedModeId];
+  const preset = PRACTICE_PRESETS[modeId];
   if (!preset) throw new Error(`Unknown practice preset: ${modeId}`);
   return preset;
 }
@@ -66,11 +52,8 @@ function recentMetadataValues(field) {
 }
 
 function presetOptions(modeId) {
-  const normalizedModeId = normalizeQuizModeId(modeId);
-  const settings = state.settings.quiz.modes[normalizedModeId]
-    ?? state.settings.quiz.modes[modeId]
-    ?? {};
-  if (normalizedModeId === 'pokemon-type-recognition') {
+  const settings = state.settings.quiz.modes[modeId] ?? {};
+  if (modeId === 'pokemon-type-recognition') {
     return {
       poolId: settings.pokemonPool ?? 'gen-1',
       samplingStrategy: settings.samplingStrategy ?? 'adaptive',
@@ -84,17 +67,14 @@ function presetOptions(modeId) {
 }
 
 function generatorIdsForMode(modeId, preset) {
-  const normalizedModeId = normalizeQuizModeId(modeId);
-  const settings = state.settings.quiz.modes[normalizedModeId]
-    ?? state.settings.quiz.modes[modeId]
-    ?? {};
+  const settings = state.settings.quiz.modes[modeId] ?? {};
   const effectiveness = settings.effectiveness ?? 'both';
 
-  if (normalizedModeId === 'choose-switch') {
+  if (modeId === 'choose-switch') {
     if (effectiveness === 'weak') return ['choose-switch-unsafe'];
     if (effectiveness === 'resistant') return ['choose-switch-safe'];
   }
-  if (normalizedModeId === 'choose-move') {
+  if (modeId === 'choose-move') {
     if (effectiveness === 'more') return ['choose-move-more-effective'];
     if (effectiveness === 'less') return ['choose-move-less-effective'];
   }
@@ -103,24 +83,23 @@ function generatorIdsForMode(modeId, preset) {
 
 export async function createQuestionForMode(modeId, options = {}) {
   const { mixDualTypes = false, dualTypeChance = 0.2 } = options;
-  const normalizedModeId = normalizeQuizModeId(modeId);
-  const preset = getQuizMode(normalizedModeId);
-  const generatorIds = generatorIdsForMode(normalizedModeId, preset);
+  const preset = getQuizMode(modeId);
+  const generatorIds = generatorIdsForMode(modeId, preset);
   const generatorId = generatorIds[Math.floor(Math.random() * generatorIds.length)];
   const generator = getQuestionGenerator(generatorId);
   const useDualTypes = mixDualTypes && Math.random() < dualTypeChance;
   const question = await generator.createQuestion({
     ...options,
-    ...presetOptions(normalizedModeId),
+    ...presetOptions(modeId),
     defenderCount: useDualTypes ? 2 : 1,
     attackerCount: useDualTypes ? 2 : 1
   });
 
   if (!preset.objectiveIds.includes(question.objectiveId)) {
-    throw new Error(`Generator ${generatorId} produced objective ${question.objectiveId}, which is not allowed by preset ${normalizedModeId}.`);
+    throw new Error(`Generator ${generatorId} produced objective ${question.objectiveId}, which is not allowed by preset ${modeId}.`);
   }
   if (!preset.formatIds.includes(question.formatId)) {
-    throw new Error(`Generator ${generatorId} produced format ${question.formatId}, which is not allowed by preset ${normalizedModeId}.`);
+    throw new Error(`Generator ${generatorId} produced format ${question.formatId}, which is not allowed by preset ${modeId}.`);
   }
   return question;
 }
