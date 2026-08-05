@@ -1,7 +1,7 @@
 import { createRelationshipKey, parseRelationshipKey } from './relationships.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 6;
+export const STORAGE_VERSION = 7;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -10,9 +10,9 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
     appearance: 'system',
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
     quiz: {
-      defaultMode: 'select-all',
+      defaultMode: 'choose-switch',
       common: {},
-      modes: { 'select-all': { questionCount: 10 } }
+      modes: { 'choose-switch': {} }
     }
   },
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
@@ -22,12 +22,21 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
 function cloneDefaults() { return structuredClone(DEFAULT_PERSISTENT_DATA); }
 function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function nonnegativeNumber(value, fallback = 0) { return Number.isFinite(value) && value >= 0 ? value : fallback; }
-function normalizeQuestionCount(value, fallback = 10) { return new Set([5, 10, 20, 0]).has(value) ? value : fallback; }
 
-function normalizeModeSettings(value, fallback = {}) {
+function normalizeModeSettings(value) {
   const normalized = isObject(value) ? { ...value } : {};
-  normalized.questionCount = normalizeQuestionCount(normalized.questionCount, normalizeQuestionCount(fallback.questionCount, 10));
+  delete normalized.questionCount;
   return normalized;
+}
+
+function normalizeModeId(modeId) {
+  const aliases = {
+    'select-all': 'choose-switch',
+    'choose-switch-safe': 'choose-switch',
+    'choose-move-select-all': 'choose-move',
+    'choose-move-less-effective': 'choose-move'
+  };
+  return aliases[modeId] ?? modeId;
 }
 
 function normalizeSettings(value) {
@@ -37,13 +46,15 @@ function normalizeSettings(value) {
   const validAppearances = new Set(['system', 'light', 'dark']);
   const quiz = isObject(value.quiz) ? value.quiz : {};
   const developer = isObject(value.developer) ? value.developer : {};
-  const defaultMode = typeof quiz.defaultMode === 'string' ? quiz.defaultMode : defaults.quiz.defaultMode;
+  const rawDefaultMode = typeof quiz.defaultMode === 'string' ? quiz.defaultMode : defaults.quiz.defaultMode;
+  const defaultMode = normalizeModeId(rawDefaultMode);
   const rawModes = isObject(quiz.modes) ? quiz.modes : {};
-  const modeIds = new Set([...Object.keys(defaults.quiz.modes), ...Object.keys(rawModes), defaultMode]);
   const modes = {};
-  for (const modeId of modeIds) {
-    modes[modeId] = normalizeModeSettings(rawModes[modeId], defaults.quiz.modes[modeId] ?? defaults.quiz.modes['select-all']);
+  for (const [rawModeId, rawSettings] of Object.entries(rawModes)) {
+    const modeId = normalizeModeId(rawModeId);
+    modes[modeId] = { ...(modes[modeId] ?? {}), ...normalizeModeSettings(rawSettings) };
   }
+  modes[defaultMode] ??= {};
   return {
     paletteTheme: validPalettes.has(value.paletteTheme) ? value.paletteTheme : defaults.paletteTheme,
     appearance: validAppearances.has(value.appearance) ? value.appearance : defaults.appearance,
@@ -158,10 +169,9 @@ function migrateV1(raw) {
   const defaults = cloneDefaults();
   const oldSettings = isObject(raw.settings) ? raw.settings : {};
   const oldMode = typeof oldSettings.quizMode === 'string' ? oldSettings.quizMode : defaults.settings.quiz.defaultMode;
-  const oldLength = normalizeQuestionCount(oldSettings.quizLength, 10);
   return {
     version: STORAGE_VERSION,
-    settings: normalizeSettings({ quiz: { defaultMode: oldMode, common: {}, modes: { [oldMode]: { questionCount: oldLength } } } }),
+    settings: normalizeSettings({ quiz: { defaultMode: oldMode, common: {}, modes: { [oldMode]: {} } } }),
     progress: normalizeProgress(raw.progress),
     cache: normalizeCache(raw.cache)
   };
@@ -169,7 +179,7 @@ function migrateV1(raw) {
 
 function migrate(raw) {
   if (!isObject(raw)) return cloneDefaults();
-  if ([2, 3, 4, 5, STORAGE_VERSION].includes(raw.version)) {
+  if ([2, 3, 4, 5, 6, STORAGE_VERSION].includes(raw.version)) {
     return {
       version: STORAGE_VERSION,
       settings: normalizeSettings(raw.settings),
