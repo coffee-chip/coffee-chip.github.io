@@ -6,39 +6,32 @@ export const STORAGE_VERSION = 9;
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
   settings: {
-    paletteTheme: 'classic',
-    appearance: 'system',
+    paletteTheme: 'classic', appearance: 'system',
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
-    quiz: {
-      defaultMode: 'choose-switch',
-      modes: { 'choose-switch': {} }
-    }
+    quiz: { defaultMode: 'choose-switch', modes: { 'choose-switch': {} } }
   },
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
-  cache: { pokemon: {}, pokemonNameIndex: null }
+  cache: { pokemon: {}, pokemonNameIndex: null, recentPokemonIds: [] }
 });
 
-function cloneDefaults() { return structuredClone(DEFAULT_PERSISTENT_DATA); }
-function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
-function nonnegativeNumber(value, fallback = 0) { return Number.isFinite(value) && value >= 0 ? value : fallback; }
+const cloneDefaults = () => structuredClone(DEFAULT_PERSISTENT_DATA);
+const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const nonnegative = (value, fallback = 0) => Number.isFinite(value) && value >= 0 ? value : fallback;
 
 function normalizeSettings(value) {
   const defaults = cloneDefaults().settings;
   if (!isObject(value)) return defaults;
-  const validPalettes = new Set(['classic']);
-  const validAppearances = new Set(['system', 'light', 'dark']);
   const quiz = isObject(value.quiz) ? value.quiz : {};
   const developer = isObject(value.developer) ? value.developer : {};
   const defaultMode = typeof quiz.defaultMode === 'string' ? quiz.defaultMode : defaults.quiz.defaultMode;
-  const rawModes = isObject(quiz.modes) ? quiz.modes : {};
   const modes = {};
-  for (const [modeId, modeSettings] of Object.entries(rawModes)) {
-    if (typeof modeId === 'string' && modeId && isObject(modeSettings)) modes[modeId] = { ...modeSettings };
+  for (const [id, settings] of Object.entries(isObject(quiz.modes) ? quiz.modes : {})) {
+    if (id && isObject(settings)) modes[id] = { ...settings };
   }
   modes[defaultMode] ??= {};
   return {
-    paletteTheme: validPalettes.has(value.paletteTheme) ? value.paletteTheme : defaults.paletteTheme,
-    appearance: validAppearances.has(value.appearance) ? value.appearance : defaults.appearance,
+    paletteTheme: value.paletteTheme === 'classic' ? 'classic' : defaults.paletteTheme,
+    appearance: ['system', 'light', 'dark'].includes(value.appearance) ? value.appearance : defaults.appearance,
     developer: {
       autoUpdateOnLaunch: developer.autoUpdateOnLaunch === true,
       showOverlay: developer.showOverlay === true,
@@ -48,69 +41,61 @@ function normalizeSettings(value) {
   };
 }
 
+function normalizeQuizStats(value) {
+  const result = {};
+  if (!isObject(value)) return result;
+  for (const [id, record] of Object.entries(value)) {
+    if (!id || !isObject(record)) continue;
+    const questionCount = Math.floor(nonnegative(record.questionCount));
+    result[id] = { questionCount, totalScore: Math.min(nonnegative(record.totalScore), questionCount) };
+  }
+  return result;
+}
+
 function normalizeRelationshipStats(value) {
-  if (!isObject(value)) return {};
-  const normalized = {};
-  for (const [storedKey, record] of Object.entries(value)) {
+  const result = {};
+  if (!isObject(value)) return result;
+  for (const [key, record] of Object.entries(value)) {
     if (!isObject(record)) continue;
     let relationship;
-    try { relationship = parseRelationshipKey(storedKey); }
-    catch { continue; }
-    const attempts = Math.floor(nonnegativeNumber(record.attempts));
-    normalized[relationship.key] = {
-      attackingType: relationship.attackingType,
-      defendingType: relationship.defendingType,
-      attempts,
-      earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
-      correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
-      misses: Math.floor(nonnegativeNumber(record.misses)),
-      falseSelections: Math.floor(nonnegativeNumber(record.falseSelections)),
+    try { relationship = parseRelationshipKey(key); } catch { continue; }
+    const attempts = Math.floor(nonnegative(record.attempts));
+    result[relationship.key] = {
+      attackingType: relationship.attackingType, defendingType: relationship.defendingType,
+      attempts, earnedScore: Math.min(nonnegative(record.earnedScore), attempts),
+      correctSelections: Math.floor(nonnegative(record.correctSelections)),
+      misses: Math.floor(nonnegative(record.misses)),
+      falseSelections: Math.floor(nonnegative(record.falseSelections)),
       lastSeen: typeof record.lastSeen === 'string' ? record.lastSeen : null
     };
   }
-  return normalized;
+  return result;
 }
 
 function normalizePokemonRecognitionStats(value) {
-  if (!isObject(value)) return {};
-  const normalized = {};
-  for (const [storedKey, record] of Object.entries(value)) {
+  const result = {};
+  if (!isObject(value)) return result;
+  for (const [key, record] of Object.entries(value)) {
     if (!isObject(record)) continue;
-    const pokemonId = Number(record.pokemonId ?? storedKey);
+    const pokemonId = Number(record.pokemonId ?? key);
     if (!Number.isInteger(pokemonId) || pokemonId < 1) continue;
-    const attempts = Math.floor(nonnegativeNumber(record.attempts));
-    normalized[String(pokemonId)] = {
+    const attempts = Math.floor(nonnegative(record.attempts));
+    result[String(pokemonId)] = {
       pokemonId,
-      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName.length > 0 ? record.pokemonName : `pokemon-${pokemonId}`,
-      attempts,
-      earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
-      exactAnswers: Math.min(Math.floor(nonnegativeNumber(record.exactAnswers)), attempts),
-      correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
-      misses: Math.floor(nonnegativeNumber(record.misses)),
-      falseSelections: Math.floor(nonnegativeNumber(record.falseSelections)),
+      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName ? record.pokemonName : `pokemon-${pokemonId}`,
+      attempts, earnedScore: Math.min(nonnegative(record.earnedScore), attempts),
+      exactAnswers: Math.min(Math.floor(nonnegative(record.exactAnswers)), attempts),
+      correctSelections: Math.floor(nonnegative(record.correctSelections)),
+      misses: Math.floor(nonnegative(record.misses)),
+      falseSelections: Math.floor(nonnegative(record.falseSelections)),
       lastSeen: typeof record.lastSeen === 'string' ? record.lastSeen : null
     };
   }
-  return normalized;
-}
-
-function normalizeQuizStats(value) {
-  if (!isObject(value)) return {};
-  const normalized = {};
-  for (const [modeId, record] of Object.entries(value)) {
-    if (!isObject(record) || typeof modeId !== 'string' || !modeId) continue;
-    const questionCount = Math.floor(nonnegativeNumber(record.questionCount));
-    normalized[modeId] = {
-      questionCount,
-      totalScore: Math.min(nonnegativeNumber(record.totalScore), questionCount)
-    };
-  }
-  return normalized;
+  return result;
 }
 
 function normalizeProgress(value) {
-  const defaults = cloneDefaults().progress;
-  if (!isObject(value)) return defaults;
+  if (!isObject(value)) return cloneDefaults().progress;
   return {
     quizStats: normalizeQuizStats(value.quizStats),
     relationshipStats: normalizeRelationshipStats(value.relationshipStats),
@@ -118,16 +103,20 @@ function normalizeProgress(value) {
   };
 }
 
-function normalizePokemonNameIndex(value) {
+function normalizeNameIndex(value) {
   if (!isObject(value) || !Array.isArray(value.names) || typeof value.fetchedAt !== 'string') return null;
-  const names = [...new Set(value.names.filter(name => typeof name === 'string' && name.length > 0))];
+  const names = [...new Set(value.names.filter(name => typeof name === 'string' && name))];
   return names.length ? { names, fetchedAt: value.fetchedAt } : null;
 }
 
 function normalizeCache(value) {
+  const ids = Array.isArray(value?.recentPokemonIds)
+    ? [...new Set(value.recentPokemonIds.map(Number).filter(id => Number.isInteger(id) && id > 0))].slice(0, 10)
+    : [];
   return {
     pokemon: isObject(value?.pokemon) ? value.pokemon : {},
-    pokemonNameIndex: normalizePokemonNameIndex(value?.pokemonNameIndex)
+    pokemonNameIndex: normalizeNameIndex(value?.pokemonNameIndex),
+    recentPokemonIds: ids
   };
 }
 
@@ -139,6 +128,11 @@ function normalizeCurrentData(raw) {
     progress: normalizeProgress(raw.progress),
     cache: normalizeCache(raw.cache)
   };
+}
+
+function write(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
+  catch (error) { console.warn('Could not save data.', error); return false; }
 }
 
 export function loadPersistentData() {
@@ -154,17 +148,12 @@ export function loadPersistentData() {
   }
 }
 
-function write(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
-  catch (error) { console.warn('Could not save data.', error); return false; }
-}
-
 export function savePersistentData({ settings, progress, cache }) {
   return write({ version: STORAGE_VERSION, settings: normalizeSettings(settings), progress: normalizeProgress(progress), cache: normalizeCache(cache) });
 }
-export function saveSettings(settings) { const current = loadPersistentData(); current.settings = normalizeSettings(settings); return write(current); }
-export function saveProgress(progress) { const current = loadPersistentData(); current.progress = normalizeProgress(progress); return write(current); }
-export function saveCache(cache) { const current = loadPersistentData(); current.cache = normalizeCache(cache); return write(current); }
+export function saveSettings(settings) { const data = loadPersistentData(); data.settings = normalizeSettings(settings); return write(data); }
+export function saveProgress(progress) { const data = loadPersistentData(); data.progress = normalizeProgress(progress); return write(data); }
+export function saveCache(cache) { const data = loadPersistentData(); data.cache = normalizeCache(cache); return write(data); }
 export function clearPersistentData() {
   try { localStorage.removeItem(STORAGE_KEY); return true; }
   catch (error) { console.warn('Could not clear saved data.', error); return false; }
