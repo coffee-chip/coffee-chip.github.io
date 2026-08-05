@@ -10,7 +10,6 @@ import { initializePokemonAutocomplete } from './components/pokemonAutocomplete.
 import { enhancePokemonLookupResult } from './components/pokemonMatchupEnhancer.js';
 import { enhancePokemonEvolutionControls } from './components/pokemonEvolutionControls.js';
 import { enhanceStudyTabs } from './components/studyTabs.js';
-import { enhanceQuizRecognitionSettings } from './components/quizRecognitionSettings.js';
 import { initializeQuizAutoScroll } from './components/quizAutoScroll.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
@@ -55,7 +54,6 @@ function render() {
   enhanceStudyTabs(viewRoot);
   enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
-  enhanceQuizRecognitionSettings(viewRoot);
   for (const link of navLinks) {
     if (link.dataset.route === state.route) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
