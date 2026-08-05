@@ -9,6 +9,18 @@ export const PRACTICE_PRESETS = {
     formatIds: ['type-multi-select'],
     generatorIds: ['recognize-pokemon-type']
   },
+  'two-way-combat': {
+    id: 'two-way-combat',
+    label: 'Two-way combat',
+    objectiveIds: ['choose-switch', 'choose-move'],
+    formatIds: ['type-multi-select'],
+    generatorIds: [
+      'choose-switch-unsafe',
+      'choose-switch-safe',
+      'choose-move-more-effective',
+      'choose-move-less-effective'
+    ]
+  },
   'choose-switch': {
     id: 'choose-switch',
     label: 'Choose a switch-in',
