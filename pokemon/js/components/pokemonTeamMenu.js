@@ -1,14 +1,8 @@
 import { state } from '../state.js';
 import { addPokemonToTeam, getTeams, TEAM_MAX_POKEMON } from '../data/teamRepository.js';
 
-let outsidePointerHandler = null;
-
 function closeMenu(root) {
   root.querySelector('.pokemon-team-menu')?.remove();
-  if (outsidePointerHandler) {
-    document.removeEventListener('pointerdown', outsidePointerHandler);
-    outsidePointerHandler = null;
-  }
 }
 
 function statusMessage(result, teamTitle, pokemonName) {
@@ -18,7 +12,7 @@ function statusMessage(result, teamTitle, pokemonName) {
   return 'Could not add that Pokémon to the team.';
 }
 
-function openTeamPicker(root, visual, pokemon, trigger) {
+function openTeamPicker(root, card, pokemon) {
   closeMenu(root);
   const menu = document.createElement('div');
   menu.className = 'pokemon-team-menu';
@@ -49,22 +43,23 @@ function openTeamPicker(root, visual, pokemon, trigger) {
     options.append(button);
   }
   menu.append(options);
-  visual.append(menu);
+  card.append(menu);
 
-  outsidePointerHandler = event => {
-    if (!menu.contains(event.target) && event.target !== trigger) closeMenu(root);
-  };
   window.setTimeout(() => {
-    if (outsidePointerHandler) document.addEventListener('pointerdown', outsidePointerHandler);
+    document.addEventListener('pointerdown', event => {
+      if (!menu.contains(event.target)) closeMenu(root);
+    }, { once: true });
   }, 0);
 }
 
 export function enhancePokemonTeamMenu(root) {
   if (state.route !== 'study' || state.study.mode !== 'pokemon') return;
   const pokemon = state.study.pokemonResult;
-  const visual = root.querySelector('.pokemon-result-visual');
-  if (!pokemon || !visual || visual.querySelector('.pokemon-team-menu-button')) return;
+  const card = root.querySelector('.pokemon-result-card');
+  const visual = card?.querySelector('.pokemon-result-visual');
+  if (!pokemon || !card || !visual || visual.querySelector('.pokemon-team-menu-button')) return;
 
+  card.classList.add('pokemon-result-card-with-team-menu');
   visual.classList.add('pokemon-result-visual-with-menu');
   const button = document.createElement('button');
   button.type = 'button';
@@ -74,8 +69,8 @@ export function enhancePokemonTeamMenu(root) {
   button.setAttribute('aria-haspopup', 'dialog');
   button.addEventListener('click', event => {
     event.stopPropagation();
-    if (visual.querySelector('.pokemon-team-menu')) closeMenu(root);
-    else openTeamPicker(root, visual, pokemon, button);
+    if (card.querySelector('.pokemon-team-menu')) closeMenu(root);
+    else openTeamPicker(root, card, pokemon);
   });
   visual.append(button);
 }
