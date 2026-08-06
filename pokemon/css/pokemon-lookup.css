@@ -20,7 +20,7 @@
 .pokemon-evolution-button { padding: 0; border: 1px solid var(--border-default); border-radius: .55rem; background: var(--panel-background); color: var(--action-primary); font-size: 1.65rem; font-weight: 700; line-height: 1; }
 .pokemon-evolution-button:hover, .pokemon-evolution-button:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
 .pokemon-evolution-spacer { display: block; justify-self: center; }
-.pokemon-evolution-next-controls { display: grid; justify-items: center; gap: .25rem; min-width: 0; }
+.pokemon-evolution-controls { display: grid; justify-items: center; gap: .25rem; min-width: 0; }
 .pokemon-evolution-condition { min-height: 1.65rem; max-width: 100%; padding: .15rem .35rem; border-color: var(--border-default); border-radius: 999px; background: var(--subtle-background); color: var(--text-primary); font-size: .68rem; font-weight: 700; line-height: 1.05; white-space: normal; }
 .pokemon-evolution-condition:hover, .pokemon-evolution-condition:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
 .pokemon-result-details { min-width: 0; }
@@ -28,9 +28,9 @@
 .pokemon-result-details .type-badge-list { justify-content: center; }
 .pokemon-dex-number, .pokemon-source { color: var(--text-muted); }
 .pokemon-source { margin: .75rem 0 0; font-size: .84rem; }
-.pokemon-evolution-chooser-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
-.pokemon-evolution-chooser-header h3 { margin: 0; }
-.pokemon-evolution-close { flex: 0 0 auto; width: 2rem; min-height: 2rem; padding: 0; border: 1px solid var(--border-default); border-radius: 999px; background: var(--panel-background); color: var(--text-primary); font-size: 1.25rem; line-height: 1; }
+.pokemon-evolution-chooser-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: 0 0 .75rem; padding: 0; }
+.pokemon-evolution-chooser-header h3 { margin: 0; padding: 0; line-height: 1.2; }
+.pokemon-evolution-close { display: grid; place-items: center; flex: 0 0 auto; width: 2.25rem; height: 2.25rem; min-height: 2.25rem; padding: 0; border: 1px solid var(--border-default); border-radius: 999px; background: var(--panel-background); color: var(--text-primary); font-size: 1.25rem; font-weight: 500; line-height: 1; }
 .pokemon-evolution-close:hover, .pokemon-evolution-close:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
 .pokemon-evolution-options { display: flex; flex-wrap: wrap; gap: .5rem; }
 .pokemon-evolution-options button { min-height: 2.5rem; padding: 0 .75rem; }
