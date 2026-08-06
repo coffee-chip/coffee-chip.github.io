@@ -1,4 +1,4 @@
-import { createTeam, getTeams, reorderTeams, TEAM_MAX_POKEMON } from '../data/teamRepository.js';
+import { createTeam, deleteTeam, getTeams, reorderTeams, TEAM_MAX_POKEMON } from '../data/teamRepository.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -23,17 +23,42 @@ function pokemonSlot(pokemon) {
   return slot;
 }
 
+function createDeleteConfirmation(team, card, render) {
+  card.querySelector('.team-delete-confirmation')?.remove();
+  const confirmation = el('div', { className: 'team-delete-confirmation' });
+  const message = el('span', { text: `Delete “${team.title}”?` });
+  const actions = el('div', { className: 'team-delete-actions' });
+  const cancel = el('button', { className: 'secondary-button', text: 'Cancel' });
+  cancel.type = 'button';
+  cancel.addEventListener('click', () => confirmation.remove());
+  const confirm = el('button', { className: 'danger-button', text: 'Delete' });
+  confirm.type = 'button';
+  confirm.addEventListener('click', () => {
+    if (deleteTeam(team.id)) render();
+  });
+  actions.append(cancel, confirm);
+  confirmation.append(message, actions);
+  card.append(confirmation);
+}
+
 function createTeamCard(team, index, render) {
   const card = el('article', { className: 'panel team-card' });
   card.dataset.teamIndex = String(index);
 
   const header = el('div', { className: 'team-card-header' });
   const title = el('h2', { text: team.title });
+  const actions = el('div', { className: 'team-card-actions' });
+  const remove = el('button', { className: 'team-delete-button', text: '×' });
+  remove.type = 'button';
+  remove.setAttribute('aria-label', `Delete ${team.title}`);
+  remove.title = 'Delete team';
+  remove.addEventListener('click', () => createDeleteConfirmation(team, card, render));
   const handle = el('button', { className: 'team-drag-handle', text: '≡' });
   handle.type = 'button';
   handle.setAttribute('aria-label', `Reorder ${team.title}`);
   handle.title = 'Drag to reorder';
-  header.append(title, handle);
+  actions.append(remove, handle);
+  header.append(title, actions);
 
   const row = el('div', { className: 'team-pokemon-row' });
   for (const pokemon of team.pokemon) row.append(pokemonSlot(pokemon));
