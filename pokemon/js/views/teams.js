@@ -47,6 +47,8 @@ function createTeamCard(team, index, render) {
 
   const header = el('div', { className: 'team-card-header' });
   const title = el('h2', { text: team.title });
+  title.style.overflowWrap = 'anywhere';
+  title.style.wordBreak = 'break-word';
   const actions = el('div', { className: 'team-card-actions' });
   const remove = el('button', { className: 'team-delete-button', text: '×' });
   remove.type = 'button';
