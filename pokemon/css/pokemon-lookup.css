@@ -1,7 +1,7 @@
 .pokemon-recent { min-width: 0; max-width: 100%; margin: 0 0 1rem; }
 .pokemon-recent-list { display: flex; min-width: 0; max-width: 100%; gap: .5rem; overflow-x: auto; overflow-y: hidden; padding: .1rem .05rem .45rem; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 .pokemon-recent-button { flex: 0 0 4.75rem; min-height: 5.5rem; padding: .3rem; display: grid; grid-template-rows: 3.5rem auto; place-items: center; gap: .15rem; border-color: var(--border-default); background: var(--panel-background); color: var(--text-primary); font-size: .72rem; font-weight: 600; line-height: 1.1; text-align: center; }
-.pokemon-recent-button:hover, .pokemon-recent-button:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
+.pokemon-recent-button:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
 .pokemon-recent-button img { display: block; width: 3.5rem; height: 3.5rem; object-fit: contain; }
 .pokemon-recent-placeholder { display: grid; place-items: center; width: 3.25rem; height: 3.25rem; border-radius: 50%; background: var(--subtle-background); color: var(--text-muted); font-size: .75rem; }
 .pokemon-lookup-form { display: grid; gap: .75rem; }
@@ -18,11 +18,11 @@
 .pokemon-result-identity-row { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr) 3.75rem; align-items: center; gap: .55rem; }
 .pokemon-evolution-button, .pokemon-evolution-spacer { width: 2.75rem; min-height: 3rem; }
 .pokemon-evolution-button { padding: 0; border: 1px solid var(--border-default); border-radius: .55rem; background: var(--panel-background); color: var(--action-primary); font-size: 1.65rem; font-weight: 700; line-height: 1; }
-.pokemon-evolution-button:hover, .pokemon-evolution-button:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
+.pokemon-evolution-button:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
 .pokemon-evolution-spacer { display: block; justify-self: center; }
 .pokemon-evolution-controls { display: grid; justify-items: center; gap: .25rem; min-width: 0; }
 .pokemon-evolution-condition { min-height: 1.65rem; max-width: 100%; padding: .15rem .35rem; border-color: var(--border-default); border-radius: 999px; background: var(--subtle-background); color: var(--text-primary); font-size: .68rem; font-weight: 700; line-height: 1.05; white-space: normal; }
-.pokemon-evolution-condition:hover, .pokemon-evolution-condition:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
+.pokemon-evolution-condition:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
 .pokemon-result-details { min-width: 0; }
 .pokemon-result-details h3 { margin: .15rem 0 .65rem; font-size: 1.35rem; }
 .pokemon-result-details .type-badge-list { justify-content: center; }
@@ -31,7 +31,7 @@
 .pokemon-evolution-chooser-header { position: relative; margin: 0 0 .75rem; padding: 0 2.5rem 0 0; }
 .pokemon-evolution-chooser-header h3 { margin: 0; padding: 0; line-height: 1.2; }
 .pokemon-evolution-close { position: absolute; top: 0; right: 0; display: grid; place-items: center; width: 2rem; height: 2rem; min-width: 2rem; min-height: 2rem; padding: 0; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--panel-background); color: var(--text-primary); font-size: 1.25rem; font-weight: 500; line-height: 1; }
-.pokemon-evolution-close:hover, .pokemon-evolution-close:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
+.pokemon-evolution-close:focus-visible { border-color: var(--action-primary); background: var(--action-primary-soft); outline: none; }
 .pokemon-evolution-options { display: flex; flex-wrap: wrap; gap: .5rem; }
 .pokemon-evolution-options button { min-height: 2.5rem; padding: 0 .75rem; }
 .pokemon-evolution-requirements { display: grid; gap: .75rem; }
@@ -42,9 +42,16 @@
 .pokemon-matchups-intro { margin-top: 0; margin-bottom: .8rem; }
 .pokemon-matchup-group { margin-top: .75rem; }
 .pokemon-matchup-group h4 { margin: 0 0 .45rem; font-size: .95rem; }
+@media (hover: hover) {
+  .pokemon-recent-button:hover { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
+  .pokemon-evolution-button:hover { border-color: var(--action-primary); background: var(--action-primary-soft); }
+  .pokemon-evolution-condition:hover { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
+  .pokemon-evolution-close:hover { border-color: var(--action-primary); background: var(--action-primary-soft); }
+}
 @media (hover: none) {
   .pokemon-recent-button:focus-visible { border-color: var(--border-default); background: var(--panel-background); color: var(--text-primary); outline: none; }
   .pokemon-evolution-button:focus-visible { border-color: var(--border-default); background: var(--panel-background); color: var(--action-primary); outline: none; }
+  .pokemon-evolution-condition:focus-visible { border-color: var(--border-default); background: var(--subtle-background); color: var(--text-primary); outline: none; }
 }
 @media (max-width: 25rem) {
   .pokemon-result-identity-row { grid-template-columns: 3.25rem minmax(0, 1fr) 3.25rem; gap: .35rem; }
