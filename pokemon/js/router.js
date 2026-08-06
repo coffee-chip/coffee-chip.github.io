@@ -1,4 +1,4 @@
-const VALID_ROUTES = new Set(['quiz', 'study', 'progress', 'settings', 'debug']);
+const VALID_ROUTES = new Set(['quiz', 'study', 'teams', 'progress', 'settings', 'debug']);
 
 export function getRoute() {
   const route = location.hash.replace('#', '') || 'quiz';
