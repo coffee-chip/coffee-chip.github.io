@@ -1,0 +1,57 @@
+import { state } from '../state.js';
+import { saveTeams } from '../storage.js';
+
+const TEAM_SIZE_LIMIT = 6;
+
+function createTeamId(title) {
+  const base = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'team';
+  let id = base;
+  let suffix = 2;
+  while (state.teams.some(team => team.id === id)) {
+    id = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return id;
+}
+
+function snapshotPokemon(pokemon) {
+  return {
+    id: pokemon.id,
+    name: pokemon.name,
+    displayName: pokemon.displayName,
+    spriteUrl: pokemon.spriteUrl ?? null
+  };
+}
+
+export function getTeams() {
+  return state.teams;
+}
+
+export function createTeam(title) {
+  const normalizedTitle = String(title ?? '').trim().slice(0, 60);
+  if (!normalizedTitle) return null;
+  const team = { id: createTeamId(normalizedTitle), title: normalizedTitle, pokemon: [] };
+  state.teams.push(team);
+  saveTeams(state.teams);
+  return team;
+}
+
+export function addPokemonToTeam(teamId, pokemon) {
+  const team = state.teams.find(entry => entry.id === teamId);
+  if (!team || !Number.isInteger(pokemon?.id)) return { ok: false, reason: 'not-found' };
+  if (team.pokemon.some(entry => entry.id === pokemon.id)) return { ok: false, reason: 'duplicate' };
+  if (team.pokemon.length >= TEAM_SIZE_LIMIT) return { ok: false, reason: 'full' };
+  team.pokemon.push(snapshotPokemon(pokemon));
+  saveTeams(state.teams);
+  return { ok: true, team };
+}
+
+export function reorderTeams(fromIndex, toIndex) {
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return false;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= state.teams.length || toIndex >= state.teams.length || fromIndex === toIndex) return false;
+  const [team] = state.teams.splice(fromIndex, 1);
+  state.teams.splice(toIndex, 0, team);
+  return saveTeams(state.teams);
+}
+
+export const TEAM_MAX_POKEMON = TEAM_SIZE_LIMIT;
