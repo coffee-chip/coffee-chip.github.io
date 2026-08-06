@@ -1,4 +1,4 @@
-import { createTeam, deleteTeam, getTeams, reorderTeams, TEAM_MAX_POKEMON } from '../data/teamRepository.js';
+import { createTeam, deleteTeam, getTeams, reorderTeams } from '../data/teamRepository.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -42,7 +42,7 @@ function createDeleteConfirmation(team, card, render) {
 }
 
 function createTeamCard(team, index, render) {
-  const card = el('article', { className: 'panel team-card' });
+  const card = el('article', { className: `panel team-card${team.pokemon.length ? '' : ' team-card-empty'}` });
   card.dataset.teamIndex = String(index);
 
   const header = el('div', { className: 'team-card-header' });
@@ -53,20 +53,11 @@ function createTeamCard(team, index, render) {
   remove.setAttribute('aria-label', `Delete ${team.title}`);
   remove.title = 'Delete team';
   remove.addEventListener('click', () => createDeleteConfirmation(team, card, render));
-  const handle = el('button', { className: 'team-drag-handle', text: '≡' });
-  handle.type = 'button';
-  handle.setAttribute('aria-label', `Reorder ${team.title}`);
+  const handle = el('span', { className: 'team-drag-handle', text: '≡' });
+  handle.setAttribute('aria-label', `Drag to reorder ${team.title}`);
   handle.title = 'Drag to reorder';
   actions.append(remove, handle);
   header.append(title, actions);
-
-  const row = el('div', { className: 'team-pokemon-row' });
-  for (const pokemon of team.pokemon) row.append(pokemonSlot(pokemon));
-  for (let slot = team.pokemon.length; slot < TEAM_MAX_POKEMON; slot += 1) {
-    const empty = el('div', { className: 'team-pokemon-slot team-pokemon-slot-empty' });
-    empty.setAttribute('aria-hidden', 'true');
-    row.append(empty);
-  }
 
   let holdTimer = null;
   let dragging = false;
@@ -114,7 +105,12 @@ function createTeamCard(team, index, render) {
   handle.addEventListener('pointercancel', stopDrag);
   handle.addEventListener('lostpointercapture', stopDrag);
 
-  card.append(header, row);
+  card.append(header);
+  if (team.pokemon.length) {
+    const row = el('div', { className: 'team-pokemon-row' });
+    for (const pokemon of team.pokemon) row.append(pokemonSlot(pokemon));
+    card.append(row);
+  }
   return card;
 }
 
