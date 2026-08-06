@@ -1,8 +1,14 @@
 import { state } from '../state.js';
 import { addPokemonToTeam, getTeams, TEAM_MAX_POKEMON } from '../data/teamRepository.js';
 
+let outsidePointerHandler = null;
+
 function closeMenu(root) {
   root.querySelector('.pokemon-team-menu')?.remove();
+  if (outsidePointerHandler) {
+    document.removeEventListener('pointerdown', outsidePointerHandler);
+    outsidePointerHandler = null;
+  }
 }
 
 function statusMessage(result, teamTitle, pokemonName) {
@@ -12,7 +18,7 @@ function statusMessage(result, teamTitle, pokemonName) {
   return 'Could not add that Pokémon to the team.';
 }
 
-function openTeamPicker(root, visual, pokemon) {
+function openTeamPicker(root, visual, pokemon, trigger) {
   closeMenu(root);
   const menu = document.createElement('div');
   menu.className = 'pokemon-team-menu';
@@ -44,6 +50,13 @@ function openTeamPicker(root, visual, pokemon) {
   }
   menu.append(options);
   visual.append(menu);
+
+  outsidePointerHandler = event => {
+    if (!menu.contains(event.target) && event.target !== trigger) closeMenu(root);
+  };
+  window.setTimeout(() => {
+    if (outsidePointerHandler) document.addEventListener('pointerdown', outsidePointerHandler);
+  }, 0);
 }
 
 export function enhancePokemonTeamMenu(root) {
@@ -62,12 +75,7 @@ export function enhancePokemonTeamMenu(root) {
   button.addEventListener('click', event => {
     event.stopPropagation();
     if (visual.querySelector('.pokemon-team-menu')) closeMenu(root);
-    else openTeamPicker(root, visual, pokemon);
+    else openTeamPicker(root, visual, pokemon, button);
   });
   visual.append(button);
-
-  document.addEventListener('pointerdown', event => {
-    const menu = root.querySelector('.pokemon-team-menu');
-    if (menu && !menu.contains(event.target) && event.target !== button) closeMenu(root);
-  }, { once: true });
 }
