@@ -64,43 +64,68 @@ function createTeamCard(team, index, render) {
   let holdTimer = null;
   let dragging = false;
   let pointerId = null;
+  let proposedIndex = index;
+  let insertionMarker = null;
+
+  function removeInsertionMarker() {
+    insertionMarker?.remove();
+    insertionMarker = null;
+  }
+
+  function updateInsertionMarker(clientY) {
+    const list = card.closest('.team-list');
+    if (!list) return;
+
+    const otherCards = [...list.querySelectorAll('.team-card')].filter(candidate => candidate !== card);
+    let insertionIndex = otherCards.length;
+    let insertBefore = list.querySelector('.team-create-card');
+
+    for (let candidateIndex = 0; candidateIndex < otherCards.length; candidateIndex += 1) {
+      const candidate = otherCards[candidateIndex];
+      const bounds = candidate.getBoundingClientRect();
+      if (clientY < bounds.top + bounds.height / 2) {
+        insertionIndex = candidateIndex;
+        insertBefore = candidate;
+        break;
+      }
+    }
+
+    proposedIndex = insertionIndex;
+    insertionMarker ??= el('div', { className: 'team-insertion-marker' });
+    list.insertBefore(insertionMarker, insertBefore);
+  }
 
   function stopDrag() {
     window.clearTimeout(holdTimer);
     holdTimer = null;
     if (pointerId !== null && handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
     pointerId = null;
-    if (dragging) {
-      dragging = false;
-      card.classList.remove('team-card-dragging');
-      document.querySelectorAll('.team-card-drag-target').forEach(node => node.classList.remove('team-card-drag-target'));
-      render();
-    }
+
+    if (!dragging) return;
+    dragging = false;
+    card.classList.remove('team-card-dragging');
+    removeInsertionMarker();
+
+    if (proposedIndex !== index) reorderTeams(index, proposedIndex);
+    render();
   }
 
   handle.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
     pointerId = event.pointerId;
+    proposedIndex = index;
     handle.setPointerCapture(pointerId);
     holdTimer = window.setTimeout(() => {
       dragging = true;
       card.classList.add('team-card-dragging');
+      updateInsertionMarker(event.clientY);
     }, event.pointerType === 'touch' ? 300 : 0);
   });
 
   handle.addEventListener('pointermove', event => {
     if (!dragging) return;
     event.preventDefault();
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.team-card');
-    if (!target || target === card) return;
-    document.querySelectorAll('.team-card-drag-target').forEach(node => node.classList.remove('team-card-drag-target'));
-    target.classList.add('team-card-drag-target');
-    const fromIndex = Number(card.dataset.teamIndex);
-    const toIndex = Number(target.dataset.teamIndex);
-    if (reorderTeams(fromIndex, toIndex)) {
-      card.dataset.teamIndex = String(toIndex);
-      target.dataset.teamIndex = String(fromIndex);
-    }
+    updateInsertionMarker(event.clientY);
   });
 
   handle.addEventListener('pointerup', stopDrag);
