@@ -25,12 +25,16 @@ function openTeamPicker(root, card, pokemon) {
 
   const options = document.createElement('div');
   options.className = 'pokemon-team-menu-options';
-  for (const team of getTeams()) {
+  const eligibleTeams = getTeams().filter(team => (
+    team.pokemon.length < TEAM_MAX_POKEMON
+    || team.pokemon.some(entry => entry.id === pokemon.id)
+  ));
+
+  for (const team of eligibleTeams) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'secondary-button';
     button.textContent = team.title;
-    button.disabled = team.pokemon.length >= TEAM_MAX_POKEMON && !team.pokemon.some(entry => entry.id === pokemon.id);
     button.addEventListener('click', () => {
       const result = addPokemonToTeam(team.id, pokemon);
       menu.replaceChildren();
@@ -42,7 +46,16 @@ function openTeamPicker(root, card, pokemon) {
     });
     options.append(button);
   }
-  menu.append(options);
+
+  if (!eligibleTeams.length) {
+    const status = document.createElement('span');
+    status.className = 'pokemon-team-menu-status';
+    status.textContent = 'All teams are full.';
+    menu.append(status);
+  } else {
+    menu.append(options);
+  }
+
   card.append(menu);
 
   window.setTimeout(() => {
