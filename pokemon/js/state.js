@@ -4,6 +4,13 @@ function emptyProgress() {
   return { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} };
 }
 
+function defaultTeams() {
+  return [
+    { id: 'my-team', title: 'My team', pokemon: [] },
+    { id: 'opponents', title: 'Opponents', pokemon: [] }
+  ];
+}
+
 export const state = {
   route: 'quiz',
   quiz: {
@@ -20,6 +27,7 @@ export const state = {
     mode: 'pokemon', primaryType: 'fire', secondaryType: null,
     pokemonQuery: '', pokemonStatus: 'idle', pokemonResult: null, pokemonSource: null, pokemonError: null
   },
+  teams: defaultTeams(),
   progress: emptyProgress(),
   cache: { pokemon: {}, pokemonNameIndex: null, recentPokemonIds: [] }
 };
@@ -52,6 +60,7 @@ export function hydratePersistentState(persistentData) {
     ...persistentData.cache,
     recentPokemonIds: [...(persistentData.cache.recentPokemonIds ?? [])]
   };
+  state.teams = structuredClone(persistentData.teams ?? defaultTeams());
   state.quiz.mode = state.settings.quiz.defaultMode;
   getQuizModeSettings(state.quiz.mode);
   state.quiz.session.mode = state.quiz.mode;
@@ -78,7 +87,8 @@ export function getPersistentSnapshot() {
       pokemon: { ...state.cache.pokemon },
       pokemonNameIndex: state.cache.pokemonNameIndex ? structuredClone(state.cache.pokemonNameIndex) : null,
       recentPokemonIds: [...state.cache.recentPokemonIds]
-    }
+    },
+    teams: structuredClone(state.teams)
   };
 }
 
