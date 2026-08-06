@@ -7,12 +7,14 @@
 .team-card-header h2 { min-width: 0; margin: 0; font-size: 1.1rem; color: var(--heading-color); }
 .team-card-actions { display: flex; flex: 0 0 auto; align-items: flex-start; gap: .4rem; }
 .team-delete-button, .team-drag-handle { flex: 0 0 auto; width: 2.5rem; min-width: 2.5rem; height: 2.5rem; min-height: 2.5rem; padding: 0; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--panel-background); color: var(--text-muted); line-height: 1; }
-.team-delete-button { font-size: 1.35rem; }
-.team-delete-button:active { border-color: var(--status-error); background: var(--status-error-soft); color: var(--status-error); }
+.team-delete-button { font-size: 1.35rem; touch-action: manipulation; }
+.team-delete-button:hover, .team-delete-button:focus { border-color: var(--border-default); background: var(--panel-background); color: var(--text-muted); }
+.team-delete-button:focus-visible { border-color: var(--border-default); background: var(--panel-background); color: var(--text-muted); outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.team-delete-button:active { border-color: var(--status-error); background: var(--status-error); color: var(--neutral-1); outline: none; }
 .team-drag-handle { display: grid; place-items: center; font-size: 1.45rem; user-select: none; touch-action: none; cursor: grab; }
 .team-drag-handle:active { cursor: grabbing; border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
-.team-card-dragging { opacity: .72; }
-.team-card-drag-target { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.team-card-dragging { opacity: .62; }
+.team-insertion-marker { height: .28rem; margin: -.14rem .65rem; border-radius: 999px; background: var(--action-primary); box-shadow: 0 0 0 2px var(--panel-background); pointer-events: none; }
 .team-pokemon-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .25rem; }
 .team-pokemon-slot { display: grid; place-items: center; min-width: 0; aspect-ratio: 1; border-radius: .5rem; background: var(--subtle-background); overflow: hidden; color: var(--text-muted); font-size: .65rem; }
 .team-pokemon-slot img { display: block; width: 100%; height: 100%; object-fit: contain; }
