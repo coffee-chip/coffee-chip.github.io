@@ -36,6 +36,13 @@ export function createTeam(title) {
   return team;
 }
 
+export function deleteTeam(teamId) {
+  const index = state.teams.findIndex(team => team.id === teamId);
+  if (index < 0) return false;
+  state.teams.splice(index, 1);
+  return saveTeams(state.teams);
+}
+
 export function addPokemonToTeam(teamId, pokemon) {
   const team = state.teams.find(entry => entry.id === teamId);
   if (!team || !Number.isInteger(pokemon?.id)) return { ok: false, reason: 'not-found' };
