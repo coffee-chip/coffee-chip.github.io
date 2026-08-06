@@ -27,7 +27,11 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
     pokemon: {},
     pokemonNameIndex: null,
     recentPokemonIds: []
-  }
+  },
+  teams: [
+    { id: 'my-team', title: 'My team', pokemon: [] },
+    { id: 'opponents', title: 'Opponents', pokemon: [] }
+  ]
 });
 
 function cloneDefaults() {
@@ -204,6 +208,48 @@ function normalizeCache(value) {
   };
 }
 
+function normalizeTeamPokemon(value) {
+  if (!isObject(value)) return null;
+  const id = Number(value.id);
+  if (!Number.isInteger(id) || id < 1) return null;
+  return {
+    id,
+    name: typeof value.name === 'string' && value.name ? value.name : `pokemon-${id}`,
+    displayName: typeof value.displayName === 'string' && value.displayName ? value.displayName : `Pokémon #${id}`,
+    spriteUrl: typeof value.spriteUrl === 'string' && value.spriteUrl ? value.spriteUrl : null
+  };
+}
+
+function normalizeTeams(value) {
+  const defaults = cloneDefaults().teams;
+  if (!Array.isArray(value)) return defaults;
+
+  const seenIds = new Set();
+  const normalized = [];
+  for (const team of value) {
+    if (!isObject(team)) continue;
+    const id = typeof team.id === 'string' && team.id.trim() ? team.id.trim() : null;
+    const title = typeof team.title === 'string' && team.title.trim() ? team.title.trim().slice(0, 60) : null;
+    if (!id || !title || seenIds.has(id)) continue;
+    seenIds.add(id);
+    const pokemon = [];
+    const seenPokemon = new Set();
+    for (const entry of Array.isArray(team.pokemon) ? team.pokemon : []) {
+      const normalizedPokemon = normalizeTeamPokemon(entry);
+      if (!normalizedPokemon || seenPokemon.has(normalizedPokemon.id)) continue;
+      seenPokemon.add(normalizedPokemon.id);
+      pokemon.push(normalizedPokemon);
+      if (pokemon.length === 6) break;
+    }
+    normalized.push({ id, title, pokemon });
+  }
+
+  for (const defaultTeam of defaults) {
+    if (!seenIds.has(defaultTeam.id)) normalized.push(defaultTeam);
+  }
+  return normalized;
+}
+
 function normalizeCurrentData(raw) {
   if (!isObject(raw) || raw.version !== STORAGE_VERSION) return cloneDefaults();
 
@@ -211,7 +257,8 @@ function normalizeCurrentData(raw) {
     version: STORAGE_VERSION,
     settings: normalizeSettings(raw.settings),
     progress: normalizeProgress(raw.progress),
-    cache: normalizeCache(raw.cache)
+    cache: normalizeCache(raw.cache),
+    teams: normalizeTeams(raw.teams)
   };
 }
 
@@ -245,12 +292,13 @@ export function loadPersistentData() {
   }
 }
 
-export function savePersistentData({ settings, progress, cache }) {
+export function savePersistentData({ settings, progress, cache, teams }) {
   return write({
     version: STORAGE_VERSION,
     settings: normalizeSettings(settings),
     progress: normalizeProgress(progress),
-    cache: normalizeCache(cache)
+    cache: normalizeCache(cache),
+    teams: normalizeTeams(teams)
   });
 }
 
@@ -264,6 +312,10 @@ export function saveProgress(progress) {
 
 export function saveCache(cache) {
   return updateSection('cache', cache, normalizeCache);
+}
+
+export function saveTeams(teams) {
+  return updateSection('teams', teams, normalizeTeams);
 }
 
 export function clearPersistentData() {
