@@ -18,7 +18,7 @@ function isValidEvolutionTarget(value) {
 }
 function isValidEvolution(value) {
   return value && Array.isArray(value.previous) && Array.isArray(value.next)
-    && value.previous.every(name => typeof name === 'string' && name.length > 0)
+    && value.previous.every(isValidEvolutionTarget)
     && value.next.every(isValidEvolutionTarget);
 }
 function isValidCachedPokemon(value) { return value && Number.isInteger(value.id) && typeof value.name === 'string' && typeof value.displayName === 'string' && Array.isArray(value.types) && value.types.length >= 1 && value.types.every(type => TYPES.includes(type)) && typeof value.fetchedAt === 'string'; }
@@ -67,8 +67,9 @@ function evolutionTarget(link) {
 function findEvolutionContext(link, targetName, parentName = null) {
   if (!link?.species?.name) return null;
   if (link.species.name === targetName) {
+    const incomingDetails = Array.isArray(link.evolution_details) && link.evolution_details.length ? link.evolution_details : [{}];
     return {
-      previous: parentName ? [parentName] : [],
+      previous: parentName ? [{ name: parentName, conditions: incomingDetails.map(normalizeEvolutionCondition) }] : [],
       next: (link.evolves_to ?? []).map(evolutionTarget).filter(Boolean)
     };
   }
