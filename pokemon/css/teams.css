@@ -2,9 +2,13 @@
 
 .team-list { display: grid; gap: 1rem; }
 .team-card { margin: 0; touch-action: pan-y; }
-.team-card-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+.team-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
 .team-card-header h2 { margin: 0; font-size: 1.1rem; color: var(--heading-color); }
-.team-drag-handle { flex: 0 0 auto; width: 2.5rem; min-width: 2.5rem; height: 2.5rem; min-height: 2.5rem; padding: 0; border-color: var(--border-default); background: var(--panel-background); color: var(--text-muted); font-size: 1.45rem; line-height: 1; touch-action: none; cursor: grab; }
+.team-card-actions { display: flex; align-items: flex-start; gap: .4rem; }
+.team-delete-button, .team-drag-handle { flex: 0 0 auto; width: 2.5rem; min-width: 2.5rem; height: 2.5rem; min-height: 2.5rem; padding: 0; border-color: var(--border-default); background: var(--panel-background); color: var(--text-muted); line-height: 1; }
+.team-delete-button { font-size: 1.35rem; }
+.team-delete-button:active { border-color: var(--status-error); background: var(--status-error-soft); color: var(--status-error); }
+.team-drag-handle { font-size: 1.45rem; touch-action: none; cursor: grab; }
 .team-drag-handle:active { cursor: grabbing; border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); }
 .team-card-dragging { opacity: .72; }
 .team-card-drag-target { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
@@ -12,13 +16,17 @@
 .team-pokemon-slot { display: grid; place-items: center; min-width: 0; aspect-ratio: 1; border-radius: .5rem; background: var(--subtle-background); overflow: hidden; color: var(--text-muted); font-size: .65rem; }
 .team-pokemon-slot img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .team-pokemon-slot-empty { border: 1px dashed var(--border-default); background: transparent; }
+.team-delete-confirmation { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--border-default); }
+.team-delete-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.team-delete-actions button { min-height: 2.5rem; }
 .team-create-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; align-items: center; margin: 0; border-style: dashed; }
 .team-create-card input { width: 100%; min-width: 0; min-height: 2.75rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }
 
+.pokemon-result-card-with-team-menu { position: relative; overflow: visible; }
 .pokemon-result-visual-with-menu { position: relative; }
 .pokemon-team-menu-button { position: absolute; z-index: 2; top: .45rem; right: .45rem; width: 2.25rem; min-width: 2.25rem; height: 2.25rem; min-height: 2.25rem; border: 1px solid color-mix(in srgb, var(--border-default) 75%, transparent); background: color-mix(in srgb, var(--panel-background) 88%, transparent); color: var(--text-primary); font-size: 1.35rem; }
-.pokemon-team-menu { position: absolute; z-index: 4; top: 3rem; right: .45rem; display: grid; gap: .6rem; width: min(14rem, calc(100% - .9rem)); padding: .75rem; border: 1px solid var(--border-default); border-radius: .65rem; background: var(--panel-background); box-shadow: 0 .5rem 1.25rem rgb(0 0 0 / .18); text-align: left; }
-.pokemon-team-menu-options { display: grid; gap: .4rem; }
+.pokemon-team-menu { position: absolute; z-index: 8; top: 3.55rem; right: 1rem; display: grid; gap: .6rem; width: min(14rem, calc(100% - 2rem)); padding: .75rem; border: 1px solid var(--border-default); border-radius: .65rem; background: var(--panel-background); box-shadow: 0 .5rem 1.25rem rgb(0 0 0 / .18); text-align: left; }
+.pokemon-team-menu-options { display: grid; gap: .4rem; max-height: calc(8 * 2.5rem + 7 * .4rem); overflow-y: auto; overscroll-behavior: contain; }
 .pokemon-team-menu-options button { width: 100%; min-height: 2.5rem; text-align: left; }
 .pokemon-team-menu-status { color: var(--text-muted); line-height: 1.3; }
 .pokemon-team-menu-success { color: var(--status-success); font-weight: 700; line-height: 1.3; }
@@ -26,6 +34,7 @@
 @media (max-width: 24rem) {
   .app-nav { gap: .25rem; }
   .app-nav a { padding-inline: .1rem; font-size: .9rem; }
+  .team-delete-confirmation { align-items: stretch; flex-direction: column; }
   .team-create-card { grid-template-columns: 1fr; }
   .team-create-card button { width: 100%; }
 }
