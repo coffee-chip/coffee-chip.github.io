@@ -1,6 +1,6 @@
 import { TYPES } from '../data/types.js';
 import { getPokemon } from '../data/pokemonRepository.js';
-import { getTeam, removePokemonFromTeam } from '../data/teamRepository.js';
+import { getTeam, removePokemonFromTeam, setTeamOpponent } from '../data/teamRepository.js';
 import { getMultiplier } from '../engine/effectiveness.js';
 import { state } from '../state.js';
 import { createTypeList, createTypeIcon } from '../components/typeBadge.js';
@@ -21,6 +21,18 @@ function createBackLink() {
   const link = el('a', { className: 'secondary-button team-detail-back', text: '← Teams' });
   link.href = '#teams';
   return link;
+}
+
+function createOpponentToggle(team, render) {
+  const label = el('label', { className: 'toggle-field team-opponent-toggle' });
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = team.isOpponent === true;
+  input.addEventListener('change', () => {
+    if (setTeamOpponent(team.id, input.checked)) render();
+  });
+  label.append(input, el('span', { text: 'Opponent' }));
+  return label;
 }
 
 function createMemberRemoveConfirmation(team, member, pokemon, card, render) {
@@ -263,7 +275,13 @@ export function renderTeamDetail(container, render) {
     return;
   }
 
-  page.append(el('h2', { className: 'team-detail-title', text: team.title }));
+  const heading = el('div', { className: 'team-detail-heading' });
+  heading.append(
+    el('h2', { className: `team-detail-title${team.isOpponent ? ' team-detail-title-opponent' : ''}`, text: team.title }),
+    createOpponentToggle(team, render)
+  );
+  page.append(heading);
+
   const roster = el('section', { className: 'team-detail-roster' });
   if (!team.pokemon.length) {
     roster.append(el('p', { className: 'panel muted', text: 'This team has no Pokémon yet.' }));
