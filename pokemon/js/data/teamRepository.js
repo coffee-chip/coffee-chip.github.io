@@ -27,6 +27,10 @@ export function getTeams() {
   return state.teams;
 }
 
+export function getTeam(teamId) {
+  return state.teams.find(team => team.id === teamId) ?? null;
+}
+
 export function createTeam(title) {
   const normalizedTitle = String(title ?? '').trim().slice(0, 60);
   if (!normalizedTitle) return null;
@@ -44,13 +48,22 @@ export function deleteTeam(teamId) {
 }
 
 export function addPokemonToTeam(teamId, pokemon) {
-  const team = state.teams.find(entry => entry.id === teamId);
+  const team = getTeam(teamId);
   if (!team || !Number.isInteger(pokemon?.id)) return { ok: false, reason: 'not-found' };
   if (team.pokemon.some(entry => entry.id === pokemon.id)) return { ok: false, reason: 'duplicate' };
   if (team.pokemon.length >= TEAM_SIZE_LIMIT) return { ok: false, reason: 'full' };
   team.pokemon.push(snapshotPokemon(pokemon));
   saveTeams(state.teams);
   return { ok: true, team };
+}
+
+export function removePokemonFromTeam(teamId, pokemonId) {
+  const team = getTeam(teamId);
+  if (!team) return false;
+  const index = team.pokemon.findIndex(entry => entry.id === pokemonId);
+  if (index < 0) return false;
+  team.pokemon.splice(index, 1);
+  return saveTeams(state.teams);
 }
 
 export function reorderTeams(fromIndex, toIndex) {
