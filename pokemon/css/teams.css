@@ -2,6 +2,7 @@
 
 .team-list { display: grid; gap: 1rem; }
 .team-card { margin: 0; touch-action: pan-y; cursor: pointer; }
+.team-card-opponent { border-color: color-mix(in srgb, var(--status-error) 55%, var(--border-default)); }
 .team-card:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .team-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
 .team-card-empty .team-card-header { margin-bottom: 0; }
@@ -25,7 +26,10 @@
 
 .team-detail-page { display: grid; gap: 1rem; }
 .team-detail-back { justify-self: start; text-decoration: none; }
-.team-detail-title { margin: 0; overflow-wrap: anywhere; }
+.team-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.team-detail-heading .team-detail-title { min-height: 0; margin: 0; padding-right: 0; overflow-wrap: anywhere; }
+.page .team-detail-title-opponent { color: var(--status-error); }
+.team-opponent-toggle { flex: 0 0 auto; min-height: 2.65rem; }
 .team-detail-roster { display: grid; gap: .65rem; }
 .team-detail-member { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr) auto; align-items: center; gap: .75rem; margin: 0; padding: .65rem; }
 .team-detail-member-visual { display: grid; place-items: center; width: 3.75rem; height: 3.75rem; border-radius: .55rem; background: var(--subtle-background); overflow: hidden; }
@@ -64,6 +68,7 @@
 
 @media (hover: hover) {
   .team-card:hover { border-color: var(--action-primary); }
+  .team-card-opponent:hover { border-color: var(--status-error); }
 }
 
 @media (max-width: 24rem) {
@@ -72,6 +77,7 @@
   .team-delete-confirmation { align-items: start; }
   .team-create-card { grid-template-columns: 1fr; }
   .team-create-card button { width: 100%; }
+  .team-detail-heading { align-items: flex-start; }
   .team-detail-member { grid-template-columns: 3.25rem minmax(0, 1fr) auto; }
   .team-detail-member-visual { width: 3.25rem; height: 3.25rem; }
   .team-matchup-table th, .team-matchup-table td { width: 2.55rem; min-width: 2.55rem; }
