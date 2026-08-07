@@ -31,10 +31,15 @@ export function getTeam(teamId) {
   return state.teams.find(team => team.id === teamId) ?? null;
 }
 
+export function getRival(teamId) {
+  const team = getTeam(teamId);
+  return team?.rivalTeamId ? getTeam(team.rivalTeamId) : null;
+}
+
 export function createTeam(title) {
   const normalizedTitle = String(title ?? '').trim().slice(0, 60);
   if (!normalizedTitle) return null;
-  const team = { id: createTeamId(normalizedTitle), title: normalizedTitle, isOpponent: false, pokemon: [] };
+  const team = { id: createTeamId(normalizedTitle), title: normalizedTitle, isOpponent: false, rivalTeamId: null, pokemon: [] };
   state.teams.push(team);
   saveTeams(state.teams);
   return team;
@@ -55,9 +60,37 @@ export function setTeamOpponent(teamId, isOpponent) {
   return saveTeams(state.teams);
 }
 
+export function clearRivalry(teamId) {
+  const team = getTeam(teamId);
+  if (!team) return false;
+  const rival = team.rivalTeamId ? getTeam(team.rivalTeamId) : null;
+  team.rivalTeamId = null;
+  if (rival?.rivalTeamId === team.id) rival.rivalTeamId = null;
+  return saveTeams(state.teams);
+}
+
+export function setRivalry(teamId, rivalTeamId) {
+  const team = getTeam(teamId);
+  const rival = getTeam(rivalTeamId);
+  if (!team || !rival || team.id === rival.id) return false;
+  if (team.rivalTeamId === rival.id && rival.rivalTeamId === team.id) return true;
+
+  const oldTeamRival = team.rivalTeamId ? getTeam(team.rivalTeamId) : null;
+  const oldRivalRival = rival.rivalTeamId ? getTeam(rival.rivalTeamId) : null;
+  if (oldTeamRival?.rivalTeamId === team.id) oldTeamRival.rivalTeamId = null;
+  if (oldRivalRival?.rivalTeamId === rival.id) oldRivalRival.rivalTeamId = null;
+
+  team.rivalTeamId = rival.id;
+  rival.rivalTeamId = team.id;
+  return saveTeams(state.teams);
+}
+
 export function deleteTeam(teamId) {
   const index = state.teams.findIndex(team => team.id === teamId);
   if (index < 0) return false;
+  const team = state.teams[index];
+  const rival = team.rivalTeamId ? getTeam(team.rivalTeamId) : null;
+  if (rival?.rivalTeamId === team.id) rival.rivalTeamId = null;
   state.teams.splice(index, 1);
   return saveTeams(state.teams);
 }
