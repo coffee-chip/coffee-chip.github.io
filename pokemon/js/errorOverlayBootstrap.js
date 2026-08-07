@@ -58,7 +58,7 @@
     title.textContent = currentError.title;
     const close = document.createElement('button');
     close.type = 'button';
-    close.className = 'developer-error-overlay-close';
+    close.className = 'transparent-button developer-error-overlay-close';
     close.setAttribute('aria-label', 'Dismiss error');
     close.textContent = '×';
     close.addEventListener('click', removeOverlay);
