@@ -44,6 +44,21 @@ function createDeleteConfirmation(team, card, render) {
 function createTeamCard(team, index, render) {
   const card = el('article', { className: `panel team-card${team.pokemon.length ? '' : ' team-card-empty'}` });
   card.dataset.teamIndex = String(index);
+  card.tabIndex = 0;
+  card.setAttribute('role', 'link');
+  card.setAttribute('aria-label', `Open ${team.title}`);
+
+  const openTeam = event => {
+    if (event?.target?.closest?.('button, .team-drag-handle, .team-delete-confirmation')) return;
+    location.hash = `team/${encodeURIComponent(team.id)}`;
+  };
+  card.addEventListener('click', openTeam);
+  card.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.target !== card) return;
+    event.preventDefault();
+    openTeam(event);
+  });
 
   const header = el('div', { className: 'team-card-header' });
   const title = el('h2', { text: team.title });
