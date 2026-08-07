@@ -26,6 +26,15 @@ const ROUTE_TITLES = Object.freeze({
   debug: 'Developer diagnostics'
 });
 
+const BUTTON_COLOR_ROLE_SELECTOR = [
+  '.primary-button',
+  '.secondary-button',
+  '.danger-button',
+  '.transparent-button',
+  '.type-button',
+  '.type-badge-button'
+].join(',');
+
 hydratePersistentState(loadPersistentData());
 applyTheme(state.settings.paletteTheme, state.settings.appearance);
 watchSystemTheme(() => ({ paletteTheme: state.settings.paletteTheme, appearance: state.settings.appearance }));
@@ -60,6 +69,14 @@ function renderUpdateBanner() {
   }
 }
 
+function auditButtonColorRoles() {
+  const unclassified = [...document.querySelectorAll('button')]
+    .filter(button => !button.matches(BUTTON_COLOR_ROLE_SELECTOR));
+  if (unclassified.length) {
+    console.warn('Buttons without an explicit color role:', unclassified);
+  }
+}
+
 function renderPageHeader() {
   const title = ROUTE_TITLES[state.route] ?? '';
   pageTitle.textContent = title;
@@ -81,6 +98,7 @@ function render() {
   }
   renderUpdateBanner();
   renderDeveloperOverlay();
+  auditButtonColorRoles();
 }
 
 function warmPokemonNameIndex() {
