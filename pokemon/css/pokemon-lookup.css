@@ -32,7 +32,7 @@
 
 .pokemon-result-card-with-team-menu { position: relative; overflow: visible; }
 .pokemon-result-visual-with-menu { position: relative; }
-.pokemon-team-menu-button { position: absolute; z-index: 2; top: .45rem; right: .45rem; width: 2.25rem; min-width: 2.25rem; height: 2.25rem; min-height: 2.25rem; font-size: 1.35rem; }
+.pokemon-team-menu-button { position: absolute; z-index: 2; top: .45rem; right: .45rem; width: 2.5rem; min-width: 2.5rem; height: 2.5rem; min-height: 2.5rem; font-size: 1.35rem; }
 .pokemon-team-menu { position: absolute; z-index: 8; top: 3.55rem; right: 1rem; display: grid; gap: .6rem; width: min(14rem, calc(100% - 2rem)); padding: .75rem; border: 1px solid var(--border-default); border-radius: .65rem; background: var(--panel-background); box-shadow: 0 .5rem 1.25rem rgb(0 0 0 / .18); text-align: left; }
 .pokemon-team-menu-options { display: grid; gap: .4rem; max-height: calc(5 * 2.5rem + 4 * .4rem); overflow-y: auto; overscroll-behavior: contain; }
 .pokemon-team-menu-options button { width: 100%; min-height: 2.5rem; text-align: left; }
