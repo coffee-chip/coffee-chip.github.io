@@ -1,8 +1,15 @@
-const VALID_ROUTES = new Set(['quiz', 'study', 'teams', 'progress', 'settings', 'debug']);
+const VALID_ROUTES = new Set(['quiz', 'study', 'teams', 'team', 'progress', 'settings', 'debug']);
 
 export function getRoute() {
-  const route = location.hash.replace('#', '') || 'quiz';
-  return VALID_ROUTES.has(route) ? route : 'quiz';
+  const hash = location.hash.replace(/^#/, '') || 'quiz';
+  const [name, ...segments] = hash.split('/');
+  if (!VALID_ROUTES.has(name)) return { name: 'quiz', params: {} };
+  if (name === 'team') {
+    const teamId = decodeURIComponent(segments.join('/'));
+    if (!teamId) return { name: 'teams', params: {} };
+    return { name, params: { teamId } };
+  }
+  return { name, params: {} };
 }
 
 export function startRouter(onRouteChange) {
