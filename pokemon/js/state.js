@@ -119,12 +119,13 @@ function recordRelationshipOutcome(outcome, timestamp) {
 }
 
 function recordPokemonRecognition(question, result, timestamp) {
-  const pokemonId = Number(question?.pokemon?.id);
-  if (!Number.isInteger(pokemonId) || pokemonId < 1) return;
+  if (question.objectiveId !== 'recognize-pokemon-type') return;
+  const pokemonId = Number(question.metadata?.pokemonId);
+  if (!Number.isInteger(pokemonId)) return;
   const key = String(pokemonId);
   const existing = state.progress.pokemonRecognitionStats[key] ?? {
     pokemonId,
-    pokemonName: question.pokemon.name,
+    pokemonName: question.metadata?.pokemonName ?? `pokemon-${pokemonId}`,
     attempts: 0,
     earnedScore: 0,
     exactAnswers: 0,
@@ -133,29 +134,38 @@ function recordPokemonRecognition(question, result, timestamp) {
     falseSelections: 0,
     lastSeen: null
   };
+  existing.pokemonName = question.metadata?.pokemonName ?? existing.pokemonName;
   existing.attempts += 1;
   existing.earnedScore += result.score;
   if (result.score === 1) existing.exactAnswers += 1;
-  existing.correctSelections += result.correctSelections.length;
-  existing.misses += result.missedAnswers.length;
-  existing.falseSelections += result.falseSelections.length;
+  existing.correctSelections += result.correctlySelected?.length ?? 0;
+  existing.misses += result.missedAnswers?.length ?? 0;
+  existing.falseSelections += result.incorrectAnswers?.length ?? 0;
   existing.lastSeen = timestamp;
   state.progress.pokemonRecognitionStats[key] = existing;
 }
 
-export function recordQuizResult(question, result) {
-  const timestamp = new Date().toISOString();
-  state.quiz.session.results.push({ question, result, timestamp });
-  state.quiz.session.totalScore += result.score;
-  const modeStats = state.progress.quizStats[state.quiz.mode] ?? { questionCount: 0, totalScore: 0 };
-  modeStats.questionCount += 1;
-  modeStats.totalScore += result.score;
-  state.progress.quizStats[state.quiz.mode] = modeStats;
-  for (const outcome of result.relationshipOutcomes ?? []) recordRelationshipOutcome(outcome, timestamp);
-  if (question?.pokemon) recordPokemonRecognition(question, result, timestamp);
+function recordQuizStat(modeId, score) {
+  const existing = state.progress.quizStats[modeId] ?? { questionCount: 0, totalScore: 0 };
+  existing.questionCount += 1;
+  existing.totalScore += score;
+  state.progress.quizStats[modeId] = existing;
 }
 
-export function nextQuizQuestion() {
+export function recordQuestionResult(question, result) {
+  state.quiz.session.results.push({ questionId: question.id, generatorId: question.generatorId, score: result.score, metadata: question.metadata });
+  state.quiz.session.totalScore += result.score;
+  recordQuizStat(state.quiz.session.mode, result.score);
+  const timestamp = new Date().toISOString();
+  for (const outcome of result.relationshipOutcomes ?? []) recordRelationshipOutcome(outcome, timestamp);
+  recordPokemonRecognition(question, result, timestamp);
+}
+
+export function advanceQuizSession() {
   state.quiz.session.questionNumber += 1;
   resetQuestionState();
+  state.quiz.status = 'answering';
 }
+export function endQuizSession() { state.quiz.status = 'complete'; resetQuestionState(); }
+export function returnToQuizSetup() { state.quiz.status = 'idle'; resetQuestionState(); }
+export function getSessionAverageScore() { const count = state.quiz.session.results.length; return count === 0 ? 0 : state.quiz.session.totalScore / count; }
