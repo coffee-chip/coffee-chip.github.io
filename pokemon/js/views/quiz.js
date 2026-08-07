@@ -172,7 +172,7 @@ function showFeedbackMnemonic({ mnemonics, button }) {
   if (button.getAttribute('aria-pressed') === 'true') { dismissFeedbackMnemonic(); return; }
   dismissFeedbackMnemonic();
   button.setAttribute('aria-pressed', 'true');
-  const banner = el('button', { className: 'mnemonic-banner quiz-mnemonic-banner' });
+  const banner = el('button', { className: 'transparent-button mnemonic-banner quiz-mnemonic-banner' });
   banner.type = 'button';
   banner.setAttribute('aria-label', 'Dismiss mnemonic');
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
@@ -231,7 +231,7 @@ function buildQuizTypeSelector(refreshQuiz) {
   selector.setAttribute('aria-label', 'Quiz type');
 
   for (const mode of Object.values(PRACTICE_PRESETS)) {
-    const button = el('button', { className: 'button-selector-option', text: mode.label });
+    const button = el('button', { className: 'secondary-button button-selector-option', text: mode.label });
     button.type = 'button';
     button.setAttribute('role', 'radio');
     button.setAttribute('aria-checked', String(mode.id === state.quiz.mode));
@@ -314,7 +314,7 @@ function buildQuizSetup(refreshQuiz) {
 
   const startArea = el('div', { className: 'quiz-start-area' });
   startArea.append(el('p', { className: 'muted', text: 'Practice for as long as you want; you can end the quiz at any time.' }));
-  const start = el('button', { text: 'Start quiz' });
+  const start = el('button', { className: 'primary-button', text: 'Start quiz' });
   start.type = 'button';
   start.addEventListener('click', () => beginSession(refreshQuiz));
   startArea.append(start);
@@ -361,7 +361,7 @@ function buildLoadError(refreshQuiz) {
   const panel = el('div', { className: 'panel quiz-loading-panel' });
   panel.append(el('p', { className: 'settings-status error', text: questionLoadError }));
   const actions = el('div', { className: 'actions' });
-  const retry = el('button', { text: 'Retry' });
+  const retry = el('button', { className: 'primary-button', text: 'Retry' });
   retry.addEventListener('click', () => createNextQuestion(refreshQuiz));
   actions.append(retry, createFinishButton(refreshQuiz));
   panel.append(actions);
@@ -387,7 +387,7 @@ function buildActiveQuestion(refreshQuiz) {
   if (state.quiz.result) panel.append(renderFeedback(state.quiz.result, question));
   const actions = el('div', { className: 'actions' });
   if (!state.quiz.result) {
-    const submit = el('button', { text: state.quiz.selectedAnswers.size === 0 ? 'Submit no types' : 'Submit answer' });
+    const submit = el('button', { className: 'primary-button', text: state.quiz.selectedAnswers.size === 0 ? 'Submit no types' : 'Submit answer' });
     submit.addEventListener('click', () => {
       const result = scoreQuestion(question, state.quiz.selectedAnswers);
       state.quiz.result = result;
@@ -398,7 +398,7 @@ function buildActiveQuestion(refreshQuiz) {
     });
     actions.append(submit);
   } else {
-    const next = el('button', { text: 'Next question' });
+    const next = el('button', { className: 'primary-button', text: 'Next question' });
     next.addEventListener('click', () => {
       advanceQuizSession();
       createNextQuestion(refreshQuiz, { usePrefetch: true });
@@ -418,7 +418,7 @@ function buildSessionSummary(refreshQuiz) {
   panel.append(el('p', { text: `Questions answered: ${state.quiz.session.results.length}` }));
   panel.append(el('p', { className: 'summary-score', text: `Average score: ${formatPercent(getSessionAverageScore())}` }));
   const actions = el('div', { className: 'actions' });
-  const again = el('button', { text: 'Quiz again' });
+  const again = el('button', { className: 'primary-button', text: 'Quiz again' });
   again.addEventListener('click', () => beginSession(refreshQuiz));
   const setup = el('button', { className: 'secondary-button', text: 'Change setup' });
   setup.addEventListener('click', () => {
