@@ -32,23 +32,25 @@
 .team-detail-member-visual img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .team-detail-member-details { display: grid; min-width: 0; gap: .35rem; }
 .team-detail-member-details > strong { color: var(--heading-color); overflow-wrap: anywhere; }
-.team-detail-remove { min-height: 2.5rem; white-space: nowrap; }
+.team-detail-remove { justify-self: end; }
+.team-detail-member .team-delete-confirmation { grid-column: 1 / -1; width: 100%; }
 .team-analysis { display: grid; gap: .75rem; min-width: 0; }
 .team-analysis-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
 .team-analysis-tabs button { width: 100%; }
 .team-matchup-table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border-default); border-radius: .65rem; background: var(--panel-background); overscroll-behavior-inline: contain; }
-.team-matchup-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: .9rem; }
-.team-matchup-table caption { padding: .75rem; text-align: left; color: var(--text-muted); }
-.team-matchup-table th, .team-matchup-table td { min-width: 5.25rem; height: 3.25rem; padding: .35rem .45rem; border-top: 1px solid var(--border-default); border-right: 1px solid var(--border-default); text-align: center; vertical-align: middle; }
+.team-matchup-table { width: 100%; min-width: 0; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: .82rem; }
+.team-matchup-table caption { padding: .55rem .6rem; text-align: left; color: var(--text-muted); }
+.team-matchup-table th, .team-matchup-table td { width: 2.75rem; min-width: 2.75rem; height: 2.4rem; padding: .15rem .2rem; border-top: 1px solid var(--border-default); border-right: 1px solid var(--border-default); text-align: center; vertical-align: middle; }
 .team-matchup-table tr > :last-child { border-right: 0; }
-.team-matchup-table thead th { background: var(--subtle-background); color: var(--heading-color); font-weight: 700; }
-.team-matchup-table thead th:first-child, .team-matchup-table tbody th { position: sticky; left: 0; z-index: 2; min-width: 6.75rem; text-align: left; background: var(--panel-background); }
-.team-matchup-table thead th:first-child { z-index: 3; background: var(--subtle-background); }
-.team-matchup-table tbody th .type-badge { white-space: nowrap; }
-.team-matchup-pokemon { display: grid; justify-items: center; gap: .2rem; width: 5.5rem; }
-.team-matchup-pokemon img { display: block; width: 2.75rem; height: 2.75rem; object-fit: contain; }
-.team-matchup-pokemon span { max-width: 5.5rem; overflow-wrap: anywhere; line-height: 1.15; }
-.team-matchup-check { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 999px; background: var(--action-primary-soft); color: var(--action-primary); font-size: 1.2rem; font-weight: 800; }
+.team-matchup-table thead th { height: 6.5rem; background: var(--subtle-background); color: var(--heading-color); font-weight: 700; vertical-align: bottom; }
+.team-matchup-table thead th:first-child, .team-matchup-table tbody th { width: 2.35rem; min-width: 2.35rem; }
+.team-matchup-table tbody th { position: sticky; left: 0; z-index: 2; padding: .1rem; background: var(--panel-background); }
+.team-matchup-table thead th:first-child { position: sticky; left: 0; z-index: 3; background: var(--subtle-background); }
+.team-matchup-type-icon { width: 1.35rem; height: 1.35rem; }
+.team-matchup-pokemon { display: grid; justify-items: center; align-content: end; gap: .1rem; min-width: 0; height: 100%; }
+.team-matchup-pokemon img { display: block; width: min(100%, 2rem); height: 1.8rem; object-fit: contain; }
+.team-matchup-pokemon-name { display: block; max-height: 4.25rem; writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.team-matchup-check { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 999px; background: var(--action-primary-soft); color: var(--action-primary); font-size: 1rem; font-weight: 800; }
 
 .pokemon-result-card-with-team-menu { position: relative; overflow: visible; }
 .pokemon-result-visual-with-menu { position: relative; }
@@ -69,7 +71,8 @@
   .team-delete-confirmation { align-items: start; }
   .team-create-card { grid-template-columns: 1fr; }
   .team-create-card button { width: 100%; }
-  .team-detail-member { grid-template-columns: 3.25rem minmax(0, 1fr); }
+  .team-detail-member { grid-template-columns: 3.25rem minmax(0, 1fr) auto; }
   .team-detail-member-visual { width: 3.25rem; height: 3.25rem; }
-  .team-detail-remove { grid-column: 1 / -1; width: 100%; }
+  .team-matchup-table th, .team-matchup-table td { width: 2.55rem; min-width: 2.55rem; }
+  .team-matchup-table thead th:first-child, .team-matchup-table tbody th { width: 2.15rem; min-width: 2.15rem; }
 }
