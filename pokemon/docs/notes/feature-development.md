@@ -24,6 +24,9 @@
 - Offensive analysis intentionally assumes same-type attack coverage but does not apply STAB.
 - Team analysis resolves full Pokémon records through the existing Pokémon repository so type logic is not duplicated in team storage.
 - Matchup matrices are intentionally compact: the type column is icon-only, Pokémon names are vertical, images shrink to fit, and horizontal scrolling remains available only as overflow fallback.
+- Battle scenario quiz mode uses combined advantage scoring against a displayed Pokémon. Its Answers setting supports Types, Pokémon, or Both.
+- Battle scenario type questions ask which hypothetical single-type Pokémon would have positive combined advantage against the displayed Pokémon.
+- Battle scenario Pokémon questions show four candidate Pokémon and ask which has the greatest combined type advantage; generation retries until there is a unique highest-scoring candidate so the question remains single-select.
 
 ## Implementation ideas
 
