@@ -78,13 +78,17 @@ export function createPokemonOffensiveMatchups(pokemonTypes, onMnemonic) {
     text: 'Defending types this Pokémon’s own move types are strong or weak against.'
   }));
 
-  const strongGroup = el('section', { className: 'matchup-group pokemon-matchup-group' });
-  strongGroup.append(el('h4', { text: 'Strong against' }), createOutgoingMnemonicList(strong, pokemonTypes, onMnemonic));
-  section.append(strongGroup);
+  if (strong.length) {
+    const strongGroup = el('section', { className: 'matchup-group pokemon-matchup-group' });
+    strongGroup.append(el('h4', { text: 'Strong against' }), createOutgoingMnemonicList(strong, pokemonTypes, onMnemonic));
+    section.append(strongGroup);
+  }
 
-  const weakGroup = el('section', { className: 'matchup-group pokemon-matchup-group' });
-  weakGroup.append(el('h4', { text: 'Weak against' }), createOutgoingMnemonicList(weak, pokemonTypes, onMnemonic));
-  section.append(weakGroup);
+  if (weak.length) {
+    const weakGroup = el('section', { className: 'matchup-group pokemon-matchup-group' });
+    weakGroup.append(el('h4', { text: 'Weak against' }), createOutgoingMnemonicList(weak, pokemonTypes, onMnemonic));
+    section.append(weakGroup);
+  }
 
   return section;
 }
