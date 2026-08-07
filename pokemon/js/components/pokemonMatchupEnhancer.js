@@ -1,7 +1,7 @@
 import { state } from '../state.js';
 import { parseRelationshipKey } from '../relationships.js';
 import { createTypeBadge } from './typeBadge.js';
-import { createPokemonDefensiveMatchups } from './pokemonMatchups.js';
+import { createPokemonDefensiveMatchups, createPokemonOffensiveMatchups } from './pokemonMatchups.js';
 
 let activeMnemonicKey = null;
 let activeMnemonicBanner = null;
@@ -58,8 +58,12 @@ export function enhancePokemonLookupResult(root) {
   dismissMnemonicBanner();
   if (state.route !== 'study' || state.study.mode !== 'pokemon' || !state.study.pokemonResult) return;
   root.querySelector('.pokemon-source')?.remove();
-  if (root.querySelector('.pokemon-matchups')) return;
+  if (root.querySelector('.pokemon-defensive-matchups') || root.querySelector('.pokemon-offensive-matchups')) return;
   const card = root.querySelector('.pokemon-result-card');
   if (!card) return;
-  card.after(createPokemonDefensiveMatchups(state.study.pokemonResult.types, showMnemonicBanner));
+  const types = state.study.pokemonResult.types;
+  card.after(
+    createPokemonDefensiveMatchups(types, showMnemonicBanner),
+    createPokemonOffensiveMatchups(types, showMnemonicBanner)
+  );
 }
