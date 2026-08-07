@@ -5,8 +5,7 @@
 html { min-height: 100%; background: var(--page-background); }
 body { margin: 0; min-height: 100%; background: var(--page-background); color: var(--text-primary); }
 button, select, input { font: inherit; color: inherit; }
-button { min-height: 2.75rem; padding: 0 1rem; border: 1px solid var(--action-primary); border-radius: .45rem; background: var(--action-primary); color: var(--neutral-1); font-weight: 700; cursor: pointer; }
-button:hover, button:focus-visible { border-color: var(--action-primary-strong); background: var(--action-primary-strong); }
+button { min-height: 2.75rem; padding: 0 1rem; border: 1px solid; border-radius: .45rem; font-weight: 700; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }
 .primary-button { border-color: var(--action-primary); background: var(--action-primary); color: var(--neutral-1); }
 .primary-button:hover, .primary-button:focus-visible { border-color: var(--action-primary-strong); background: var(--action-primary-strong); color: var(--neutral-1); }
@@ -96,8 +95,7 @@ select, input[type="search"] { min-height: 2.75rem; border: 1px solid var(--bord
 .search-field input[type="search"] { width: 100%; padding-right: 2.8rem; }
 .search-field-clear { position: absolute; top: 50%; right: .4rem; transform: translateY(-50%); }
 .pokemon-autocomplete-list { position: absolute; z-index: 20; top: calc(100% + .25rem); right: 0; left: 0; overflow: hidden; border: 1px solid var(--border-default); border-radius: .55rem; background: var(--panel-background); box-shadow: 0 .5rem 1.25rem rgb(0 0 0 / .16); }
-.pokemon-autocomplete-option { display: block; width: 100%; min-height: 2.5rem; padding: .55rem .7rem; border: 0; border-bottom: 1px solid var(--border-default); border-radius: 0; background: var(--panel-background); color: var(--text-primary); font-weight: 400; text-align: left; }
-.pokemon-autocomplete-option:last-child { border-bottom: 0; }
-.pokemon-autocomplete-option:hover, .pokemon-autocomplete-option:focus-visible { background: var(--subtle-background); }
+.pokemon-autocomplete-option { display: block; width: 100%; min-height: 2.5rem; padding: .55rem .7rem; border-width: 0 0 1px; border-radius: 0; font-weight: 400; text-align: left; }
+.pokemon-autocomplete-option:last-child { border-bottom-width: 0; }
 @media (prefers-reduced-motion: reduce) { .toggle-field input[type="checkbox"], .toggle-field input[type="checkbox"]::before { transition: none; } }
 @media (min-width: 36rem) { .type-grid { grid-template-columns: repeat(6, 1fr); } .quiz-setup { grid-template-columns: 1fr 1fr auto; align-items: end; } .study-controls { grid-template-columns: repeat(3, 1fr); } }
