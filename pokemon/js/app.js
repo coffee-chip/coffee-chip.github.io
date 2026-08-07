@@ -47,6 +47,7 @@ function renderUpdateBanner() {
     text.textContent = 'A new version is available.';
     const update = document.createElement('button');
     update.type = 'button';
+    update.className = 'primary-button';
     update.textContent = 'Update now';
     update.addEventListener('click', () => applyWaitingUpdate());
     const later = document.createElement('button');
