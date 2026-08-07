@@ -27,3 +27,73 @@
 .quiz-dual-note[hidden] {
   display: none;
 }
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .5rem;
+}
+
+.type-button {
+  min-height: 4.15rem;
+  padding: .35rem;
+  border: 1px solid var(--border-default);
+  border-radius: .5rem;
+  background: var(--panel-background);
+  color: var(--text-primary);
+  font-weight: inherit;
+}
+
+.type-button:focus-visible {
+  border-color: var(--border-strong);
+  background: var(--subtle-background);
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.type-button .type-badge {
+  width: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: .25rem;
+  border: 0;
+  background: transparent;
+  padding: .2rem;
+}
+
+.type-button .type-icon {
+  width: 1.7rem;
+  height: 1.7rem;
+}
+
+.type-button[aria-pressed="true"] {
+  outline: 3px solid var(--focus-ring);
+}
+
+.type-button.correct {
+  border-color: var(--status-success);
+  background: var(--status-success-soft);
+}
+
+.type-button.missed {
+  border-color: var(--status-warning);
+  background: var(--status-warning-soft);
+}
+
+.type-button.incorrect {
+  border-color: var(--status-error);
+  background: var(--status-error-soft);
+}
+
+@media (hover: hover) {
+  .type-button:hover {
+    border-color: var(--border-strong);
+    background: var(--subtle-background);
+  }
+}
+
+@media (min-width: 36rem) {
+  .type-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
