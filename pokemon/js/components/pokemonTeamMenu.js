@@ -1,8 +1,10 @@
 import { state } from '../state.js';
 import { addPokemonToTeam, getTeams, TEAM_MAX_POKEMON } from '../data/teamRepository.js';
+import { createOverflowMenuButton, setOverflowMenuExpanded } from './overflowMenuButton.js';
 
 function closeMenu(root) {
   root.querySelector('.pokemon-team-menu')?.remove();
+  setOverflowMenuExpanded(root.querySelector('.pokemon-team-menu-button'), false);
 }
 
 function statusMessage(result, teamTitle, pokemonName) {
@@ -57,12 +59,6 @@ function openTeamPicker(root, card, pokemon) {
   }
 
   card.append(menu);
-
-  window.setTimeout(() => {
-    document.addEventListener('pointerdown', event => {
-      if (!menu.contains(event.target)) closeMenu(root);
-    }, { once: true });
-  }, 0);
 }
 
 export function enhancePokemonTeamMenu(root) {
@@ -74,16 +70,12 @@ export function enhancePokemonTeamMenu(root) {
 
   card.classList.add('pokemon-result-card-with-team-menu');
   visual.classList.add('pokemon-result-visual-with-menu');
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'secondary-button icon-button pokemon-team-menu-button';
-  button.textContent = '⋯';
-  button.setAttribute('aria-label', `More actions for ${pokemon.displayName}`);
-  button.setAttribute('aria-haspopup', 'dialog');
-  button.addEventListener('click', event => {
-    event.stopPropagation();
-    if (card.querySelector('.pokemon-team-menu')) closeMenu(root);
-    else openTeamPicker(root, card, pokemon);
+  const button = createOverflowMenuButton({
+    className: 'pokemon-team-menu-button',
+    ariaLabel: `More actions for ${pokemon.displayName}`,
+    isOpen: () => Boolean(card.querySelector('.pokemon-team-menu')),
+    open: () => openTeamPicker(root, card, pokemon),
+    close: () => closeMenu(root)
   });
   visual.append(button);
 }
