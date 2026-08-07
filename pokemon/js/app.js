@@ -21,6 +21,7 @@ const ROUTE_TITLES = Object.freeze({
   quiz: 'Quiz',
   study: 'Study',
   teams: 'Teams',
+  team: 'Team',
   progress: 'Progress',
   settings: 'Settings',
   debug: 'Developer diagnostics'
@@ -92,8 +93,9 @@ function render() {
   enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
   enhancePokemonTeamMenu(viewRoot);
+  const activeNavRoute = state.route === 'team' ? 'teams' : state.route;
   for (const link of navLinks) {
-    if (link.dataset.route === state.route) link.setAttribute('aria-current', 'page');
+    if (link.dataset.route === activeNavRoute) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
   renderUpdateBanner();
@@ -108,7 +110,11 @@ function warmPokemonNameIndex() {
 }
 
 subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
-startRouter(route => { state.route = route; render(); });
+startRouter(route => {
+  state.route = route.name;
+  state.routeParams = route.params;
+  render();
+});
 registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
 if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
 else window.setTimeout(warmPokemonNameIndex, 0);
