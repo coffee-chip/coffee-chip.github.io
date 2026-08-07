@@ -113,7 +113,7 @@ function pokemonRow(record, rank) {
 }
 
 function createToggleButton({ expanded, recordsLength, onToggle }) {
-  const toggle = el('button', { className: 'progress-expand-button', text: expanded ? 'Collapse' : `Show rankings (${Math.min(recordsLength, EXPANDED_LIMIT)})` });
+  const toggle = el('button', { className: 'secondary-button progress-expand-button', text: expanded ? 'Collapse' : `Show rankings (${Math.min(recordsLength, EXPANDED_LIMIT)})` });
   toggle.type = 'button';
   toggle.setAttribute('aria-expanded', String(expanded));
   toggle.addEventListener('click', onToggle);
