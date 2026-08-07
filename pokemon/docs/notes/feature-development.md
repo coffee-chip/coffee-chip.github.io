@@ -6,8 +6,9 @@
 - Team detail roster shows each Pokémon and its types.
 - Removing a Pokémon from a team reuses the team-delete interaction pattern: an × trigger followed by an inline confirmation with Cancel/Remove actions.
 - Team analysis has Defense and Offense tabs with an 18-type matrix and one Pokémon per column.
-- Defense marks an incoming type when the canonical type multiplier against that Pokémon's one/two types is >1.
-- Offense marks a defending type when at least one of that Pokémon's own types is >1 effective against it. This intentionally assumes same-type attack coverage but does not apply STAB.
+- Defense has Weak and Resistant subviews. Weak marks incoming type multipliers >1; Resistant marks incoming type multipliers <1, including immunities.
+- Offense has Strong and Weak subviews. Strong marks a defending type when at least one of the Pokémon's own types is >1 effective against it. Weak marks a defending type only when all of the Pokémon's own types are <1 effective against it, representing a true same-type coverage gap.
+- Offensive analysis intentionally assumes same-type attack coverage but does not apply STAB.
 - Team analysis resolves full Pokémon records through the existing Pokémon repository so type logic is not duplicated in team storage.
 - Matchup matrices are intentionally compact: the type column is icon-only, Pokémon names are vertical, images shrink to fit, and horizontal scrolling remains available only as overflow fallback.
 
