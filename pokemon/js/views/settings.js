@@ -109,13 +109,13 @@ export function renderSettings(container, render) {
   developerPanel.append(toggle('Automatically check for and apply updates on launch', state.settings.developer.autoUpdateOnLaunch, checked => { state.settings.developer.autoUpdateOnLaunch = checked; saveSettings(state.settings); }));
 
   const updateActions = el('div', { className: 'actions' });
-  const checkButton = el('button', { text: 'Get latest version' });
+  const checkButton = el('button', { className: 'primary-button', text: 'Get latest version' });
   checkButton.type = 'button';
   checkButton.disabled = !serviceWorkerState.supported || ['checking', 'updating', 'applying-update'].includes(serviceWorkerState.status);
   checkButton.addEventListener('click', async () => { serviceMessage = ''; await checkForLatestVersion(); serviceMessage = serviceWorkerState.message; render(); });
   updateActions.append(checkButton);
   if (serviceWorkerState.status === 'update-ready') {
-    const applyButton = el('button', { text: 'Update now' });
+    const applyButton = el('button', { className: 'primary-button', text: 'Update now' });
     applyButton.type = 'button';
     applyButton.addEventListener('click', () => applyWaitingUpdate());
     updateActions.append(applyButton);
