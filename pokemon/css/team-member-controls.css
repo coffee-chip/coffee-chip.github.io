@@ -26,11 +26,11 @@
   font-size: 1.15rem;
 }
 
-.team-detail-member .team-drag-handle {
+.team-drag-handle {
   font-size: 0;
 }
 
-.team-detail-member .team-drag-handle::before {
+.team-drag-handle::before {
   content: '';
   width: 1.375rem;
   height: 1.375rem;
