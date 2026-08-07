@@ -68,9 +68,10 @@ button.team-analysis-status-success:focus-visible, button.team-analysis-status-d
 .team-matchup-pokemon { display: grid; justify-items: center; align-content: end; gap: .1rem; min-width: 0; height: 100%; }
 .team-matchup-pokemon img { display: block; width: min(100%, 2rem); height: 1.8rem; object-fit: contain; }
 .team-matchup-pokemon-name { display: block; max-height: 4.25rem; writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.team-matchup-check { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 999px; font-size: 1rem; font-weight: 800; }
-.team-matchup-check-success { background: var(--status-success-soft); color: var(--status-success); }
-.team-matchup-check-danger { background: var(--status-error-soft); color: var(--status-error); }
+.team-matchup-marks { display: inline-flex; align-items: center; justify-content: center; gap: .2rem; }
+.team-matchup-dot { display: inline-block; width: .72rem; height: .72rem; border-radius: 50%; }
+.team-matchup-dot-success { background: var(--status-success); }
+.team-matchup-dot-danger { background: var(--status-error); }
 
 .pokemon-result-card-with-team-menu { position: relative; overflow: visible; }
 .pokemon-result-visual-with-menu { position: relative; }
