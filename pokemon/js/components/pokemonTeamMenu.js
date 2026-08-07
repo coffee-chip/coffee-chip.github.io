@@ -76,7 +76,7 @@ export function enhancePokemonTeamMenu(root) {
   visual.classList.add('pokemon-result-visual-with-menu');
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'icon-button pokemon-team-menu-button';
+  button.className = 'transparent-button icon-button pokemon-team-menu-button';
   button.textContent = '⋯';
   button.setAttribute('aria-label', `More actions for ${pokemon.displayName}`);
   button.setAttribute('aria-haspopup', 'dialog');
