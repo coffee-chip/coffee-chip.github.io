@@ -47,8 +47,28 @@ export function scoreMultiSelect(question, submittedAnswers) {
   };
 }
 
+export function scoreSingleSelect(question, submittedAnswers) {
+  const correctAnswers = [...question.correctAnswers];
+  const selectedAnswers = [...submittedAnswers];
+  const correctlySelected = intersection(selectedAnswers, correctAnswers);
+  const missedAnswers = difference(correctAnswers, selectedAnswers);
+  const incorrectAnswers = difference(selectedAnswers, correctAnswers);
+  const score = selectedAnswers.length === 1 && correctlySelected.length === 1 ? 1 : 0;
+
+  return {
+    score,
+    correctlySelected,
+    missedAnswers,
+    incorrectAnswers,
+    correctAnswers,
+    selectedAnswers,
+    relationshipOutcomes: buildRelationshipOutcomes(question, correctlySelected, missedAnswers, incorrectAnswers)
+  };
+}
+
 export const SCORING_STRATEGIES = {
-  'type-multi-select': scoreMultiSelect
+  'type-multi-select': scoreMultiSelect,
+  'single-select': scoreSingleSelect
 };
 
 export function scoreQuestion(question, submittedAnswers) {
