@@ -1,0 +1,11 @@
+.team-card, .team-actions-host { position: relative; }
+.team-actions-button { flex: 0 0 auto; width: 2.5rem; min-width: 2.5rem; height: 2.5rem; min-height: 2.5rem; padding: 0; font-size: 1.3rem; line-height: 1; }
+.team-actions-menu { position: absolute; z-index: 12; top: calc(100% + .35rem); right: 0; display: grid; gap: .5rem; width: min(16rem, calc(100vw - 2rem)); padding: .65rem; border: 1px solid var(--border-default); border-radius: .65rem; background: var(--panel-background); box-shadow: 0 .5rem 1.25rem rgb(0 0 0 / .18); }
+.team-card > .team-actions-menu { top: 3.6rem; right: .65rem; }
+.team-actions-item { width: 100%; min-height: 2.6rem; text-align: left; justify-content: flex-start; }
+.team-actions-opponent { display: flex; align-items: center; gap: .6rem; min-height: 2.6rem; padding: .45rem .55rem; border-radius: .45rem; cursor: pointer; }
+.team-actions-opponent input { flex: 0 0 auto; }
+.team-actions-panel { display: grid; gap: .65rem; min-width: 0; }
+.team-actions-panel input { width: 100%; min-width: 0; min-height: 2.6rem; padding: 0 .65rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); color: inherit; }
+.team-actions-inline-buttons { display: flex; justify-content: flex-end; gap: .5rem; }
+.team-actions-inline-buttons button { min-height: 2.5rem; }
