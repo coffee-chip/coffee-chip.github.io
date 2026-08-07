@@ -37,6 +37,12 @@ const EFFECTIVENESS_OPTIONS = {
   ]
 };
 
+const BATTLE_ANSWER_OPTIONS = [
+  { id: 'types', label: 'Types' },
+  { id: 'pokemon', label: 'Pokémon' },
+  { id: 'both', label: 'Both' }
+];
+
 function el(tag, options = {}) {
   const node = document.createElement(tag);
   if (options.className) node.className = options.className;
@@ -159,6 +165,10 @@ function beginSession(refreshQuiz) {
 }
 
 function toggleAnswer(answer) {
+  if (state.quiz.question?.answerType === 'single-select') {
+    state.quiz.selectedAnswers = new Set([answer]);
+    return;
+  }
   if (state.quiz.selectedAnswers.has(answer)) state.quiz.selectedAnswers.delete(answer);
   else state.quiz.selectedAnswers.add(answer);
 }
@@ -194,12 +204,16 @@ function relationshipKeysForType(question, type) {
   return (question.relationships ?? []).filter(relationship => relationship.answer === type).map(relationship => relationship.key);
 }
 
-function feedbackRow(label, types, question) {
+function feedbackRow(label, answers, question) {
   const row = el('div', { className: 'feedback-row' });
   row.append(el('strong', { text: `${label}: ` }));
-  const list = el('span', { className: 'type-badge-list' });
-  if (!types.length) list.textContent = 'None';
-  else for (const type of types) list.append(createMnemonicTypeBadge(type, relationshipKeysForType(question, type), showFeedbackMnemonic));
+  const list = el('span', { className: question.answerType === 'type-multi-select' ? 'type-badge-list' : 'quiz-answer-text-list' });
+  if (!answers.length) list.textContent = 'None';
+  else if (question.answerType === 'type-multi-select') {
+    for (const type of answers) list.append(createMnemonicTypeBadge(type, relationshipKeysForType(question, type), showFeedbackMnemonic));
+  } else {
+    list.textContent = answers.map(answer => question.choicePokemon?.[answer]?.displayName ?? answer).join(', ');
+  }
   row.append(list);
   return row;
 }
@@ -207,9 +221,14 @@ function feedbackRow(label, types, question) {
 function renderFeedback(result, question) {
   const feedback = el('div', { className: 'feedback' });
   feedback.append(el('h4', { text: `Question score: ${formatPercent(result.score)}` }));
-  feedback.append(feedbackRow('Correctly selected', result.correctlySelected, question));
-  feedback.append(feedbackRow('Missed', result.missedAnswers, question));
-  feedback.append(feedbackRow('Incorrectly selected', result.incorrectAnswers, question));
+  if (question.answerType === 'single-select') {
+    feedback.append(feedbackRow('Correct answer', result.correctAnswers, question));
+    if (result.incorrectAnswers.length) feedback.append(feedbackRow('Your answer', result.incorrectAnswers, question));
+  } else {
+    feedback.append(feedbackRow('Correctly selected', result.correctlySelected, question));
+    feedback.append(feedbackRow('Missed', result.missedAnswers, question));
+    feedback.append(feedbackRow('Incorrectly selected', result.incorrectAnswers, question));
+  }
   return feedback;
 }
 
@@ -268,6 +287,31 @@ function buildRecognitionFields() {
   return fragment;
 }
 
+function buildBattleScenarioFields() {
+  const fragment = document.createDocumentFragment();
+  const settings = getQuizModeSettings('battle-scenario');
+  settings.answers ??= 'both';
+  settings.pokemonPool ??= 'gen-1';
+
+  const answerSelect = createSelect(BATTLE_ANSWER_OPTIONS, settings.answers);
+  answerSelect.addEventListener('change', () => {
+    settings.answers = answerSelect.value;
+    saveSettings(state.settings);
+  });
+
+  const poolSelect = createSelect(Object.values(POKEMON_POOLS), settings.pokemonPool);
+  poolSelect.addEventListener('change', () => {
+    settings.pokemonPool = poolSelect.value;
+    saveSettings(state.settings);
+  });
+
+  fragment.append(
+    createField('Answers', answerSelect, 'quiz-battle-answers'),
+    createField('Pokémon pool', poolSelect, 'quiz-battle-pool')
+  );
+  return fragment;
+}
+
 function buildMatchupFields(modeId) {
   const fragment = document.createDocumentFragment();
   const settings = getQuizModeSettings(modeId);
@@ -310,6 +354,7 @@ function buildQuizSetup(refreshQuiz) {
 
   form.append(buildQuizTypeSelector(refreshQuiz));
   if (state.quiz.mode === 'pokemon-type-recognition') form.append(buildRecognitionFields());
+  else if (state.quiz.mode === 'battle-scenario') form.append(buildBattleScenarioFields());
   else form.append(buildMatchupFields(state.quiz.mode));
 
   const startArea = el('div', { className: 'quiz-start-area' });
@@ -387,7 +432,9 @@ function buildActiveQuestion(refreshQuiz) {
   if (state.quiz.result) panel.append(renderFeedback(state.quiz.result, question));
   const actions = el('div', { className: 'actions' });
   if (!state.quiz.result) {
-    const submit = el('button', { className: 'primary-button', text: state.quiz.selectedAnswers.size === 0 ? 'Submit no types' : 'Submit answer' });
+    const emptyLabel = question.answerType === 'type-multi-select' ? 'Submit no types' : 'Submit answer';
+    const submit = el('button', { className: 'primary-button', text: state.quiz.selectedAnswers.size === 0 ? emptyLabel : 'Submit answer' });
+    submit.disabled = question.answerType === 'single-select' && state.quiz.selectedAnswers.size === 0;
     submit.addEventListener('click', () => {
       const result = scoreQuestion(question, state.quiz.selectedAnswers);
       state.quiz.result = result;
