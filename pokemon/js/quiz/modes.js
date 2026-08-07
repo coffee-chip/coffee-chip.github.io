@@ -1,4 +1,5 @@
 import { getQuestionGenerator } from './generators.js';
+import { getBattleScenarioGenerator } from './battleScenarioQuestions.js';
 import { state } from '../state.js';
 
 export const PRACTICE_PRESETS = {
@@ -8,6 +9,13 @@ export const PRACTICE_PRESETS = {
     objectiveIds: ['recognize-pokemon-type'],
     formatIds: ['type-multi-select'],
     generatorIds: ['recognize-pokemon-type']
+  },
+  'battle-scenario': {
+    id: 'battle-scenario',
+    label: 'Battle scenario',
+    objectiveIds: ['battle-scenario'],
+    formatIds: ['type-multi-select', 'single-select'],
+    generatorIds: ['battle-types', 'battle-pokemon']
   },
   'two-way-combat': {
     id: 'two-way-combat',
@@ -60,6 +68,9 @@ function presetOptions(modeId) {
       recentPokemonIds: recentMetadataValues('pokemonId').map(Number).filter(Number.isInteger)
     };
   }
+  if (modeId === 'battle-scenario') {
+    return { poolId: settings.pokemonPool ?? 'gen-1' };
+  }
   return {
     samplingStrategy: settings.samplingStrategy ?? 'adaptive',
     recentPromptKeys: recentMetadataValues('promptKey').filter(value => typeof value === 'string')
@@ -70,6 +81,11 @@ function generatorIdsForMode(modeId, preset) {
   const settings = state.settings.quiz.modes[modeId] ?? {};
   const effectiveness = settings.effectiveness ?? 'both';
 
+  if (modeId === 'battle-scenario') {
+    const answers = settings.answers ?? 'both';
+    if (answers === 'types') return ['battle-types'];
+    if (answers === 'pokemon') return ['battle-pokemon'];
+  }
   if (modeId === 'choose-switch') {
     if (effectiveness === 'weak') return ['choose-switch-unsafe'];
     if (effectiveness === 'resistant') return ['choose-switch-safe'];
@@ -81,12 +97,16 @@ function generatorIdsForMode(modeId, preset) {
   return preset.generatorIds;
 }
 
+function getGenerator(generatorId) {
+  return getBattleScenarioGenerator(generatorId) ?? getQuestionGenerator(generatorId);
+}
+
 export async function createQuestionForMode(modeId, options = {}) {
   const { mixDualTypes = false, dualTypeChance = 0.2 } = options;
   const preset = getQuizMode(modeId);
   const generatorIds = generatorIdsForMode(modeId, preset);
   const generatorId = generatorIds[Math.floor(Math.random() * generatorIds.length)];
-  const generator = getQuestionGenerator(generatorId);
+  const generator = getGenerator(generatorId);
   const useDualTypes = mixDualTypes && Math.random() < dualTypeChance;
   const question = await generator.createQuestion({
     ...options,
