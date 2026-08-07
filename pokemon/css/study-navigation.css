@@ -9,6 +9,11 @@
 .study-controls-with-tabs { margin-top: 0; }
 .study-tabs { grid-column: 1 / -1; }
 
+.study-results { display: grid; gap: .75rem; }
+.study-heading { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; color: var(--text-muted); }
+.matchup-group { border: 1px solid var(--border-default); border-radius: .75rem; padding: .85rem; background: var(--subtle-background); }
+.matchup-group h3 { margin: 0 0 .65rem; font-size: 1rem; }
+
 .quiz-setup { grid-template-columns: 1fr; margin-top: 0; }
 .quiz-type-field, .quiz-start-area { grid-column: 1 / -1; }
 .quiz-dual-toggle { margin: 0; }
