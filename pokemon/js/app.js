@@ -11,9 +11,11 @@ import { enhancePokemonLookupResult } from './components/pokemonMatchupEnhancer.
 import { enhancePokemonEvolutionControls } from './components/pokemonEvolutionControls.js';
 import { enhancePokemonTeamMenu } from './components/pokemonTeamMenu.js';
 import { enhanceTeamMemberStudyLinks } from './components/teamMemberStudyLink.js';
+import { createTeamActionsButton } from './components/teamActionsMenu.js';
 import { enhanceStudyTabs } from './components/studyTabs.js';
 import { initializeQuizAutoScroll } from './components/quizAutoScroll.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
+import { getTeam } from './data/teamRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
 import { registerServiceWorker, subscribeServiceWorker, serviceWorkerState, applyWaitingUpdate } from './serviceWorker.js';
@@ -22,7 +24,6 @@ const ROUTE_TITLES = Object.freeze({
   quiz: 'Quiz',
   study: 'Study',
   teams: 'Teams',
-  team: 'Team',
   progress: 'Progress',
   settings: 'Settings',
   debug: 'Developer diagnostics'
@@ -45,6 +46,7 @@ initializeQuizAutoScroll();
 
 const viewRoot = document.querySelector('#app-view');
 const pageTitle = document.querySelector('#page-title');
+const pageHeaderActions = document.querySelector('.page-header-actions');
 const navLinks = [...document.querySelectorAll('[data-route]')];
 
 function renderUpdateBanner() {
@@ -77,17 +79,38 @@ function auditButtonColorRoles() {
   if (unclassified.length) console.warn('Buttons without an explicit color role:', unclassified);
 }
 
+function getCurrentTeam() {
+  return state.route === 'team' ? getTeam(state.routeParams.teamId) : null;
+}
+
 function renderPageHeader() {
-  const title = ROUTE_TITLES[state.route] ?? '';
+  const team = getCurrentTeam();
+  const title = team?.title ?? ROUTE_TITLES[state.route] ?? (state.route === 'team' ? 'Team' : '');
   pageTitle.textContent = title;
   pageTitle.hidden = !title;
+  pageTitle.classList.toggle('team-detail-title-opponent', team?.isOpponent === true);
   document.title = title ? `${title} · Pokémon Type Trainer` : 'Pokémon Type Trainer';
+}
+
+function renderTeamHeaderActions(render) {
+  pageHeaderActions.querySelector('.team-page-actions')?.remove();
+  const team = getCurrentTeam();
+  if (!team) return;
+  const host = document.createElement('div');
+  host.className = 'team-actions-host team-page-actions';
+  host.append(createTeamActionsButton(team, host, render, { onDelete: () => { location.hash = 'teams'; } }));
+  pageHeaderActions.prepend(host);
 }
 
 function render() {
   renderPageHeader();
   const view = VIEWS[state.route] ?? VIEWS.quiz;
   view(viewRoot, render);
+  if (state.route === 'team') {
+    viewRoot.querySelector('.team-detail-back')?.remove();
+    viewRoot.querySelector('.team-detail-heading')?.remove();
+  }
+  renderTeamHeaderActions(render);
   enhanceStudyTabs(viewRoot);
   enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
