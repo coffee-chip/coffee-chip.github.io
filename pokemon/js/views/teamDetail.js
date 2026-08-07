@@ -8,6 +8,7 @@ import { createTypeList, createTypeIcon } from '../components/typeBadge.js';
 const resolvedPokemon = new Map();
 let loadingTeamId = null;
 let activeAnalysisMode = 'defense';
+const activeAnalysisRelationship = { defense: 'weak', offense: 'strong' };
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -95,13 +96,51 @@ function createMatchupCell(marked, label) {
   return cell;
 }
 
-function createAnalysisTable(pokemon, mode) {
+function getAnalysisCaption(mode, relationship) {
+  if (mode === 'defense') {
+    return relationship === 'weak'
+      ? 'Incoming move types that are super effective against each Pokémon.'
+      : 'Incoming move types that each Pokémon resists or is immune to.';
+  }
+  return relationship === 'strong'
+    ? 'Defending types that at least one of each Pokémon’s own move types is super effective against.'
+    : 'Defending types that resist or are immune to all of each Pokémon’s own move types.';
+}
+
+function getMatchupResult(member, type, mode, relationship) {
+  if (mode === 'defense') {
+    const multiplier = getMultiplier(type, member.types);
+    const marked = relationship === 'weak' ? multiplier > 1 : multiplier < 1;
+    return {
+      marked,
+      label: `${type} moves deal ${multiplier}× damage to ${member.displayName}`
+    };
+  }
+
+  const multipliers = member.types.map(attackingType => ({
+    attackingType,
+    multiplier: getMultiplier(attackingType, [type])
+  }));
+  if (relationship === 'strong') {
+    const effective = multipliers.filter(entry => entry.multiplier > 1);
+    return {
+      marked: effective.length > 0,
+      label: `${member.displayName}: ${effective.map(entry => entry.attackingType).join(' or ')} moves are super effective against ${type}`
+    };
+  }
+
+  const marked = multipliers.every(entry => entry.multiplier < 1);
+  return {
+    marked,
+    label: `${member.displayName}: all own-type moves are resisted or ineffective against ${type}`
+  };
+}
+
+function createAnalysisTable(pokemon, mode, relationship) {
   const wrapper = el('div', { className: 'team-matchup-table-scroll' });
   const table = el('table', { className: 'team-matchup-table' });
   const caption = document.createElement('caption');
-  caption.textContent = mode === 'defense'
-    ? 'Incoming move types that are super effective against each Pokémon.'
-    : 'Defending types that at least one of each Pokémon’s own move types is super effective against.';
+  caption.textContent = getAnalysisCaption(mode, relationship);
   table.append(caption);
 
   const head = document.createElement('thead');
@@ -125,16 +164,8 @@ function createAnalysisTable(pokemon, mode) {
     row.append(typeHeader);
 
     for (const member of pokemon) {
-      if (mode === 'defense') {
-        const multiplier = getMultiplier(type, member.types);
-        row.append(createMatchupCell(multiplier > 1, `${type} moves deal ${multiplier}× damage to ${member.displayName}`));
-      } else {
-        const effectiveTypes = member.types.filter(attackingType => getMultiplier(attackingType, [type]) > 1);
-        row.append(createMatchupCell(
-          effectiveTypes.length > 0,
-          `${member.displayName}: ${effectiveTypes.join(' or ')} moves are super effective against ${type}`
-        ));
-      }
+      const result = getMatchupResult(member, type, mode, relationship);
+      row.append(createMatchupCell(result.marked, result.label));
     }
     body.append(row);
   }
@@ -143,27 +174,51 @@ function createAnalysisTable(pokemon, mode) {
   return wrapper;
 }
 
-function createAnalysis(team, render) {
-  const section = el('section', { className: 'team-analysis' });
-  const tabs = el('div', { className: 'team-analysis-tabs' });
-  tabs.setAttribute('role', 'tablist');
-  tabs.setAttribute('aria-label', 'Team matchup analysis');
-
-  for (const mode of ['defense', 'offense']) {
+function createAnalysisSelector(className, label, options, activeValue, onChange) {
+  const selector = el('div', { className });
+  selector.setAttribute('role', 'tablist');
+  selector.setAttribute('aria-label', label);
+  for (const option of options) {
     const button = el('button', {
-      className: mode === activeAnalysisMode ? 'primary-button' : 'secondary-button',
-      text: mode === 'defense' ? 'Defense' : 'Offense'
+      className: option.value === activeValue ? 'primary-button' : 'secondary-button',
+      text: option.label
     });
     button.type = 'button';
     button.setAttribute('role', 'tab');
-    button.setAttribute('aria-selected', String(mode === activeAnalysisMode));
-    button.addEventListener('click', () => {
+    button.setAttribute('aria-selected', String(option.value === activeValue));
+    button.addEventListener('click', () => onChange(option.value));
+    selector.append(button);
+  }
+  return selector;
+}
+
+function createAnalysis(team, render) {
+  const section = el('section', { className: 'team-analysis' });
+  section.append(createAnalysisSelector(
+    'team-analysis-tabs',
+    'Team matchup direction',
+    [{ value: 'defense', label: 'Defense' }, { value: 'offense', label: 'Offense' }],
+    activeAnalysisMode,
+    mode => {
       activeAnalysisMode = mode;
       render();
-    });
-    tabs.append(button);
-  }
-  section.append(tabs);
+    }
+  ));
+
+  const relationshipOptions = activeAnalysisMode === 'defense'
+    ? [{ value: 'weak', label: 'Weak' }, { value: 'resistant', label: 'Resistant' }]
+    : [{ value: 'strong', label: 'Strong' }, { value: 'weak', label: 'Weak' }];
+  const relationship = activeAnalysisRelationship[activeAnalysisMode];
+  section.append(createAnalysisSelector(
+    'team-analysis-relationship-tabs',
+    `${activeAnalysisMode} matchup relationship`,
+    relationshipOptions,
+    relationship,
+    value => {
+      activeAnalysisRelationship[activeAnalysisMode] = value;
+      render();
+    }
+  ));
 
   const pokemon = team.pokemon
     .map(member => resolvedPokemon.get(member.id))
@@ -173,7 +228,7 @@ function createAnalysis(team, render) {
   } else if (!pokemon.length) {
     section.append(el('p', { className: 'muted', text: 'Add Pokémon to this team to analyze its matchups.' }));
   } else {
-    section.append(createAnalysisTable(pokemon, activeAnalysisMode));
+    section.append(createAnalysisTable(pokemon, activeAnalysisMode, relationship));
   }
   return section;
 }
