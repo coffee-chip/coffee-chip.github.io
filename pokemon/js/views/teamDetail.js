@@ -157,10 +157,17 @@ function createPokemonColumnHeader(pokemon) {
   return header;
 }
 
-function createMatchupCell(marked, label) {
+function getRelationshipRole(mode, relationship, isOpponent) {
+  const favorableToTeam = (mode === 'defense' && relationship === 'resistant')
+    || (mode === 'offense' && relationship === 'strong');
+  const favorableToUser = isOpponent ? !favorableToTeam : favorableToTeam;
+  return favorableToUser ? 'success' : 'danger';
+}
+
+function createMatchupCell(marked, label, role) {
   const cell = document.createElement('td');
   if (!marked) return cell;
-  const mark = el('span', { className: 'team-matchup-check', text: '✓' });
+  const mark = el('span', { className: `team-matchup-check team-matchup-check-${role}`, text: '✓' });
   mark.setAttribute('aria-label', label);
   cell.append(mark);
   return cell;
@@ -202,9 +209,9 @@ function getMatchupResult(member, type, mode, relationship) {
   };
 }
 
-function createAnalysisTable(pokemon, mode, relationship) {
+function createAnalysisTable(pokemon, mode, relationship, role) {
   const wrapper = el('div', { className: 'team-matchup-table-scroll' });
-  const table = el('table', { className: 'team-matchup-table' });
+  const table = el('table', { className: `team-matchup-table team-matchup-table-${role}` });
   const caption = document.createElement('caption');
   caption.textContent = getAnalysisCaption(mode, relationship);
   table.append(caption);
@@ -230,7 +237,7 @@ function createAnalysisTable(pokemon, mode, relationship) {
     row.append(typeHeader);
     for (const member of pokemon) {
       const result = getMatchupResult(member, type, mode, relationship);
-      row.append(createMatchupCell(result.marked, result.label));
+      row.append(createMatchupCell(result.marked, result.label, role));
     }
     body.append(row);
   }
@@ -239,18 +246,22 @@ function createAnalysisTable(pokemon, mode, relationship) {
   return wrapper;
 }
 
-function createAnalysisSelector(className, label, options, activeValue, onChange) {
+function createAnalysisSelector(className, label, options, activeValue, onChange, roleForOption = null) {
   const selector = el('div', { className });
   selector.setAttribute('role', 'tablist');
   selector.setAttribute('aria-label', label);
   for (const option of options) {
+    const role = roleForOption?.(option.value) ?? null;
+    const active = option.value === activeValue;
+    const roleClass = role ? ` team-analysis-status-${role}` : '';
+    const activeClass = active ? ' team-analysis-status-active' : '';
     const button = el('button', {
-      className: option.value === activeValue ? 'primary-button' : 'secondary-button',
+      className: `${active && !role ? 'primary-button' : 'secondary-button'}${roleClass}${activeClass}`,
       text: option.label
     });
     button.type = 'button';
     button.setAttribute('role', 'tab');
-    button.setAttribute('aria-selected', String(option.value === activeValue));
+    button.setAttribute('aria-selected', String(active));
     button.addEventListener('click', () => onChange(option.value));
     selector.append(button);
   }
@@ -271,12 +282,14 @@ function createAnalysis(team, render) {
     ? [{ value: 'weak', label: 'Weak' }, { value: 'resistant', label: 'Resistant' }]
     : [{ value: 'strong', label: 'Strong' }, { value: 'weak', label: 'Weak' }];
   const relationship = activeAnalysisRelationship[activeAnalysisMode];
+  const roleForRelationship = value => getRelationshipRole(activeAnalysisMode, value, team.isOpponent === true);
   section.append(createAnalysisSelector(
     'team-analysis-relationship-tabs',
     `${activeAnalysisMode} matchup relationship`,
     relationshipOptions,
     relationship,
-    value => { activeAnalysisRelationship[activeAnalysisMode] = value; render(); }
+    value => { activeAnalysisRelationship[activeAnalysisMode] = value; render(); },
+    roleForRelationship
   ));
 
   const pokemon = team.pokemon
@@ -287,7 +300,12 @@ function createAnalysis(team, render) {
   } else if (!pokemon.length) {
     section.append(el('p', { className: 'muted', text: 'Add Pokémon to this team to analyze its matchups.' }));
   } else {
-    section.append(createAnalysisTable(pokemon, activeAnalysisMode, relationship));
+    section.append(createAnalysisTable(
+      pokemon,
+      activeAnalysisMode,
+      relationship,
+      roleForRelationship(relationship)
+    ));
   }
   return section;
 }
