@@ -142,8 +142,7 @@ function normalizeTeamPokemon(value) {
 }
 
 function normalizeTeams(value) {
-  const defaults = cloneDefaults().teams;
-  if (!Array.isArray(value)) return defaults;
+  if (!Array.isArray(value)) return cloneDefaults().teams;
   const seenIds = new Set();
   const normalized = [];
   for (const team of value) {
@@ -164,7 +163,6 @@ function normalizeTeams(value) {
     const isOpponent = typeof team.isOpponent === 'boolean' ? team.isOpponent : id === 'opponents';
     normalized.push({ id, title, isOpponent, pokemon });
   }
-  for (const defaultTeam of defaults) if (!seenIds.has(defaultTeam.id)) normalized.push(defaultTeam);
   return normalized;
 }
 
