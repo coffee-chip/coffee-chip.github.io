@@ -40,7 +40,7 @@ function renderSuggestions(input) {
   for (const name of matches) {
     const option = document.createElement('button');
     option.type = 'button';
-    option.className = 'pokemon-autocomplete-option';
+    option.className = 'secondary-button pokemon-autocomplete-option';
     option.setAttribute('role', 'option');
     option.textContent = displayName(name);
     option.addEventListener('pointerdown', event => {
