@@ -1,6 +1,7 @@
 import { LEARNING_OBJECTIVES } from './objectives.js';
 import { INTERACTION_FORMATS } from './formats.js';
 import { MOVE_CRITERIA, SWITCH_CRITERIA, QUESTION_GENERATORS } from './generators.js';
+import { BATTLE_SCENARIO_GENERATORS } from './battleScenarioQuestions.js';
 import { PRACTICE_PRESETS } from './modes.js';
 import { parseRelationshipKey } from '../relationships.js';
 
@@ -26,7 +27,8 @@ function criterionRegistryFor(generator) {
 
 export function validateQuizArchitecture() {
   const results = [];
-  for (const generator of Object.values(QUESTION_GENERATORS)) {
+  const allGenerators = { ...QUESTION_GENERATORS, ...BATTLE_SCENARIO_GENERATORS };
+  for (const generator of Object.values(allGenerators)) {
     results.push(result(`Generator ${generator.id} has a registered objective`, Boolean(LEARNING_OBJECTIVES[generator.objectiveId]), generator.objectiveId));
     results.push(result(`Generator ${generator.id} has a registered format`, Boolean(INTERACTION_FORMATS[generator.formatId]), generator.formatId));
     if (generator.config?.criterion) {
@@ -58,7 +60,7 @@ export function validateQuizArchitecture() {
     for (const objectiveId of preset.objectiveIds) results.push(result(`Preset ${preset.id} references objective ${objectiveId}`, Boolean(LEARNING_OBJECTIVES[objectiveId]), objectiveId));
     for (const formatId of preset.formatIds) results.push(result(`Preset ${preset.id} references format ${formatId}`, Boolean(INTERACTION_FORMATS[formatId]), formatId));
     for (const generatorId of preset.generatorIds) {
-      const generator = QUESTION_GENERATORS[generatorId];
+      const generator = allGenerators[generatorId];
       const compatible = Boolean(generator) && preset.objectiveIds.includes(generator.objectiveId) && preset.formatIds.includes(generator.formatId);
       results.push(result(`Preset ${preset.id} accepts generator ${generatorId}`, compatible, generator ? `${generator.objectiveId} / ${generator.formatId}` : 'Generator missing'));
     }
