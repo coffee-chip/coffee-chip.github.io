@@ -8,6 +8,19 @@ button, select, input { font: inherit; color: inherit; }
 button { min-height: 2.75rem; padding: 0 1rem; border: 1px solid var(--action-primary); border-radius: .45rem; background: var(--action-primary); color: var(--neutral-1); font-weight: 700; cursor: pointer; }
 button:hover, button:focus-visible { border-color: var(--action-primary-strong); background: var(--action-primary-strong); }
 button:disabled { cursor: not-allowed; opacity: .55; }
+.primary-button { border-color: var(--action-primary); background: var(--action-primary); color: var(--neutral-1); }
+.primary-button:hover, .primary-button:focus-visible { border-color: var(--action-primary-strong); background: var(--action-primary-strong); color: var(--neutral-1); }
+.primary-button:active { border-color: var(--action-primary-strong); background: var(--action-primary-strong); color: var(--neutral-1); }
+.secondary-button { border-color: var(--border-default); background: var(--panel-background); color: var(--text-primary); }
+.secondary-button:hover, .secondary-button:focus-visible { border-color: var(--border-strong); background: var(--subtle-background); color: var(--text-primary); }
+.secondary-button:active { border-color: var(--border-strong); background: var(--subtle-background); color: var(--text-primary); }
+.danger-button { border-color: var(--status-error); background: var(--panel-background); color: var(--status-error); }
+.danger-button:hover, .danger-button:focus-visible { border-color: var(--status-error); background: var(--status-error-soft); color: var(--status-error); }
+.danger-button:active { border-color: var(--status-error); background: var(--status-error); color: var(--neutral-1); }
+.transparent-button { border-color: transparent; background: transparent; color: var(--text-muted); }
+.transparent-button:hover { border-color: transparent; background: var(--subtle-background); color: var(--text-primary); }
+.transparent-button:focus-visible { border-color: transparent; background: transparent; color: var(--text-primary); outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.transparent-button:active { border-color: transparent; background: var(--subtle-background); color: var(--text-primary); }
 a { color: var(--action-primary); }
 .app-shell { position: relative; min-width: 0; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-rows: 1fr auto; max-width: 48rem; margin: 0 auto; background: var(--app-background); }
 #app-view, .page { min-width: 0; }
@@ -28,10 +41,7 @@ a { color: var(--action-primary); }
 .quiz-setup, .study-controls { display: grid; gap: .75rem; margin-top: .75rem; }
 .quiz-setup label, .study-controls label, .settings-field { display: grid; gap: .25rem; }
 select, input[type="search"] { min-height: 2.75rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }
-.secondary-button { border-color: var(--border-default); background: var(--panel-background); color: var(--text-primary); }
-.secondary-button:hover, .secondary-button:focus-visible { border-color: var(--border-strong); background: var(--subtle-background); }
-.icon-button { display: grid; place-items: center; width: 2rem; min-width: 2rem; height: 2rem; min-height: 2rem; padding: 0; border-color: transparent; border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 1.25rem; line-height: 1; }
-.icon-button:hover, .icon-button:focus-visible { border-color: transparent; background: var(--subtle-background); color: var(--text-primary); }
+.icon-button { display: grid; place-items: center; width: 2rem; min-width: 2rem; height: 2rem; min-height: 2rem; padding: 0; border-radius: 999px; font-size: 1.25rem; line-height: 1; }
 .session-header { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; color: var(--text-muted); font-size: .9rem; }
 .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
 .type-button { min-height: 4.15rem; padding: .35rem; border: 1px solid var(--border-default); border-radius: .5rem; background: var(--panel-background); color: var(--text-primary); font-weight: inherit; }
@@ -77,8 +87,6 @@ select, input[type="search"] { min-height: 2.75rem; border: 1px solid var(--bord
 .toggle-field input[type="checkbox"]:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .danger-zone { border-color: color-mix(in srgb, var(--status-error) 55%, var(--border-default)); }
 .danger-zone h3 { color: var(--status-error); }
-.danger-button { border-color: var(--status-error); background: var(--panel-background); color: var(--status-error); }
-.danger-button:hover, .danger-button:focus-visible { border-color: var(--status-error); background: var(--status-error-soft); }
 .inline-confirmation { margin-top: .75rem; padding: .85rem; border: 1px solid var(--status-error); border-radius: .65rem; background: var(--status-error-soft); }
 .inline-confirmation p { margin: 0; }
 .settings-status { margin: .85rem 0 0; padding: .7rem .8rem; border-radius: .5rem; font-weight: 650; }
