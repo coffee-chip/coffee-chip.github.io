@@ -59,7 +59,7 @@ function createPanelHeader(title, onClose) {
   heading.textContent = title;
   const close = document.createElement('button');
   close.type = 'button';
-  close.className = 'pokemon-evolution-close';
+  close.className = 'transparent-button pokemon-evolution-close';
   close.setAttribute('aria-label', 'Close evolution details');
   close.textContent = '×';
   close.addEventListener('click', onClose);
@@ -120,7 +120,7 @@ function createChooser(direction, entries, root, card) {
 function createDirectionButton(direction, entries, root, card) {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `pokemon-evolution-button pokemon-evolution-${direction}`;
+  button.className = `secondary-button pokemon-evolution-button pokemon-evolution-${direction}`;
   button.setAttribute('aria-label', direction === 'previous' ? 'Go to previous evolution' : 'Go to next evolution');
   button.textContent = direction === 'previous' ? '‹' : '›';
   button.addEventListener('click', () => {
@@ -137,7 +137,7 @@ function createEvolutionControls(direction, entries, root, card) {
 
   const condition = document.createElement('button');
   condition.type = 'button';
-  condition.className = 'pokemon-evolution-condition';
+  condition.className = 'secondary-button pokemon-evolution-condition';
   condition.textContent = entries.length === 1 ? compactConditionLabel(entries[0]) : 'Options';
   condition.setAttribute('aria-label', direction === 'previous'
     ? 'Show how this Pokémon evolves from its previous form'
