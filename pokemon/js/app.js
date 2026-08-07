@@ -10,6 +10,7 @@ import { initializePokemonAutocomplete } from './components/pokemonAutocomplete.
 import { enhancePokemonLookupResult } from './components/pokemonMatchupEnhancer.js';
 import { enhancePokemonEvolutionControls } from './components/pokemonEvolutionControls.js';
 import { enhancePokemonTeamMenu } from './components/pokemonTeamMenu.js';
+import { enhanceTeamMemberStudyLinks } from './components/teamMemberStudyLink.js';
 import { enhanceStudyTabs } from './components/studyTabs.js';
 import { initializeQuizAutoScroll } from './components/quizAutoScroll.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
@@ -73,9 +74,7 @@ function renderUpdateBanner() {
 function auditButtonColorRoles() {
   const unclassified = [...document.querySelectorAll('button')]
     .filter(button => !button.matches(BUTTON_COLOR_ROLE_SELECTOR));
-  if (unclassified.length) {
-    console.warn('Buttons without an explicit color role:', unclassified);
-  }
+  if (unclassified.length) console.warn('Buttons without an explicit color role:', unclassified);
 }
 
 function renderPageHeader() {
@@ -93,6 +92,7 @@ function render() {
   enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
   enhancePokemonTeamMenu(viewRoot);
+  enhanceTeamMemberStudyLinks(viewRoot);
   const activeNavRoute = state.route === 'team' ? 'teams' : state.route;
   for (const link of navLinks) {
     if (link.dataset.route === activeNavRoute) link.setAttribute('aria-current', 'page');
@@ -122,9 +122,7 @@ else window.setTimeout(warmPokemonNameIndex, 0);
 const contractResults = validateApplicationContracts();
 console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
 const failedContracts = contractResults.filter(test => !test.passed);
-if (failedContracts.length) {
-  throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
-}
+if (failedContracts.length) throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
 const engineResults = runEngineSelfTests();
 console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
 if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
