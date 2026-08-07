@@ -34,10 +34,17 @@ export function getTeam(teamId) {
 export function createTeam(title) {
   const normalizedTitle = String(title ?? '').trim().slice(0, 60);
   if (!normalizedTitle) return null;
-  const team = { id: createTeamId(normalizedTitle), title: normalizedTitle, pokemon: [] };
+  const team = { id: createTeamId(normalizedTitle), title: normalizedTitle, isOpponent: false, pokemon: [] };
   state.teams.push(team);
   saveTeams(state.teams);
   return team;
+}
+
+export function setTeamOpponent(teamId, isOpponent) {
+  const team = getTeam(teamId);
+  if (!team) return false;
+  team.isOpponent = isOpponent === true;
+  return saveTeams(state.teams);
 }
 
 export function deleteTeam(teamId) {
