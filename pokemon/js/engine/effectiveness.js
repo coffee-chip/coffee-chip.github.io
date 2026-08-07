@@ -10,6 +10,15 @@ export function getMultiplier(attackingType, defendingTypes) {
   }, 1);
 }
 
+function validatePokemonTypes(pokemonTypes, label = 'Pokémon types') {
+  if (!Array.isArray(pokemonTypes) || pokemonTypes.length < 1 || pokemonTypes.length > 2) {
+    throw new Error(`${label} must contain one or two types.`);
+  }
+  for (const type of pokemonTypes) {
+    if (!TYPES.includes(type)) throw new Error(`Unknown type: ${type}`);
+  }
+}
+
 export function getEffectivenessTierScore(multiplier) {
   if (multiplier === 0) return -3;
   const score = Math.log2(multiplier);
@@ -18,14 +27,26 @@ export function getEffectivenessTierScore(multiplier) {
 }
 
 export function getTypeAdvantageScore(pokemonTypes, otherType) {
-  if (!Array.isArray(pokemonTypes) || pokemonTypes.length < 1 || pokemonTypes.length > 2) {
-    throw new Error('Pokémon types must contain one or two types.');
-  }
+  validatePokemonTypes(pokemonTypes);
   const pokemonEffectiveness = Math.max(
     ...pokemonTypes.map(attackingType => getMultiplier(attackingType, [otherType]))
   );
   const otherEffectiveness = getMultiplier(otherType, pokemonTypes);
   return getEffectivenessTierScore(pokemonEffectiveness) - getEffectivenessTierScore(otherEffectiveness);
+}
+
+export function getPokemonTypeAdvantageScore(pokemonTypes, otherPokemonTypes) {
+  validatePokemonTypes(pokemonTypes, 'First Pokémon types');
+  validatePokemonTypes(otherPokemonTypes, 'Second Pokémon types');
+
+  const pokemonEffectiveness = Math.max(
+    ...pokemonTypes.map(attackingType => getMultiplier(attackingType, otherPokemonTypes))
+  );
+  const otherPokemonEffectiveness = Math.max(
+    ...otherPokemonTypes.map(attackingType => getMultiplier(attackingType, pokemonTypes))
+  );
+
+  return getEffectivenessTierScore(pokemonEffectiveness) - getEffectivenessTierScore(otherPokemonEffectiveness);
 }
 
 export function getDefendingTypesAtMultiplier(attackingType, multiplier) {
@@ -42,9 +63,7 @@ export function getOffensiveMatchups(attackingType) {
 }
 
 export function getDefensiveMatchups(defendingTypes) {
-  if (!Array.isArray(defendingTypes) || defendingTypes.length < 1 || defendingTypes.length > 2) {
-    throw new Error('Defending types must contain one or two types.');
-  }
+  validatePokemonTypes(defendingTypes, 'Defending types');
 
   return Object.fromEntries(
     MULTIPLIER_ORDER.map(multiplier => [
@@ -55,13 +74,13 @@ export function getDefensiveMatchups(defendingTypes) {
 }
 
 export function runEngineSelfTests() {
-  const cases = [
+  const multiplierCases = [
     ['normal', ['ghost'], 0],
     ['fire', ['bug', 'steel'], 4],
     ['ice', ['fire', 'steel'], 0.25],
     ['electric', ['water', 'flying'], 4]
   ];
-  return cases.map(([attack, defend, expected]) => {
+  const results = multiplierCases.map(([attack, defend, expected]) => {
     const actual = getMultiplier(attack, defend);
     return {
       name: `${attack} → ${defend.join('/')}: expected ${expected}×`,
@@ -72,4 +91,22 @@ export function runEngineSelfTests() {
       passed: actual === expected
     };
   });
+
+  const pokemonAdvantageCases = [
+    [['fire'], ['grass'], 2],
+    [['electric'], ['water', 'flying'], 4],
+    [['normal'], ['ghost'], 0]
+  ];
+  for (const [firstTypes, secondTypes, expected] of pokemonAdvantageCases) {
+    const actual = getPokemonTypeAdvantageScore(firstTypes, secondTypes);
+    results.push({
+      name: `${firstTypes.join('/')} vs ${secondTypes.join('/')}: expected advantage ${expected}`,
+      firstTypes,
+      secondTypes,
+      expected,
+      actual,
+      passed: actual === expected
+    });
+  }
+  return results;
 }
