@@ -21,7 +21,7 @@ export function enhanceStudyTabs(root) {
   for (const mode of ['pokemon', 'offense', 'defense']) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'button-selector-option study-tab';
+    button.className = 'secondary-button button-selector-option study-tab';
     button.textContent = TAB_LABELS[mode];
     button.setAttribute('role', 'tab');
     button.setAttribute('aria-selected', String(state.study.mode === mode));
