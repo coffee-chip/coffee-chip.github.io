@@ -73,6 +73,26 @@ export function removePokemonFromTeam(teamId, pokemonId) {
   return saveTeams(state.teams);
 }
 
+export function setTeamPokemonAlias(teamId, pokemonId, alias, canonicalDisplayName) {
+  const team = getTeam(teamId);
+  if (!team) return false;
+  const member = team.pokemon.find(entry => entry.id === pokemonId);
+  if (!member) return false;
+  const normalizedAlias = String(alias ?? '').trim().slice(0, 60);
+  const fallback = String(canonicalDisplayName ?? member.displayName ?? '').trim().slice(0, 60);
+  member.displayName = normalizedAlias || fallback || member.displayName;
+  return saveTeams(state.teams);
+}
+
+export function reorderPokemonInTeam(teamId, fromIndex, toIndex) {
+  const team = getTeam(teamId);
+  if (!team || !Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return false;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= team.pokemon.length || toIndex >= team.pokemon.length || fromIndex === toIndex) return false;
+  const [member] = team.pokemon.splice(fromIndex, 1);
+  team.pokemon.splice(toIndex, 0, member);
+  return saveTeams(state.teams);
+}
+
 export function reorderTeams(fromIndex, toIndex) {
   if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return false;
   if (fromIndex < 0 || toIndex < 0 || fromIndex >= state.teams.length || toIndex >= state.teams.length || fromIndex === toIndex) return false;
