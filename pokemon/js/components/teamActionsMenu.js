@@ -1,8 +1,5 @@
 import { clearRivalry, deleteTeam, getRival, getTeams, renameTeam, setRivalry, setTeamOpponent } from '../data/teamRepository.js';
-import { truncateText } from '../utils/text.js';
 import { createOverflowMenuButton, setOverflowMenuExpanded } from './overflowMenuButton.js';
-
-const MENU_TEXT_LIMIT = 24;
 
 function el(tag,o={}){const n=document.createElement(tag);if(o.className)n.className=o.className;if(o.text)n.textContent=o.text;return n;}
 function closeMenu(host){host.querySelector('.team-actions-menu')?.remove();setOverflowMenuExpanded(host.querySelector('.team-actions-button'),false);}
@@ -10,7 +7,7 @@ function createRenamePanel(team,host,render){const panel=el('form',{className:'t
 function focusRenameInput(panel){const input=panel.querySelector('input');if(!input)return;input.focus();const end=input.value.length;input.setSelectionRange(end,end);}
 function applyOpponentVisual(host,isOpponent){if(host.classList.contains('team-card'))host.classList.toggle('team-card-opponent',isOpponent);const localTitle=host.querySelector('.team-detail-title');if(localTitle)localTitle.classList.toggle('team-detail-title-opponent',isOpponent);if(host.classList.contains('team-page-actions'))document.querySelector('#page-title')?.classList.toggle('team-detail-title-opponent',isOpponent);}
 function createDeletePanel(team,host,render,onDelete){const panel=el('div',{className:'team-actions-panel'}),actions=el('div',{className:'team-actions-inline-buttons'}),cancel=el('button',{className:'secondary-button',text:'Cancel'}),confirm=el('button',{className:'danger-button',text:'Delete'});panel.append(el('span',{text:`Delete “${team.title}”?`}));cancel.type=confirm.type='button';cancel.addEventListener('click',()=>closeMenu(host));confirm.addEventListener('click',()=>{if(!deleteTeam(team.id))return;if(onDelete)onDelete();else render();});actions.append(cancel,confirm);panel.append(actions);return panel;}
-function createMenuItem(label,className='secondary-button team-actions-item'){const button=el('button',{className,text:truncateText(label,MENU_TEXT_LIMIT)});button.type='button';button.title=label;button.setAttribute('aria-label',label);return button;}
+function createMenuItem(label,className='secondary-button team-actions-item'){const button=el('button',{className,text:label});button.type='button';button.title=label;button.setAttribute('aria-label',label);return button;}
 function populateMainMenu(menu,team,host,render,onDelete){
   const rename=createMenuItem('Rename');rename.addEventListener('click',()=>{const panel=createRenamePanel(team,host,render);menu.replaceChildren(panel);focusRenameInput(panel);});
   const currentRival=getRival(team.id),rivalLabel=currentRival?`Rival: ${currentRival.title}`:'Add rival',rival=createMenuItem(rivalLabel);rival.addEventListener('click',()=>menu.replaceChildren(createRivalPanel(team,host,render,onDelete,menu)));
