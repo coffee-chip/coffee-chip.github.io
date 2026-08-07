@@ -33,7 +33,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   activeMnemonicKey = selectionKey;
   button.setAttribute('aria-pressed', 'true');
 
-  const banner = el('button', { className: 'mnemonic-banner' });
+  const banner = el('button', { className: 'transparent-button mnemonic-banner' });
   banner.type = 'button';
   banner.setAttribute('aria-label', 'Dismiss mnemonic');
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
