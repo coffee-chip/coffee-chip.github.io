@@ -169,16 +169,12 @@ function getRelationshipRole(mode, relationship, isOpponent) {
 
 function createMatchupCell(results) {
   const cell = document.createElement('td');
-  const markedResults = results.filter(result => result.marked);
-  if (!markedResults.length) return cell;
-  const marks = el('span', { className: 'team-matchup-marks' });
-  for (const result of markedResults) {
-    const mark = el('span', { className: `team-matchup-dot team-matchup-dot-${result.role}` });
-    mark.setAttribute('aria-label', result.label);
-    mark.title = result.label;
-    marks.append(mark);
-  }
-  cell.append(marks);
+  const result = results.find(candidate => candidate.marked);
+  if (!result) return cell;
+  const mark = el('span', { className: `team-matchup-dot team-matchup-dot-${result.role}` });
+  mark.setAttribute('aria-label', result.label);
+  mark.title = result.label;
+  cell.append(mark);
   return cell;
 }
 
@@ -313,6 +309,12 @@ function createRelationshipToggles(mode, team, render) {
   return group;
 }
 
+function getResolvedTeamPokemon(team) {
+  return team.pokemon
+    .map(member => resolvedPokemon.get(member.id))
+    .filter(member => Array.isArray(member?.types) && member.types.length);
+}
+
 function createAnalysis(team, render) {
   const section = el('section', { className: 'team-analysis' });
   section.append(createAnalysisSelector(
@@ -325,10 +327,8 @@ function createAnalysis(team, render) {
 
   section.append(createRelationshipToggles(activeAnalysisMode, team, render));
   const relationships = activeAnalysisRelationships[activeAnalysisMode];
+  const pokemon = getResolvedTeamPokemon(team);
 
-  const pokemon = team.pokemon
-    .map(member => resolvedPokemon.get(member.id))
-    .filter(member => Array.isArray(member?.types) && member.types.length);
   if (pokemon.length !== team.pokemon.length) {
     section.append(el('p', { className: 'muted', text: 'Loading matchup data…' }));
   } else if (!pokemon.length) {
@@ -336,6 +336,85 @@ function createAnalysis(team, render) {
   } else {
     section.append(createAnalysisTable(pokemon, activeAnalysisMode, relationships, team));
   }
+  return section;
+}
+
+function getAdvantageIntensity(score) {
+  const magnitude = Math.abs(score);
+  if (magnitude >= 3) return 3;
+  if (magnitude >= 2) return 2;
+  return 1;
+}
+
+function createOverallMatchupMatrix(team) {
+  const section = el('section', { className: 'team-overall-matchups' });
+  section.append(el('h3', { className: 'team-overall-matchups-title', text: 'Overall type matchups' }));
+
+  const pokemon = getResolvedTeamPokemon(team);
+  if (pokemon.length !== team.pokemon.length) {
+    section.append(el('p', { className: 'muted', text: 'Loading matchup data…' }));
+    return section;
+  }
+  if (!pokemon.length) {
+    section.append(el('p', { className: 'muted', text: 'Add Pokémon to this team to analyze its matchups.' }));
+    return section;
+  }
+
+  const isOpponent = team.isOpponent === true;
+  const role = isOpponent ? 'danger' : 'success';
+  const wrapper = el('div', { className: 'team-matchup-table-scroll' });
+  const table = el('table', { className: 'team-matchup-table team-overall-matchup-table' });
+  const caption = document.createElement('caption');
+  caption.textContent = isOpponent
+    ? 'Types that have an overall advantage against each opponent Pokémon.'
+    : 'Types that each Pokémon has an overall advantage against.';
+  table.append(caption);
+
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  const corner = document.createElement('th');
+  corner.scope = 'col';
+  corner.setAttribute('aria-label', 'Type');
+  headRow.append(corner);
+  for (const member of pokemon) headRow.append(createPokemonColumnHeader(member));
+  head.append(headRow);
+  table.append(head);
+
+  const body = document.createElement('tbody');
+  for (const type of TYPES) {
+    const row = document.createElement('tr');
+    const typeHeader = document.createElement('th');
+    typeHeader.scope = 'row';
+    typeHeader.title = type;
+    typeHeader.setAttribute('aria-label', `${type} type`);
+    typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' }));
+    row.append(typeHeader);
+
+    for (const member of pokemon) {
+      const score = getTypeAdvantageScore(member.types, type);
+      const shouldMark = isOpponent ? score < 0 : score > 0;
+      const cell = document.createElement('td');
+      if (shouldMark) {
+        const magnitude = Math.abs(score);
+        const intensity = getAdvantageIntensity(score);
+        const dot = el('span', {
+          className: `team-advantage-dot team-advantage-dot-${role} team-advantage-dot-${intensity}`
+        });
+        const perspectiveScore = isOpponent ? -score : score;
+        const label = isOpponent
+          ? `${type} has advantage score ${perspectiveScore} against ${member.displayName}`
+          : `${member.displayName} has advantage score ${score} against ${type}`;
+        dot.setAttribute('aria-label', label);
+        dot.title = `${label} (magnitude ${magnitude})`;
+        cell.append(dot);
+      }
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  table.append(body);
+  wrapper.append(table);
+  section.append(wrapper);
   return section;
 }
 
@@ -382,7 +461,7 @@ export function renderTeamDetail(container, render) {
   } else {
     for (const member of team.pokemon) roster.append(createMemberCard(team, member, render));
   }
-  page.append(roster, createAnalysis(team, render));
+  page.append(roster, createAnalysis(team, render), createOverallMatchupMatrix(team));
   container.replaceChildren(page);
   loadTeamPokemon(team, render);
 }
