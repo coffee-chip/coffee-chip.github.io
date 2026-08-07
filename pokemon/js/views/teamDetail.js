@@ -3,7 +3,7 @@ import { getPokemon } from '../data/pokemonRepository.js';
 import { getTeam, removePokemonFromTeam } from '../data/teamRepository.js';
 import { getMultiplier } from '../engine/effectiveness.js';
 import { state } from '../state.js';
-import { createTypeList, createTypeBadge } from '../components/typeBadge.js';
+import { createTypeList, createTypeIcon } from '../components/typeBadge.js';
 
 const resolvedPokemon = new Map();
 let loadingTeamId = null;
@@ -20,6 +20,24 @@ function createBackLink() {
   const link = el('a', { className: 'secondary-button team-detail-back', text: '← Teams' });
   link.href = '#teams';
   return link;
+}
+
+function createMemberRemoveConfirmation(team, member, pokemon, card, render) {
+  card.querySelector('.team-delete-confirmation')?.remove();
+  const confirmation = el('div', { className: 'team-delete-confirmation' });
+  const message = el('span', { text: `Remove ${pokemon.displayName} from “${team.title}”?` });
+  const actions = el('div', { className: 'team-delete-actions' });
+  const cancel = el('button', { className: 'secondary-button', text: 'Cancel' });
+  cancel.type = 'button';
+  cancel.addEventListener('click', () => confirmation.remove());
+  const confirm = el('button', { className: 'danger-button', text: 'Remove' });
+  confirm.type = 'button';
+  confirm.addEventListener('click', () => {
+    if (removePokemonFromTeam(team.id, member.id)) render();
+  });
+  actions.append(cancel, confirm);
+  confirmation.append(message, actions);
+  card.append(confirmation);
 }
 
 function createMemberCard(team, member, render) {
@@ -42,12 +60,11 @@ function createMemberCard(team, member, render) {
     details.append(el('span', { className: 'muted', text: 'Loading types…' }));
   }
 
-  const remove = el('button', { className: 'danger-button team-detail-remove', text: 'Remove' });
+  const remove = el('button', { className: 'danger-button team-delete-button team-detail-remove', text: '×' });
   remove.type = 'button';
   remove.setAttribute('aria-label', `Remove ${pokemon.displayName} from ${team.title}`);
-  remove.addEventListener('click', () => {
-    if (removePokemonFromTeam(team.id, member.id)) render();
-  });
+  remove.title = 'Remove from team';
+  remove.addEventListener('click', () => createMemberRemoveConfirmation(team, member, pokemon, card, render));
 
   card.append(visual, details, remove);
   return card;
@@ -64,7 +81,7 @@ function createPokemonColumnHeader(pokemon) {
     image.loading = 'lazy';
     content.append(image);
   }
-  content.append(el('span', { text: pokemon.displayName }));
+  content.append(el('span', { className: 'team-matchup-pokemon-name', text: pokemon.displayName }));
   header.append(content);
   return header;
 }
@@ -91,7 +108,7 @@ function createAnalysisTable(pokemon, mode) {
   const headRow = document.createElement('tr');
   const corner = document.createElement('th');
   corner.scope = 'col';
-  corner.textContent = 'Type';
+  corner.setAttribute('aria-label', 'Type');
   headRow.append(corner);
   for (const member of pokemon) headRow.append(createPokemonColumnHeader(member));
   head.append(headRow);
@@ -102,7 +119,9 @@ function createAnalysisTable(pokemon, mode) {
     const row = document.createElement('tr');
     const typeHeader = document.createElement('th');
     typeHeader.scope = 'row';
-    typeHeader.append(createTypeBadge(type));
+    typeHeader.title = type;
+    typeHeader.setAttribute('aria-label', `${type} type`);
+    typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' }));
     row.append(typeHeader);
 
     for (const member of pokemon) {
