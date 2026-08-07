@@ -42,7 +42,10 @@ function createDeleteConfirmation(team, card, render) {
 }
 
 function createTeamCard(team, index, render) {
-  const card = el('article', { className: `panel team-card${team.pokemon.length ? '' : ' team-card-empty'}` });
+  const classes = ['panel', 'team-card'];
+  if (!team.pokemon.length) classes.push('team-card-empty');
+  if (team.isOpponent) classes.push('team-card-opponent');
+  const card = el('article', { className: classes.join(' ') });
   card.dataset.teamIndex = String(index);
   card.tabIndex = 0;
   card.setAttribute('role', 'link');
