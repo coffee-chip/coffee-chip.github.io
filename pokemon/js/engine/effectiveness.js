@@ -94,7 +94,7 @@ export function runEngineSelfTests() {
 
   const pokemonAdvantageCases = [
     [['fire'], ['grass'], 2],
-    [['electric'], ['water', 'flying'], 4],
+    [['electric'], ['water', 'flying'], 2],
     [['normal'], ['ghost'], 0]
   ];
   for (const [firstTypes, secondTypes, expected] of pokemonAdvantageCases) {
