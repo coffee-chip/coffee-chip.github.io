@@ -85,6 +85,59 @@
   background: var(--status-error-soft);
 }
 
+.quiz-pokemon-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.quiz-pokemon-choice {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: .35rem;
+  min-width: 0;
+  padding: .55rem;
+  text-align: center;
+}
+
+.quiz-pokemon-choice img {
+  display: block;
+  width: min(100%, 7rem);
+  height: auto;
+}
+
+.quiz-pokemon-choice strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quiz-pokemon-choice .type-badge-list {
+  justify-content: center;
+}
+
+.quiz-pokemon-choice[aria-pressed="true"] {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.quiz-pokemon-choice.correct {
+  border-color: var(--status-success);
+  background: var(--status-success-soft);
+}
+
+.quiz-pokemon-choice.missed {
+  border-color: var(--status-warning);
+  background: var(--status-warning-soft);
+}
+
+.quiz-pokemon-choice.incorrect {
+  border-color: var(--status-error);
+  background: var(--status-error-soft);
+}
+
 @media (hover: hover) {
   .type-button:hover {
     border-color: var(--border-strong);
@@ -95,5 +148,9 @@
 @media (min-width: 36rem) {
   .type-grid {
     grid-template-columns: repeat(6, 1fr);
+  }
+
+  .quiz-pokemon-choice-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
