@@ -20,6 +20,10 @@
   line-height: 1.2;
 }
 
+.page-header-title.team-detail-title-opponent {
+  color: var(--status-error);
+}
+
 .page-header-title:empty {
   display: none;
 }
