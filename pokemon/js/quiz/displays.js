@@ -1,4 +1,4 @@
-import { createTypeBadge } from '../components/typeBadge.js';
+import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -32,8 +32,44 @@ export function renderTypeMultiSelect({ question, selectedAnswers, result, onTog
   return grid;
 }
 
+export function renderSingleSelect({ question, selectedAnswers, result, onToggle }) {
+  const grid = el('div', { className: 'quiz-pokemon-choice-grid' });
+
+  for (const answer of question.choices) {
+    const pokemon = question.choicePokemon?.[answer];
+    const button = el('button', { className: 'secondary-button quiz-pokemon-choice' });
+    button.type = 'button';
+    button.dataset.answer = answer;
+    button.setAttribute('aria-pressed', String(selectedAnswers.has(answer)));
+
+    if (pokemon?.spriteUrl) {
+      const image = document.createElement('img');
+      image.src = pokemon.spriteUrl;
+      image.alt = '';
+      image.loading = 'lazy';
+      button.append(image);
+    }
+    button.append(el('strong', { text: pokemon?.displayName ?? answer }));
+    if (pokemon?.types?.length) button.append(createTypeList(pokemon.types));
+
+    if (result) {
+      if (result.correctlySelected.includes(answer)) button.classList.add('correct');
+      else if (result.missedAnswers.includes(answer)) button.classList.add('missed');
+      else if (result.incorrectAnswers.includes(answer)) button.classList.add('incorrect');
+      button.disabled = true;
+    } else {
+      button.addEventListener('click', () => onToggle(answer));
+    }
+
+    grid.append(button);
+  }
+
+  return grid;
+}
+
 export const ANSWER_DISPLAYS = {
-  'type-multi-select': renderTypeMultiSelect
+  'type-multi-select': renderTypeMultiSelect,
+  'single-select': renderSingleSelect
 };
 
 export function renderAnswerDisplay(answerType, context) {
