@@ -12,6 +12,7 @@ import { enhancePokemonEvolutionControls } from './components/pokemonEvolutionCo
 import { enhancePokemonTeamMenu } from './components/pokemonTeamMenu.js';
 import { enhanceTeamMemberStudyLinks } from './components/teamMemberStudyLink.js';
 import { createTeamActionsButton } from './components/teamActionsMenu.js';
+import { enhanceTeamRivalLink } from './components/teamRivalLink.js';
 import { enhanceStudyTabs } from './components/studyTabs.js';
 import { initializeQuizAutoScroll } from './components/quizAutoScroll.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
@@ -116,6 +117,7 @@ function render() {
   enhancePokemonLookupResult(viewRoot);
   enhancePokemonTeamMenu(viewRoot);
   enhanceTeamMemberStudyLinks(viewRoot);
+  enhanceTeamRivalLink(viewRoot);
   const activeNavRoute = state.route === 'team' ? 'teams' : state.route;
   for (const link of navLinks) {
     if (link.dataset.route === activeNavRoute) link.setAttribute('aria-current', 'page');
