@@ -50,7 +50,7 @@ function createTeamCard(team, index, render) {
   title.style.overflowWrap = 'anywhere';
   title.style.wordBreak = 'break-word';
   const actions = el('div', { className: 'team-card-actions' });
-  const remove = el('button', { className: 'team-delete-button', text: '×' });
+  const remove = el('button', { className: 'danger-button team-delete-button', text: '×' });
   remove.type = 'button';
   remove.setAttribute('aria-label', `Delete ${team.title}`);
   remove.title = 'Delete team';
@@ -148,7 +148,7 @@ function createNewTeamCard(render) {
   input.maxLength = 60;
   input.placeholder = 'New team name';
   input.setAttribute('aria-label', 'New team name');
-  const button = el('button', { text: 'Create team' });
+  const button = el('button', { className: 'primary-button', text: 'Create team' });
   button.type = 'submit';
   form.append(input, button);
   form.addEventListener('submit', event => {
