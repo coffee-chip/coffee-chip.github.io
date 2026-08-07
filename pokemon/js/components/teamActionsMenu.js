@@ -7,8 +7,8 @@ function createRenamePanel(team,host,render){const panel=el('form',{className:'t
 function focusRenameInput(panel){const input=panel.querySelector('input');if(!input)return;input.focus();const end=input.value.length;input.setSelectionRange(end,end);}
 function applyOpponentVisual(host,isOpponent){if(host.classList.contains('team-card'))host.classList.toggle('team-card-opponent',isOpponent);const localTitle=host.querySelector('.team-detail-title');if(localTitle)localTitle.classList.toggle('team-detail-title-opponent',isOpponent);if(host.classList.contains('team-page-actions'))document.querySelector('#page-title')?.classList.toggle('team-detail-title-opponent',isOpponent);}
 function createDeletePanel(team,host,render,onDelete){const panel=el('div',{className:'team-actions-panel'}),actions=el('div',{className:'team-actions-inline-buttons'}),cancel=el('button',{className:'secondary-button',text:'Cancel'}),confirm=el('button',{className:'danger-button',text:'Delete'});panel.append(el('span',{text:`Delete “${team.title}”?`}));cancel.type=confirm.type='button';cancel.addEventListener('click',()=>closeMenu(host));confirm.addEventListener('click',()=>{if(!deleteTeam(team.id))return;if(onDelete)onDelete();else render();});actions.append(cancel,confirm);panel.append(actions);return panel;}
-function createRivalPanel(team,host,render){
-  const panel=el('div',{className:'team-actions-panel'}),currentRival=getRival(team.id),back=el('button',{className:'secondary-button team-actions-item',text:'Back'});back.type='button';back.addEventListener('click',()=>openMenu(team,host,render));
+function createRivalPanel(team,host,render,onDelete){
+  const panel=el('div',{className:'team-actions-panel'}),currentRival=getRival(team.id),back=el('button',{className:'secondary-button team-actions-item',text:'Back'});back.type='button';back.addEventListener('click',()=>openMenu(team,host,render,onDelete));
   panel.append(el('strong',{text:currentRival?'Change rival':'Choose rival'}));
   const candidates=getTeams().filter(candidate=>candidate.id!==team.id).sort((a,b)=>Number(a.isOpponent===team.isOpponent)-Number(b.isOpponent===team.isOpponent));
   if(!candidates.length) panel.append(el('span',{className:'muted',text:'No other teams available.'}));
@@ -20,7 +20,7 @@ function openMenu(team,host,render,onDelete){
   closeMenu(host);
   const menu=el('div',{className:'team-actions-menu'});menu.setAttribute('role','dialog');menu.setAttribute('aria-label',`Actions for ${team.title}`);
   const rename=el('button',{className:'secondary-button team-actions-item',text:'Rename'});rename.type='button';rename.addEventListener('click',()=>{const panel=createRenamePanel(team,host,render);menu.replaceChildren(panel);focusRenameInput(panel);});
-  const rival=el('button',{className:'secondary-button team-actions-item',text:getRival(team.id)?`Rival: ${getRival(team.id).title}`:'Rival'});rival.type='button';rival.addEventListener('click',()=>menu.replaceChildren(createRivalPanel(team,host,render)));
+  const currentRival=getRival(team.id),rival=el('button',{className:'secondary-button team-actions-item',text:currentRival?`Rival: ${currentRival.title}`:'Rival'});rival.type='button';rival.addEventListener('click',()=>menu.replaceChildren(createRivalPanel(team,host,render,onDelete)));
   const opponent=el('label',{className:'toggle-field team-actions-opponent'}),checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=team.isOpponent===true;checkbox.addEventListener('change',()=>{if(setTeamOpponent(team.id,checkbox.checked)){applyOpponentVisual(host,checkbox.checked);setTimeout(()=>render(),180);}});opponent.append(checkbox,el('span',{text:'Opponent'}));
   const remove=el('button',{className:'danger-button team-actions-item',text:'Delete'});remove.type='button';remove.addEventListener('click',()=>menu.replaceChildren(createDeletePanel(team,host,render,onDelete)));
   menu.append(rename,rival,opponent,remove);host.append(menu);
