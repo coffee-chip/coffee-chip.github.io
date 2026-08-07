@@ -13,8 +13,8 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
   cache: { pokemon: {}, pokemonNameIndex: null, recentPokemonIds: [] },
   teams: [
-    { id: 'my-team', title: 'My team', isOpponent: false, pokemon: [] },
-    { id: 'opponents', title: 'Opponents', isOpponent: true, pokemon: [] }
+    { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, pokemon: [] },
+    { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, pokemon: [] }
   ]
 });
 
@@ -161,7 +161,17 @@ function normalizeTeams(value) {
       if (pokemon.length === 6) break;
     }
     const isOpponent = typeof team.isOpponent === 'boolean' ? team.isOpponent : id === 'opponents';
-    normalized.push({ id, title, isOpponent, pokemon });
+    const rivalTeamId = typeof team.rivalTeamId === 'string' && team.rivalTeamId.trim() ? team.rivalTeamId.trim() : null;
+    normalized.push({ id, title, isOpponent, rivalTeamId, pokemon });
+  }
+  const validIds = new Set(normalized.map(team => team.id));
+  for (const team of normalized) {
+    if (!team.rivalTeamId || team.rivalTeamId === team.id || !validIds.has(team.rivalTeamId)) team.rivalTeamId = null;
+  }
+  for (const team of normalized) {
+    if (!team.rivalTeamId) continue;
+    const rival = normalized.find(candidate => candidate.id === team.rivalTeamId);
+    if (!rival || rival.rivalTeamId !== team.id) team.rivalTeamId = null;
   }
   return normalized;
 }
