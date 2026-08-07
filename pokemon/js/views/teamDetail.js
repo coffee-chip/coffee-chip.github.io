@@ -109,7 +109,7 @@ function createMemberCard(team, member, index, render) {
   const actions = el('div', { className: 'team-detail-member-actions' });
   const edit = el('button', { className: 'secondary-button team-member-action-button team-detail-edit', text: '✎' });
   const remove = el('button', { className: 'danger-button team-delete-button team-detail-remove', text: '×' });
-  const handle = el('span', { className: 'team-drag-handle team-member-drag-handle', text: '≡' });
+  const handle = el('span', { className: 'team-drag-handle team-member-drag-handle', text: '↕' });
   edit.type = remove.type = 'button'; edit.setAttribute('aria-label', `Edit name for ${pokemon.displayName}`); edit.title = 'Edit team name';
   edit.addEventListener('click', () => createMemberEditForm(team, member, pokemon, canonicalDisplayName, card, render));
   remove.setAttribute('aria-label', `Remove ${pokemon.displayName} from ${team.title}`); remove.title = 'Remove from team';
