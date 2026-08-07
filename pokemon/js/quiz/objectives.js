@@ -16,6 +16,12 @@ export const LEARNING_OBJECTIVES = {
     label: 'Recognize Pokémon types',
     description: 'Recall a Pokémon species’ type or types without looking them up.',
     priority: 3
+  },
+  'battle-scenario': {
+    id: 'battle-scenario',
+    label: 'Battle scenario',
+    description: 'Use combined offensive and defensive type advantage to choose favorable types or Pokémon against an opponent.',
+    priority: 4
   }
 };
 
