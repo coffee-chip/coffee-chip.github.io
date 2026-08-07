@@ -40,6 +40,14 @@ export function createTeam(title) {
   return team;
 }
 
+export function renameTeam(teamId, title) {
+  const team = getTeam(teamId);
+  const normalizedTitle = String(title ?? '').trim().slice(0, 60);
+  if (!team || !normalizedTitle) return false;
+  team.title = normalizedTitle;
+  return saveTeams(state.teams);
+}
+
 export function setTeamOpponent(teamId, isOpponent) {
   const team = getTeam(teamId);
   if (!team) return false;
