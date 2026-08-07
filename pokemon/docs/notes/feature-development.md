@@ -7,9 +7,11 @@
 - Removing a Pokémon from a team reuses the team-delete interaction pattern: an × trigger followed by an inline confirmation with Cancel/Remove actions.
 - Team members can be drag-reordered using the same pointer/hold/insertion-marker interaction pattern as team cards; reorder persists only within that team.
 - Team members have an edit control for a team-local display-name alias. The alias is stored on the team Pokémon snapshot and does not modify the shared Pokémon cache/repository. Clearing the edit field resets to the canonical fetched display name.
-- Team-level Rename, Opponent, and Delete actions are centralized in a shared overflow-menu component used by both team cards and the single-team view. Team cards keep the separate drag handle; the single-team view keeps its Back navigation.
+- Team-level Rename, Rival, Opponent, and Delete actions are centralized in a shared overflow-menu component used by both team cards and the single-team view. Team cards keep the separate drag handle.
+- Rivalries are persisted as reciprocal one-to-one team links using `rivalTeamId`. Setting a rivalry automatically clears any previous rival on either side; clearing or deleting a team also clears the reciprocal link.
+- Rival assignment/change/removal is available from the shared team actions menu in both the Teams list and single-team page. The single-team page additionally shows a direct `Rival: {team} →` navigation link below its Members / Matchups / Advantage selector when a rival exists; Teams list cards intentionally do not show rival goto links yet.
 - Teams have a persisted `isOpponent` flag. Opponent teams use danger coloring for the detail-page title and a subtle danger-colored outline on their team-list card.
-- The built-in `Opponents` team defaults to opponent status; existing saved versions of that team without the new flag are normalized to opponent status, while an explicit toggle-off is preserved afterward.
+- `My team` and `Opponents` are initial defaults for fresh storage only. Existing stored teams are authoritative; deleted defaults are not re-injected.
 - Each Pokémon row on a team detail page is expandable. The expanded section shows type icons for types the Pokémon has a positive combined advantage score over and types it has a negative combined advantage score against.
 - Combined type advantage scoring is centralized in the effectiveness engine. For Pokémon types `Ptypes` and another type `Otype`: `Peffect` is the maximum effectiveness of either Pokémon type against `Otype`; `Oeffect` is `Otype`'s effectiveness against the Pokémon's full type combination. Each multiplier is converted to a tier score using log2 for nonzero values (4→2, 2→1, 1→0, 0.5→-1, 0.25→-2) and immunity 0→-3. Overall advantage is `tier(Peffect) - tier(Oeffect)`.
 - Team analysis has Defense and Offense tabs with an 18-type matrix and one Pokémon per column.
@@ -28,12 +30,15 @@
 - Reuse the canonical effectiveness engine for all team matchup calculations.
 - Prefer compact intrinsic table sizing over forcing matchup tables to fill the available width.
 - Keep team-level management actions in the shared overflow-menu component so list and detail views do not drift apart.
+- Treat rivalry as a symmetric relationship; perspective remains separate and comes from the viewed team and `isOpponent` state.
 
 ## Development workflow
 
 - The user will test the app manually; implementation branches do not need to spend time running browser/device tests unless specifically requested.
 - Always bump `APP_VERSION` in `pokemon/service-worker.js` after completing a feature or fix so the installed PWA receives an update.
+- Storage migrations are not required during active development unless the user explicitly requests safe migration work.
 
 ## Follow-up work
 
+- Use rivalry as the default pairing primitive for future full-team-vs-full-team creation and evaluation.
 - Consider whether team snapshots should eventually persist Pokémon types for fully offline team analysis; current implementation resolves them through the Pokémon repository/cache.
