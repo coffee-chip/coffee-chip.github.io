@@ -10,6 +10,24 @@ export function getMultiplier(attackingType, defendingTypes) {
   }, 1);
 }
 
+export function getEffectivenessTierScore(multiplier) {
+  if (multiplier === 0) return -3;
+  const score = Math.log2(multiplier);
+  if (!Number.isInteger(score)) throw new Error(`Unsupported effectiveness multiplier: ${multiplier}`);
+  return score;
+}
+
+export function getTypeAdvantageScore(pokemonTypes, otherType) {
+  if (!Array.isArray(pokemonTypes) || pokemonTypes.length < 1 || pokemonTypes.length > 2) {
+    throw new Error('Pokémon types must contain one or two types.');
+  }
+  const pokemonEffectiveness = Math.max(
+    ...pokemonTypes.map(attackingType => getMultiplier(attackingType, [otherType]))
+  );
+  const otherEffectiveness = getMultiplier(otherType, pokemonTypes);
+  return getEffectivenessTierScore(pokemonEffectiveness) - getEffectivenessTierScore(otherEffectiveness);
+}
+
 export function getDefendingTypesAtMultiplier(attackingType, multiplier) {
   return TYPES.filter(defendingType => getMultiplier(attackingType, [defendingType]) === multiplier);
 }
