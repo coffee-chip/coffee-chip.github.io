@@ -8,10 +8,10 @@
 .team-member-action-button,
 .team-detail-member .team-delete-button,
 .team-detail-member .team-drag-handle {
-  width: 2.1rem;
-  min-width: 2.1rem;
-  height: 2.1rem;
-  min-height: 2.1rem;
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
+  min-height: 2rem;
   padding: 0;
 }
 
@@ -58,15 +58,6 @@
 }
 
 @media (max-width: 24rem) {
-  .team-member-action-button,
-  .team-detail-member .team-delete-button,
-  .team-detail-member .team-drag-handle {
-    width: 1.95rem;
-    min-width: 1.95rem;
-    height: 1.95rem;
-    min-height: 1.95rem;
-  }
-
   .team-member-edit-form {
     grid-template-columns: 1fr;
   }
