@@ -1,4 +1,4 @@
-const APP_VERSION = '2026.08.07.01';
+const APP_VERSION = '2026.08.07.02';
 const CACHE_PREFIX = 'pokemon-type-trainer-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const CORE_ASSETS = [
