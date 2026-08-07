@@ -1,0 +1,24 @@
+.team-rival-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  padding: .55rem .75rem;
+  border: 1px solid var(--border-default);
+  border-radius: .6rem;
+  background: var(--panel-background);
+  color: var(--heading-color);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.team-rival-link:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .team-rival-link:hover {
+    border-color: var(--action-primary);
+  }
+}
