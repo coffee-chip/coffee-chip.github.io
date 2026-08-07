@@ -1,4 +1,5 @@
-import { createTeam, deleteTeam, getTeams, reorderTeams } from '../data/teamRepository.js';
+import { createTeam, getTeams, reorderTeams } from '../data/teamRepository.js';
+import { createTeamActionsButton } from '../components/teamActionsMenu.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -23,24 +24,6 @@ function pokemonSlot(pokemon) {
   return slot;
 }
 
-function createDeleteConfirmation(team, card, render) {
-  card.querySelector('.team-delete-confirmation')?.remove();
-  const confirmation = el('div', { className: 'team-delete-confirmation' });
-  const message = el('span', { text: `Delete “${team.title}”?` });
-  const actions = el('div', { className: 'team-delete-actions' });
-  const cancel = el('button', { className: 'secondary-button', text: 'Cancel' });
-  cancel.type = 'button';
-  cancel.addEventListener('click', () => confirmation.remove());
-  const confirm = el('button', { className: 'danger-button', text: 'Delete' });
-  confirm.type = 'button';
-  confirm.addEventListener('click', () => {
-    if (deleteTeam(team.id)) render();
-  });
-  actions.append(cancel, confirm);
-  confirmation.append(message, actions);
-  card.append(confirmation);
-}
-
 function createTeamCard(team, index, render) {
   const classes = ['panel', 'team-card'];
   if (!team.pokemon.length) classes.push('team-card-empty');
@@ -52,7 +35,7 @@ function createTeamCard(team, index, render) {
   card.setAttribute('aria-label', `Open ${team.title}`);
 
   const openTeam = event => {
-    if (event?.target?.closest?.('button, .team-drag-handle, .team-delete-confirmation')) return;
+    if (event?.target?.closest?.('button, input, label, form, .team-drag-handle, .team-actions-menu')) return;
     location.hash = `team/${encodeURIComponent(team.id)}`;
   };
   card.addEventListener('click', openTeam);
@@ -68,15 +51,11 @@ function createTeamCard(team, index, render) {
   title.style.overflowWrap = 'anywhere';
   title.style.wordBreak = 'break-word';
   const actions = el('div', { className: 'team-card-actions' });
-  const remove = el('button', { className: 'danger-button team-delete-button', text: '×' });
-  remove.type = 'button';
-  remove.setAttribute('aria-label', `Delete ${team.title}`);
-  remove.title = 'Delete team';
-  remove.addEventListener('click', () => createDeleteConfirmation(team, card, render));
+  const menuButton = createTeamActionsButton(team, card, render);
   const handle = el('span', { className: 'team-drag-handle', text: '≡' });
   handle.setAttribute('aria-label', `Drag to reorder ${team.title}`);
   handle.title = 'Drag to reorder';
-  actions.append(remove, handle);
+  actions.append(menuButton, handle);
   header.append(title, actions);
 
   let holdTimer = null;
@@ -93,11 +72,9 @@ function createTeamCard(team, index, render) {
   function updateInsertionMarker(clientY) {
     const list = card.closest('.team-list');
     if (!list) return;
-
     const otherCards = [...list.querySelectorAll('.team-card')].filter(candidate => candidate !== card);
     let insertionIndex = otherCards.length;
     let insertBefore = list.querySelector('.team-create-card');
-
     for (let candidateIndex = 0; candidateIndex < otherCards.length; candidateIndex += 1) {
       const candidate = otherCards[candidateIndex];
       const bounds = candidate.getBoundingClientRect();
@@ -107,7 +84,6 @@ function createTeamCard(team, index, render) {
         break;
       }
     }
-
     proposedIndex = insertionIndex;
     insertionMarker ??= el('div', { className: 'team-insertion-marker' });
     list.insertBefore(insertionMarker, insertBefore);
@@ -118,12 +94,10 @@ function createTeamCard(team, index, render) {
     holdTimer = null;
     if (pointerId !== null && handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
     pointerId = null;
-
     if (!dragging) return;
     dragging = false;
     card.classList.remove('team-card-dragging');
     removeInsertionMarker();
-
     if (proposedIndex !== index) reorderTeams(index, proposedIndex);
     render();
   }
@@ -139,13 +113,11 @@ function createTeamCard(team, index, render) {
       updateInsertionMarker(event.clientY);
     }, event.pointerType === 'touch' ? 300 : 0);
   });
-
   handle.addEventListener('pointermove', event => {
     if (!dragging) return;
     event.preventDefault();
     updateInsertionMarker(event.clientY);
   });
-
   handle.addEventListener('pointerup', stopDrag);
   handle.addEventListener('pointercancel', stopDrag);
   handle.addEventListener('lostpointercapture', stopDrag);
