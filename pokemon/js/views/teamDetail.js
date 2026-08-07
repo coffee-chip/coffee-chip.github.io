@@ -1,11 +1,12 @@
 import { TYPES } from '../data/types.js';
 import { getPokemon } from '../data/pokemonRepository.js';
 import { getTeam, removePokemonFromTeam, setTeamOpponent } from '../data/teamRepository.js';
-import { getMultiplier } from '../engine/effectiveness.js';
+import { getMultiplier, getTypeAdvantageScore } from '../engine/effectiveness.js';
 import { state } from '../state.js';
 import { createTypeList, createTypeIcon } from '../components/typeBadge.js';
 
 const resolvedPokemon = new Map();
+const expandedMembers = new Set();
 let loadingTeamId = null;
 let activeAnalysisMode = 'defense';
 const activeAnalysisRelationship = { defense: 'weak', offense: 'strong' };
@@ -15,6 +16,10 @@ function el(tag, options = {}) {
   if (options.className) node.className = options.className;
   if (options.text) node.textContent = options.text;
   return node;
+}
+
+function memberExpansionKey(teamId, pokemonId) {
+  return `${teamId}:${pokemonId}`;
 }
 
 function createBackLink() {
@@ -46,16 +51,59 @@ function createMemberRemoveConfirmation(team, member, pokemon, card, render) {
   const confirm = el('button', { className: 'danger-button', text: 'Remove' });
   confirm.type = 'button';
   confirm.addEventListener('click', () => {
-    if (removePokemonFromTeam(team.id, member.id)) render();
+    if (removePokemonFromTeam(team.id, member.id)) {
+      expandedMembers.delete(memberExpansionKey(team.id, member.id));
+      render();
+    }
   });
   actions.append(cancel, confirm);
   confirmation.append(message, actions);
   card.append(confirmation);
 }
 
+function createAdvantageIconList(types) {
+  const list = el('span', { className: 'team-member-advantage-icons' });
+  if (!types.length) {
+    list.append(el('span', { className: 'muted', text: 'None' }));
+    return list;
+  }
+  for (const type of types) {
+    const icon = createTypeIcon(type, { className: 'team-member-advantage-icon' });
+    icon.setAttribute('aria-label', `${type} type`);
+    icon.setAttribute('role', 'img');
+    const wrapper = el('span', { className: 'team-member-advantage-icon-wrap' });
+    wrapper.title = type;
+    wrapper.append(icon);
+    list.append(wrapper);
+  }
+  return list;
+}
+
+function createMemberAdvantagePanel(pokemon) {
+  const positive = [];
+  const negative = [];
+  for (const type of TYPES) {
+    const score = getTypeAdvantageScore(pokemon.types, type);
+    if (score > 0) positive.push(type);
+    else if (score < 0) negative.push(type);
+  }
+
+  const panel = el('section', { className: 'team-member-advantage-panel' });
+  const positiveRow = el('div', { className: 'team-member-advantage-row' });
+  positiveRow.append(el('strong', { text: 'Advantage' }), createAdvantageIconList(positive));
+  const negativeRow = el('div', { className: 'team-member-advantage-row' });
+  negativeRow.append(el('strong', { text: 'Disadvantage' }), createAdvantageIconList(negative));
+  panel.append(positiveRow, negativeRow);
+  return panel;
+}
+
 function createMemberCard(team, member, render) {
   const pokemon = resolvedPokemon.get(member.id) ?? member;
-  const card = el('article', { className: 'panel team-detail-member' });
+  const expansionKey = memberExpansionKey(team.id, member.id);
+  const expanded = expandedMembers.has(expansionKey);
+  const hasTypes = Array.isArray(pokemon.types) && pokemon.types.length;
+  const card = el('article', { className: `panel team-detail-member${expanded ? ' team-detail-member-expanded' : ''}` });
+
   const visual = el('div', { className: 'team-detail-member-visual' });
   if (pokemon.spriteUrl) {
     const image = document.createElement('img');
@@ -65,13 +113,22 @@ function createMemberCard(team, member, render) {
     visual.append(image);
   }
 
-  const details = el('div', { className: 'team-detail-member-details' });
+  const details = el('button', { className: 'transparent-button team-detail-member-details' });
+  details.type = 'button';
+  details.disabled = !hasTypes;
+  details.setAttribute('aria-expanded', String(expanded));
+  details.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} type advantage summary for ${pokemon.displayName}`);
   details.append(el('strong', { text: pokemon.displayName }));
-  if (Array.isArray(pokemon.types) && pokemon.types.length) {
-    details.append(createTypeList(pokemon.types));
-  } else {
-    details.append(el('span', { className: 'muted', text: 'Loading types…' }));
-  }
+  if (hasTypes) details.append(createTypeList(pokemon.types));
+  else details.append(el('span', { className: 'muted', text: 'Loading types…' }));
+  const disclosure = el('span', { className: 'team-member-disclosure', text: expanded ? '▲' : '▼' });
+  disclosure.setAttribute('aria-hidden', 'true');
+  details.append(disclosure);
+  details.addEventListener('click', () => {
+    if (expanded) expandedMembers.delete(expansionKey);
+    else expandedMembers.add(expansionKey);
+    render();
+  });
 
   const remove = el('button', { className: 'danger-button team-delete-button team-detail-remove', text: '×' });
   remove.type = 'button';
@@ -80,6 +137,7 @@ function createMemberCard(team, member, render) {
   remove.addEventListener('click', () => createMemberRemoveConfirmation(team, member, pokemon, card, render));
 
   card.append(visual, details, remove);
+  if (expanded && hasTypes) card.append(createMemberAdvantagePanel(pokemon));
   return card;
 }
 
@@ -123,10 +181,7 @@ function getMatchupResult(member, type, mode, relationship) {
   if (mode === 'defense') {
     const multiplier = getMultiplier(type, member.types);
     const marked = relationship === 'weak' ? multiplier > 1 : multiplier < 1;
-    return {
-      marked,
-      label: `${type} moves deal ${multiplier}× damage to ${member.displayName}`
-    };
+    return { marked, label: `${type} moves deal ${multiplier}× damage to ${member.displayName}` };
   }
 
   const multipliers = member.types.map(attackingType => ({
@@ -141,9 +196,8 @@ function getMatchupResult(member, type, mode, relationship) {
     };
   }
 
-  const marked = multipliers.every(entry => entry.multiplier < 1);
   return {
-    marked,
+    marked: multipliers.every(entry => entry.multiplier < 1),
     label: `${member.displayName}: all own-type moves are resisted or ineffective against ${type}`
   };
 }
@@ -174,7 +228,6 @@ function createAnalysisTable(pokemon, mode, relationship) {
     typeHeader.setAttribute('aria-label', `${type} type`);
     typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' }));
     row.append(typeHeader);
-
     for (const member of pokemon) {
       const result = getMatchupResult(member, type, mode, relationship);
       row.append(createMatchupCell(result.marked, result.label));
@@ -211,10 +264,7 @@ function createAnalysis(team, render) {
     'Team matchup direction',
     [{ value: 'defense', label: 'Defense' }, { value: 'offense', label: 'Offense' }],
     activeAnalysisMode,
-    mode => {
-      activeAnalysisMode = mode;
-      render();
-    }
+    mode => { activeAnalysisMode = mode; render(); }
   ));
 
   const relationshipOptions = activeAnalysisMode === 'defense'
@@ -226,10 +276,7 @@ function createAnalysis(team, render) {
     `${activeAnalysisMode} matchup relationship`,
     relationshipOptions,
     relationship,
-    value => {
-      activeAnalysisRelationship[activeAnalysisMode] = value;
-      render();
-    }
+    value => { activeAnalysisRelationship[activeAnalysisMode] = value; render(); }
   ));
 
   const pokemon = team.pokemon
