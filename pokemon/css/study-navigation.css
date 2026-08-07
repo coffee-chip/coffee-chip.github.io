@@ -16,11 +16,6 @@
 .quiz-start-area p { margin: 0; }
 .quiz-start-area button { width: 100%; }
 
-.pokemon-evolution-chooser h3 { margin-top: 0; }
-.pokemon-evolution-options { display: flex; flex-wrap: wrap; gap: .5rem; }
-.pokemon-evolution-options button, .pokemon-evolution-close { min-height: 2.5rem; padding: 0 .75rem; }
-.pokemon-evolution-close { margin-top: .75rem; }
-
 .app-nav a[aria-current="page"] { border-color: transparent; background: transparent; color: var(--action-primary); font-weight: 700; }
 
 @media (max-width: 25rem) { .button-selector-option { font-size: .86rem; } }
