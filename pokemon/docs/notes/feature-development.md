@@ -5,6 +5,8 @@
 - Team detail view launched from team cards at `#team/<team-id>`.
 - Team detail roster shows each Pokémon and its types.
 - Removing a Pokémon from a team reuses the team-delete interaction pattern: an × trigger followed by an inline confirmation with Cancel/Remove actions.
+- Team members can be drag-reordered using the same pointer/hold/insertion-marker interaction pattern as team cards; reorder persists only within that team.
+- Team members have an edit control for a team-local display-name alias. The alias is stored on the team Pokémon snapshot and does not modify the shared Pokémon cache/repository. Clearing the edit field resets to the canonical fetched display name.
 - Teams have a persisted `isOpponent` flag editable with an Opponent toggle near the top of the team detail page. Opponent teams use danger coloring for the detail-page title and a subtle danger-colored outline on their team-list card.
 - The built-in `Opponents` team defaults to opponent status; existing saved versions of that team without the new flag are normalized to opponent status, while an explicit toggle-off is preserved afterward.
 - Each Pokémon row on a team detail page is expandable. The expanded section shows type icons for types the Pokémon has a positive combined advantage score over and types it has a negative combined advantage score against.
@@ -12,7 +14,10 @@
 - Team analysis has Defense and Offense tabs with an 18-type matrix and one Pokémon per column.
 - Defense has Weak and Resistant subviews. Weak marks incoming type multipliers >1; Resistant marks incoming type multipliers <1, including immunities.
 - Offense has Strong and Weak subviews. Strong marks a defending type when at least one of the Pokémon's own types is >1 effective against it. Weak marks a defending type only when all of the Pokémon's own types are <1 effective against it, representing a true same-type coverage gap.
-- Matchup relationship colors are perspective-aware. For ordinary teams, Offense/Strong and Defense/Resistant use success styling while Offense/Weak and Defense/Weak use danger styling. For opponent teams the semantic colors reverse. The active chart checkmarks use the same role as the selected relationship.
+- Matchup relationship colors are perspective-aware. For ordinary teams, Offense/Strong and Defense/Resistant use success styling while Offense/Weak and Defense/Weak use danger styling. For opponent teams the semantic colors reverse.
+- Offense/Defense remain mutually exclusive, but the two relationship filters within the active mode can be selected independently and displayed together. Cells use one success/danger dot because the relationship predicates are mutually exclusive per cell.
+- Team detail has top-level Members / Matchups / Advantage tabs so the roster, raw matchup matrix, and overall advantage matrix are shown separately.
+- Overall advantage matrix uses the combined advantage score. Ordinary teams show positive-score green dots; opponent teams show negative-score red dots. Dot intensity buckets are magnitude 1, 2, and 3+.
 - Offensive analysis intentionally assumes same-type attack coverage but does not apply STAB.
 - Team analysis resolves full Pokémon records through the existing Pokémon repository so type logic is not duplicated in team storage.
 - Matchup matrices are intentionally compact: the type column is icon-only, Pokémon names are vertical, images shrink to fit, and horizontal scrolling remains available only as overflow fallback.
