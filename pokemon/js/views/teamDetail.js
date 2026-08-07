@@ -124,7 +124,7 @@ function createAnalysisTable(pokemon, mode) {
   return wrapper;
 }
 
-function createAnalysis(team) {
+function createAnalysis(team, render) {
   const section = el('section', { className: 'team-analysis' });
   const tabs = el('div', { className: 'team-analysis-tabs' });
   tabs.setAttribute('role', 'tablist');
@@ -140,13 +140,15 @@ function createAnalysis(team) {
     button.setAttribute('aria-selected', String(mode === activeAnalysisMode));
     button.addEventListener('click', () => {
       activeAnalysisMode = mode;
-      renderTeamDetail(document.querySelector('#app-view'), () => renderTeamDetail(document.querySelector('#app-view'), arguments[1]));
+      render();
     });
     tabs.append(button);
   }
   section.append(tabs);
 
-  const pokemon = team.pokemon.map(member => resolvedPokemon.get(member.id)).filter(member => Array.isArray(member?.types) && member.types.length);
+  const pokemon = team.pokemon
+    .map(member => resolvedPokemon.get(member.id))
+    .filter(member => Array.isArray(member?.types) && member.types.length);
   if (pokemon.length !== team.pokemon.length) {
     section.append(el('p', { className: 'muted', text: 'Loading matchup data…' }));
   } else if (!pokemon.length) {
@@ -180,7 +182,9 @@ export function renderTeamDetail(container, render) {
   page.append(createBackLink());
 
   if (!team) {
-    page.append(el('section', { className: 'panel' }), el('p', { className: 'muted', text: 'That team no longer exists.' }));
+    const panel = el('section', { className: 'panel' });
+    panel.append(el('p', { className: 'muted', text: 'That team no longer exists.' }));
+    page.append(panel);
     container.replaceChildren(page);
     return;
   }
@@ -192,7 +196,7 @@ export function renderTeamDetail(container, render) {
   } else {
     for (const member of team.pokemon) roster.append(createMemberCard(team, member, render));
   }
-  page.append(roster, createAnalysis(team));
+  page.append(roster, createAnalysis(team, render));
   container.replaceChildren(page);
   loadTeamPokemon(team, render);
 }
