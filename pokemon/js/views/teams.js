@@ -52,7 +52,7 @@ function createTeamCard(team, index, render) {
   title.style.wordBreak = 'break-word';
   const actions = el('div', { className: 'team-card-actions' });
   const menuButton = createTeamActionsButton(team, card, render);
-  const handle = el('span', { className: 'team-drag-handle', text: '≡' });
+  const handle = el('span', { className: 'team-drag-handle', text: '↕' });
   handle.setAttribute('aria-label', `Drag to reorder ${team.title}`);
   handle.title = 'Drag to reorder';
   actions.append(menuButton, handle);
