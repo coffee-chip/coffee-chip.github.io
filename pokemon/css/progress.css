@@ -14,7 +14,7 @@
 .progress-section-title { margin: 1.5rem 0 .8rem; }
 .progress-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 .progress-panel-heading h3 { margin-bottom: 0; }
-.progress-expand-button { flex: 0 0 auto; min-height: 2.5rem; padding: 0 .75rem; border: 1px solid var(--border-default); border-radius: .5rem; background: var(--subtle-background); color: var(--text-primary); }
+.progress-expand-button { flex: 0 0 auto; min-height: 2.5rem; padding: 0 .75rem; border-radius: .5rem; }
 .relationship-list { display: grid; gap: .65rem; margin-top: .75rem; }
 .relationship-row { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .35rem; padding-top: .65rem; border-top: 1px solid var(--border-default); }
 .relationship-row:first-child { padding-top: 0; border-top: 0; }
