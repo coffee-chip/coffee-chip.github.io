@@ -38,7 +38,7 @@
 .team-analysis-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
 .team-analysis-tabs button { width: 100%; }
 .team-matchup-table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border-default); border-radius: .65rem; background: var(--panel-background); overscroll-behavior-inline: contain; }
-.team-matchup-table { width: 100%; min-width: 0; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: .82rem; }
+.team-matchup-table { width: max-content; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: .82rem; }
 .team-matchup-table caption { padding: .55rem .6rem; text-align: left; color: var(--text-muted); }
 .team-matchup-table th, .team-matchup-table td { width: 2.75rem; min-width: 2.75rem; height: 2.4rem; padding: .15rem .2rem; border-top: 1px solid var(--border-default); border-right: 1px solid var(--border-default); text-align: center; vertical-align: middle; }
 .team-matchup-table tr > :last-child { border-right: 0; }
