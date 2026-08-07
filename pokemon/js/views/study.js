@@ -54,7 +54,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   dismissMnemonicBanner();
   activeMnemonicKey = selectionKey;
   button.setAttribute('aria-pressed', 'true');
-  const banner = el('button', { className: 'mnemonic-banner' });
+  const banner = el('button', { className: 'transparent-button mnemonic-banner' });
   banner.type = 'button';
   banner.setAttribute('aria-label', 'Dismiss mnemonic');
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
@@ -162,7 +162,7 @@ function renderRecentPokemon(page, render) {
   section.setAttribute('aria-label', 'Recently viewed Pokémon');
   const list = el('div', { className: 'pokemon-recent-list' });
   for (const pokemon of recent) {
-    const button = el('button', { className: 'pokemon-recent-button' });
+    const button = el('button', { className: 'secondary-button pokemon-recent-button' });
     button.type = 'button';
     button.title = pokemon.displayName;
     button.setAttribute('aria-label', `Open ${pokemon.displayName}`);
@@ -218,7 +218,7 @@ function renderPokemonLookup(page, render) {
   input.value = state.study.pokemonQuery;
   input.setAttribute('list', 'pokemon-name-options');
   input.addEventListener('input', () => { state.study.pokemonQuery = input.value; });
-  const clear = el('button', { className: 'icon-button search-field-clear', text: '×' });
+  const clear = el('button', { className: 'transparent-button icon-button search-field-clear', text: '×' });
   clear.type = 'button';
   clear.setAttribute('aria-label', 'Clear Pokémon search');
   clear.addEventListener('click', () => {
@@ -234,7 +234,7 @@ function renderPokemonLookup(page, render) {
   activePokemonDatalist = datalist;
   const cachedIndex = getCachedPokemonNameIndex();
   if (cachedIndex) populatePokemonDatalist(datalist, cachedIndex.names);
-  const submit = el('button', { text: 'Search' });
+  const submit = el('button', { className: 'primary-button', text: 'Search' });
   submit.type = 'submit';
   submit.disabled = state.study.pokemonStatus === 'loading';
   form.append(label, datalist, submit);
