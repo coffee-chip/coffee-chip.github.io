@@ -1,0 +1,81 @@
+.team-detail-member-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .3rem;
+}
+
+.team-member-action-button,
+.team-detail-member .team-delete-button,
+.team-detail-member .team-drag-handle {
+  width: 2.1rem;
+  min-width: 2.1rem;
+  height: 2.1rem;
+  min-height: 2.1rem;
+  padding: 0;
+}
+
+.team-member-action-button {
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.team-detail-member .team-delete-button {
+  font-size: 1.15rem;
+}
+
+.team-detail-member .team-drag-handle {
+  font-size: 1.2rem;
+}
+
+.team-member-edit-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .6rem;
+  width: 100%;
+  padding-top: .7rem;
+  border-top: 1px solid var(--border-default);
+}
+
+.team-member-edit-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  border: 1px solid var(--border-default);
+  border-radius: .45rem;
+  background: var(--subtle-background);
+  padding: 0 .65rem;
+}
+
+.team-member-edit-actions {
+  display: flex;
+  gap: .4rem;
+}
+
+.team-member-edit-actions button {
+  min-height: 2.5rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 24rem) {
+  .team-member-action-button,
+  .team-detail-member .team-delete-button,
+  .team-detail-member .team-drag-handle {
+    width: 1.95rem;
+    min-width: 1.95rem;
+    height: 1.95rem;
+    min-height: 1.95rem;
+  }
+
+  .team-member-edit-form {
+    grid-template-columns: 1fr;
+  }
+
+  .team-member-edit-actions {
+    justify-content: flex-end;
+  }
+}
