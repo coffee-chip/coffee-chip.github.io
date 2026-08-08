@@ -1,4 +1,4 @@
-import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
+import { createTypeBadge } from '../components/typeBadge.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -50,7 +50,6 @@ export function renderSingleSelect({ question, selectedAnswers, result, onToggle
       button.append(image);
     }
     button.append(el('strong', { text: pokemon?.displayName ?? answer }));
-    if (pokemon?.types?.length) button.append(createTypeList(pokemon.types));
 
     if (result) {
       if (result.correctlySelected.includes(answer)) button.classList.add('correct');
