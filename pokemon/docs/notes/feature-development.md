@@ -47,3 +47,5 @@
 - Consider whether team snapshots should eventually persist Pokémon types for fully offline team analysis; current implementation resolves them through the Pokémon repository/cache.
 
 - Study Pokémon lookup now shows a game-specific “Moves learned by level” table beneath Incoming damage and Outgoing attacks. The selected game is stored in Settings using PokéAPI version groups, initially FireRed / LeafGreen. Pokémon cache level-up learnsets per selected game, while move type, damage, accuracy, and English description data are cached separately. Tapping a move opens a dismissible bottom details banner.
+
+- Study level-up move rows can be starred. Starred state is persisted by normalized move name independently of Pokémon and level, so it is shared anywhere that move appears. The move table can optionally compare one direct previous/next evolution: rows are merged by level and the compared evolution is visually muted.
