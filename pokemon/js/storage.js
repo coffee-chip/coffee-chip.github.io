@@ -13,6 +13,7 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   },
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
   cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] },
+  starredMoves: [],
   teams: [
     { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, pokemon: [] },
     { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, pokemon: [] }
@@ -132,6 +133,13 @@ function normalizeCache(value) {
   };
 }
 
+function normalizeStarredMoves(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value
+    .map(name => typeof name === 'string' ? name.trim().toLowerCase() : '')
+    .filter(Boolean))];
+}
+
 function normalizeTeamPokemon(value) {
   if (!isObject(value)) return null;
   const id = Number(value.id);
@@ -186,6 +194,7 @@ function normalizeCurrentData(raw) {
     settings: normalizeSettings(raw.settings),
     progress: normalizeProgress(raw.progress),
     cache: normalizeCache(raw.cache),
+    starredMoves: normalizeStarredMoves(raw.starredMoves),
     teams: normalizeTeams(raw.teams)
   };
 }
@@ -214,12 +223,13 @@ export function loadPersistentData() {
   }
 }
 
-export function savePersistentData({ settings, progress, cache, teams }) {
+export function savePersistentData({ settings, progress, cache, starredMoves, teams }) {
   return write({
     version: STORAGE_VERSION,
     settings: normalizeSettings(settings),
     progress: normalizeProgress(progress),
     cache: normalizeCache(cache),
+    starredMoves: normalizeStarredMoves(starredMoves),
     teams: normalizeTeams(teams)
   });
 }
@@ -227,6 +237,7 @@ export function savePersistentData({ settings, progress, cache, teams }) {
 export function saveSettings(settings) { return updateSection('settings', settings, normalizeSettings); }
 export function saveProgress(progress) { return updateSection('progress', progress, normalizeProgress); }
 export function saveCache(cache) { return updateSection('cache', cache, normalizeCache); }
+export function saveStarredMoves(starredMoves) { return updateSection('starredMoves', starredMoves, normalizeStarredMoves); }
 export function saveTeams(teams) { return updateSection('teams', teams, normalizeTeams); }
 export function clearPersistentData() {
   try { localStorage.removeItem(STORAGE_KEY); return true; }
