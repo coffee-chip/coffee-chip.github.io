@@ -134,6 +134,7 @@ function renderPokemonResult(page) {
 }
 
 async function lookupPokemon(identifier, render) {
+  state.study.moveComparisonPokemonName = null;
   state.study.pokemonQuery = String(identifier);
   state.study.pokemonStatus = 'loading';
   state.study.pokemonError = null;
