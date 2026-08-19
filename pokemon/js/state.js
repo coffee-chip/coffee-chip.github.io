@@ -28,8 +28,10 @@ export const state = {
   },
   study: {
     mode: 'pokemon', primaryType: 'fire', secondaryType: null,
-    pokemonQuery: '', pokemonStatus: 'idle', pokemonResult: null, pokemonSource: null, pokemonError: null
+    pokemonQuery: '', pokemonStatus: 'idle', pokemonResult: null, pokemonSource: null, pokemonError: null,
+    moveComparisonPokemonName: null
   },
+  starredMoves: [],
   teams: defaultTeams(),
   progress: emptyProgress(),
   cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] }
@@ -63,6 +65,7 @@ export function hydratePersistentState(persistentData) {
     ...persistentData.cache,
     recentPokemonIds: [...(persistentData.cache.recentPokemonIds ?? [])]
   };
+  state.starredMoves = [...(persistentData.starredMoves ?? [])];
   state.teams = structuredClone(persistentData.teams ?? defaultTeams());
   state.quiz.mode = state.settings.quiz.defaultMode;
   getQuizModeSettings(state.quiz.mode);
@@ -93,6 +96,7 @@ export function getPersistentSnapshot() {
       pokemonNameIndex: state.cache.pokemonNameIndex ? structuredClone(state.cache.pokemonNameIndex) : null,
       recentPokemonIds: [...state.cache.recentPokemonIds]
     },
+    starredMoves: [...state.starredMoves],
     teams: structuredClone(state.teams)
   };
 }
