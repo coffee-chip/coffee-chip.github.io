@@ -1,4 +1,5 @@
 import { parseRelationshipKey } from './relationships.js';
+import { DEFAULT_GAME_VERSION_GROUP } from './data/gameVersions.js';
 
 function emptyProgress() {
   return { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} };
@@ -21,6 +22,7 @@ export const state = {
   settings: {
     paletteTheme: 'classic',
     appearance: 'system',
+    gameVersionGroup: DEFAULT_GAME_VERSION_GROUP,
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
     quiz: { defaultMode: 'choose-switch', modes: { 'choose-switch': {} } }
   },
@@ -30,7 +32,7 @@ export const state = {
   },
   teams: defaultTeams(),
   progress: emptyProgress(),
-  cache: { pokemon: {}, pokemonNameIndex: null, recentPokemonIds: [] }
+  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] }
 };
 
 export function getQuizModeSettings(modeId = state.quiz.mode) {
@@ -72,6 +74,7 @@ export function getPersistentSnapshot() {
     settings: {
       paletteTheme: state.settings.paletteTheme,
       appearance: state.settings.appearance,
+      gameVersionGroup: state.settings.gameVersionGroup,
       developer: { ...state.settings.developer },
       quiz: {
         defaultMode: state.settings.quiz.defaultMode,
@@ -86,6 +89,7 @@ export function getPersistentSnapshot() {
     },
     cache: {
       pokemon: { ...state.cache.pokemon },
+      moves: { ...state.cache.moves },
       pokemonNameIndex: state.cache.pokemonNameIndex ? structuredClone(state.cache.pokemonNameIndex) : null,
       recentPokemonIds: [...state.cache.recentPokemonIds]
     },
