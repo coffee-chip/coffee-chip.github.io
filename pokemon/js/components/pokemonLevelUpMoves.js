@@ -209,6 +209,10 @@ function createMovesSection(pokemon, versionGroup, currentDetails, comparison, c
   }
 
   const detailsByPokemonId = new Map([[pokemon.id, currentDetails]]);
+  if (comparison) detailsByPokemonId.set(
+    comparison.pokemon.id,
+    moveDetailsByLearnset.get(`${comparison.pokemon.id}:${versionGroup}`)
+  );
   const rows = combineMoves(pokemon, moves, comparison);
   section.append(createMovesTable(rows, versionGroup, detailsByPokemonId, render));
   if (comparisonStatus === 'loading') {
