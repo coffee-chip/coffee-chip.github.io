@@ -53,6 +53,19 @@ export async function fetchPokemon(identifier, options = {}) {
   }
 }
 
+export async function fetchMove(identifier, options = {}) {
+  const normalized = String(identifier ?? '').trim().toLowerCase();
+  if (!normalized) throw new PokeApiError('Enter a move name.', { code: 'invalid-identifier' });
+  try {
+    return await fetchJson(`${API_BASE}/move/${encodeURIComponent(normalized)}/`, options);
+  } catch (error) {
+    if (error instanceof PokeApiError && error.status === 404) {
+      throw new PokeApiError(`No move found for “${normalized}”.`, { code: 'not-found', status: 404 });
+    }
+    throw error;
+  }
+}
+
 export async function fetchPokemonSpecies(identifier, options = {}) {
   const normalized = normalizePokemonIdentifier(identifier);
   return fetchJson(`${API_BASE}/pokemon-species/${encodeURIComponent(normalized)}/`, options);
