@@ -1,4 +1,5 @@
 import { TYPES } from './types.js';
+import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './gameVersions.js';
 import { state } from '../state.js';
 import { saveCache } from '../storage.js';
 import { fetchEvolutionChain, fetchPokemon, fetchPokemonNameIndex, fetchPokemonSpecies, normalizePokemonIdentifier, PokeApiError } from '../api/pokeApi.js';
@@ -8,10 +9,34 @@ const NAME_INDEX_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const RECENT_POKEMON_LIMIT = 10;
 
 function titleCase(value) { return value.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' '); }
-function normalizeApiPokemon(raw) {
+function normalizeLevelUpMoves(raw, versionGroup) {
+  const movesByName = new Map();
+  for (const entry of raw.moves ?? []) {
+    const name = entry?.move?.name;
+    const detail = (entry?.version_group_details ?? []).find(candidate =>
+      candidate?.version_group?.name === versionGroup && candidate?.move_learn_method?.name === 'level-up'
+    );
+    if (typeof name !== 'string' || !detail || !Number.isInteger(detail.level_learned_at) || detail.level_learned_at < 0) continue;
+    const move = { name, displayName: titleCase(name), level: detail.level_learned_at };
+    const existing = movesByName.get(name);
+    if (!existing || move.level < existing.level) movesByName.set(name, move);
+  }
+  return [...movesByName.values()].sort((a, b) => a.level - b.level || a.displayName.localeCompare(b.displayName));
+}
+function normalizeApiPokemon(raw, versionGroup) {
   const types = [...(raw.types ?? [])].sort((a,b) => a.slot-b.slot).map(entry => entry.type?.name).filter(type => TYPES.includes(type));
   if (!Number.isInteger(raw.id) || raw.id < 1 || !raw.name || !types.length) throw new PokeApiError('PokéAPI returned an incomplete Pokémon record.', { code: 'invalid-response' });
-  return { id: raw.id, name: raw.name, displayName: titleCase(raw.name), types, spriteUrl: raw.sprites?.other?.['official-artwork']?.front_default ?? raw.sprites?.front_default ?? null, speciesName: raw.species?.name ?? raw.name, evolution: null, fetchedAt: new Date().toISOString() };
+  return {
+    id: raw.id,
+    name: raw.name,
+    displayName: titleCase(raw.name),
+    types,
+    spriteUrl: raw.sprites?.other?.['official-artwork']?.front_default ?? raw.sprites?.front_default ?? null,
+    speciesName: raw.species?.name ?? raw.name,
+    evolution: null,
+    levelUpMoves: { [versionGroup]: normalizeLevelUpMoves(raw, versionGroup) },
+    fetchedAt: new Date().toISOString()
+  };
 }
 function isValidEvolutionTarget(value) {
   return value && typeof value.name === 'string' && value.name.length > 0 && Array.isArray(value.conditions);
@@ -89,15 +114,39 @@ async function enrichWithEvolution(pokemon) {
     return { ...pokemon, evolution: findEvolutionContext(chain?.chain, pokemon.speciesName) ?? { previous: [], next: [] } };
   } catch (error) { console.warn('Could not load Pokémon evolution data.', error); return pokemon; }
 }
-export async function getPokemon(identifier, { forceRefresh = false } = {}) {
+function hasLevelUpMoves(pokemon, versionGroup) {
+  const moves = pokemon?.levelUpMoves?.[versionGroup];
+  return Array.isArray(moves) && moves.every(move => typeof move?.name === 'string' && typeof move?.displayName === 'string' && Number.isInteger(move?.level) && move.level >= 0);
+}
+function mergePokemon(existing, refreshed) {
+  return {
+    ...existing,
+    ...refreshed,
+    levelUpMoves: { ...(existing?.levelUpMoves ?? {}), ...(refreshed.levelUpMoves ?? {}) }
+  };
+}
+export async function getPokemon(identifier, { forceRefresh = false, versionGroup = state.settings.gameVersionGroup } = {}) {
   const normalized = normalizePokemonIdentifier(identifier);
+  const selectedVersionGroup = isGameVersionGroup(versionGroup) ? versionGroup : DEFAULT_GAME_VERSION_GROUP;
   const cached = getCached(normalized);
-  if (cached && !forceRefresh && isFresh(cached, CACHE_MAX_AGE_MS)) {
+  if (cached && !forceRefresh && isFresh(cached, CACHE_MAX_AGE_MS) && hasLevelUpMoves(cached, selectedVersionGroup)) {
     if (isValidEvolution(cached.evolution)) return { pokemon: cached, source: 'cache', stale: false };
     const enriched = await enrichWithEvolution(cached); if (enriched !== cached) cachePokemon(enriched); return { pokemon: enriched, source: 'cache', stale: false };
   }
-  try { const raw = await fetchPokemon(normalized); const pokemon = await enrichWithEvolution(normalizeApiPokemon(raw)); cachePokemon(pokemon); return { pokemon, source: 'network', stale: false }; }
-  catch (error) { if (cached) return { pokemon: cached, source: 'stale-cache', stale: true, error }; throw error; }
+  try {
+    const raw = await fetchPokemon(normalized);
+    const refreshed = normalizeApiPokemon(raw, selectedVersionGroup);
+    const pokemon = await enrichWithEvolution(mergePokemon(cached, refreshed));
+    cachePokemon(pokemon);
+    return { pokemon, source: 'network', stale: false };
+  } catch (error) {
+    if (cached) return { pokemon: cached, source: 'stale-cache', stale: true, error };
+    throw error;
+  }
+}
+export function getLevelUpMoves(pokemon, versionGroup = state.settings.gameVersionGroup) {
+  const selectedVersionGroup = isGameVersionGroup(versionGroup) ? versionGroup : DEFAULT_GAME_VERSION_GROUP;
+  return hasLevelUpMoves(pokemon, selectedVersionGroup) ? [...pokemon.levelUpMoves[selectedVersionGroup]] : null;
 }
 export function rememberPokemonLookup(pokemon) {
   if (!isValidCachedPokemon(pokemon)) return false;
@@ -117,4 +166,4 @@ export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
   catch (error) { if (cached) return { names: cached.names, source: 'stale-cache', stale: true, error }; throw error; }
 }
 export function getPokemonCacheEntryCount() { return new Set(Object.values(state.cache.pokemon ?? {}).filter(isValidCachedPokemon).map(record => record.id)).size; }
-export function clearPokemonCache() { state.cache.pokemon = {}; state.cache.pokemonNameIndex = null; state.cache.recentPokemonIds = []; return saveCache(state.cache); }
+export function clearPokemonCache() { state.cache.pokemon = {}; state.cache.moves = {}; state.cache.pokemonNameIndex = null; state.cache.recentPokemonIds = []; return saveCache(state.cache); }
