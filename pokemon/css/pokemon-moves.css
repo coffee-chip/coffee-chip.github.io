@@ -1,0 +1,24 @@
+.pokemon-level-up-moves h3 { margin-top: 0; margin-bottom: .25rem; }
+.pokemon-level-up-moves-intro { margin-top: 0; margin-bottom: .7rem; }
+.pokemon-level-up-moves-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.pokemon-level-up-moves-table th, .pokemon-level-up-moves-table td { padding: .45rem .35rem; border-bottom: 1px solid var(--border-default); text-align: left; vertical-align: middle; }
+.pokemon-level-up-moves-table th { color: var(--text-muted); font-size: .76rem; font-weight: 700; letter-spacing: .025em; text-transform: uppercase; }
+.pokemon-level-up-moves-table tbody tr:last-child td { border-bottom: 0; }
+.pokemon-level-up-move-level { width: 3.2rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pokemon-level-up-move-button { min-height: 2.1rem; padding: .15rem .25rem; border-radius: .35rem; font-weight: 650; text-align: left; }
+.pokemon-level-up-move-button[aria-pressed="true"], .pokemon-level-up-move-button:focus-visible { background: var(--action-primary-soft); color: var(--action-primary); outline: none; }
+.pokemon-level-up-move-type { width: 2.5rem; text-align: center !important; }
+.pokemon-level-up-move-type .type-icon { display: inline-block; width: 1.35rem; height: 1.35rem; vertical-align: middle; }
+
+button.transparent-button.move-details-banner { position: fixed; z-index: 40; left: max(.75rem, env(safe-area-inset-left)); right: max(.75rem, env(safe-area-inset-right)); bottom: calc(5.4rem + env(safe-area-inset-bottom)); display: grid; gap: .7rem; max-width: 46rem; margin: 0 auto; padding: .85rem; border: 1px solid var(--action-primary); border-radius: .8rem; background: var(--panel-background); color: var(--text-primary); box-shadow: 0 .4rem 1.4rem rgb(0 0 0 / .22); text-align: left; }
+.move-details-heading { display: flex; align-items: center; gap: .45rem; }
+.move-details-heading .type-icon { width: 1.45rem; height: 1.45rem; }
+.move-details-stats { display: flex; gap: 1rem; }
+.move-details-stats span { display: grid; gap: .08rem; }
+.move-details-stats strong { color: var(--text-muted); font-size: .72rem; letter-spacing: .025em; text-transform: uppercase; }
+.move-details-description { margin: 0; line-height: 1.4; }
+.move-details-dismiss-hint { color: var(--text-muted); font-size: .78rem; text-align: right; }
+
+@media (hover: hover) {
+  .pokemon-level-up-move-button:hover { background: var(--action-primary-soft); color: var(--action-primary); }
+}
