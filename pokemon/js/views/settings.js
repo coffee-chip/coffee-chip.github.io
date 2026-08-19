@@ -3,6 +3,8 @@ import { loadPersistentData, saveProgress, saveSettings } from '../storage.js';
 import { applyTheme, APPEARANCE_PREFERENCES, PALETTE_THEMES } from '../theme.js';
 import { renderDeveloperOverlay } from '../developerOverlay.js';
 import { clearPokemonCache, getPokemonCacheEntryCount } from '../data/pokemonRepository.js';
+import { GAME_VERSION_GROUPS } from '../data/gameVersions.js';
+import { getMoveCacheEntryCount } from '../data/moveRepository.js';
 import { serviceWorkerState, subscribeServiceWorker, checkForLatestVersion, applyWaitingUpdate, clearAppCaches } from '../serviceWorker.js';
 
 let resetStage = 'idle';
@@ -32,6 +34,34 @@ function persistResetProgress() {
 function statusLabel() {
   const labels = { unsupported: 'Unsupported', 'not-registered': 'Not registered', registering: 'Registering', active: 'Active', checking: 'Checking for updates', updating: 'Downloading update', 'update-ready': 'Update ready', 'applying-update': 'Applying update', error: 'Error' };
   return labels[serviceWorkerState.status] ?? serviceWorkerState.status;
+}
+
+function appendGameDataControl(panel, render) {
+  const gameLabel = el('label', { className: 'settings-field' });
+  gameLabel.append(el('span', { text: 'Game' }));
+  const gameSelect = el('select');
+  let currentGeneration = null;
+  let group = null;
+  for (const game of GAME_VERSION_GROUPS) {
+    if (game.generation !== currentGeneration) {
+      currentGeneration = game.generation;
+      group = document.createElement('optgroup');
+      group.label = currentGeneration;
+      gameSelect.append(group);
+    }
+    const option = document.createElement('option');
+    option.value = game.id;
+    option.textContent = game.label;
+    option.selected = state.settings.gameVersionGroup === game.id;
+    group.append(option);
+  }
+  gameSelect.addEventListener('change', () => {
+    state.settings.gameVersionGroup = gameSelect.value;
+    saveSettings(state.settings);
+    render();
+  });
+  gameLabel.append(gameSelect);
+  panel.append(gameLabel);
 }
 
 function appendAppearanceControls(panel) {
@@ -79,6 +109,7 @@ export function renderSettings(container, render) {
 
   const preferences = el('div', { className: 'panel settings-section' });
   preferences.append(el('h3', { text: 'Preferences' }));
+  appendGameDataControl(preferences, render);
   appendAppearanceControls(preferences);
   preferences.append(el('p', { className: 'muted', text: `Default quiz type: ${state.settings.quiz.defaultMode}.` }));
   const debugLink = el('a', { className: 'button-link', text: 'Developer diagnostics' });
@@ -126,10 +157,10 @@ export function renderSettings(container, render) {
   updateActions.append(clearButton);
   developerPanel.append(updateActions);
 
-  developerPanel.append(el('p', { className: 'muted', text: `Cached Pokémon: ${getPokemonCacheEntryCount()} · Name index: ${state.cache.pokemonNameIndex ? 'cached' : 'not cached'}` }));
+  developerPanel.append(el('p', { className: 'muted', text: `Cached Pokémon: ${getPokemonCacheEntryCount()} · Cached moves: ${getMoveCacheEntryCount()} · Name index: ${state.cache.pokemonNameIndex ? 'cached' : 'not cached'}` }));
   const clearPokemonButton = el('button', { className: 'secondary-button', text: 'Clear Pokémon cache' });
   clearPokemonButton.type = 'button';
-  clearPokemonButton.addEventListener('click', () => { const cleared = clearPokemonCache(); pokemonCacheMessage = cleared ? 'Pokémon records and autocomplete names were cleared.' : 'Pokémon cache was cleared for this session, but could not be saved.'; render(); });
+  clearPokemonButton.addEventListener('click', () => { const cleared = clearPokemonCache(); pokemonCacheMessage = cleared ? 'Pokémon records, move data, and autocomplete names were cleared.' : 'Pokémon cache was cleared for this session, but could not be saved.'; render(); });
   developerPanel.append(clearPokemonButton);
 
   if (serviceMessage || serviceWorkerState.message) { const status = el('p', { className: 'settings-status', text: serviceMessage || serviceWorkerState.message }); status.setAttribute('role', 'status'); developerPanel.append(status); }
