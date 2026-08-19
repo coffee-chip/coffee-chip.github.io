@@ -1,4 +1,5 @@
 import { parseRelationshipKey } from './relationships.js';
+import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './data/gameVersions.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
 export const STORAGE_VERSION = 9;
@@ -6,12 +7,12 @@ export const STORAGE_VERSION = 9;
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
   settings: {
-    paletteTheme: 'classic', appearance: 'system',
+    paletteTheme: 'classic', appearance: 'system', gameVersionGroup: DEFAULT_GAME_VERSION_GROUP,
     developer: { autoUpdateOnLaunch: false, showOverlay: false, showErrorOverlay: false },
     quiz: { defaultMode: 'choose-switch', modes: { 'choose-switch': {} } }
   },
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
-  cache: { pokemon: {}, pokemonNameIndex: null, recentPokemonIds: [] },
+  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] },
   teams: [
     { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, pokemon: [] },
     { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, pokemon: [] }
@@ -36,6 +37,7 @@ function normalizeSettings(value) {
   return {
     paletteTheme: value.paletteTheme === 'classic' ? 'classic' : defaults.paletteTheme,
     appearance: ['system', 'light', 'dark'].includes(value.appearance) ? value.appearance : defaults.appearance,
+    gameVersionGroup: isGameVersionGroup(value.gameVersionGroup) ? value.gameVersionGroup : defaults.gameVersionGroup,
     developer: {
       autoUpdateOnLaunch: developer.autoUpdateOnLaunch === true,
       showOverlay: developer.showOverlay === true,
@@ -124,6 +126,7 @@ function normalizeRecentPokemonIds(value) {
 function normalizeCache(value) {
   return {
     pokemon: isObject(value?.pokemon) ? value.pokemon : {},
+    moves: isObject(value?.moves) ? value.moves : {},
     pokemonNameIndex: normalizePokemonNameIndex(value?.pokemonNameIndex),
     recentPokemonIds: normalizeRecentPokemonIds(value?.recentPokemonIds)
   };
