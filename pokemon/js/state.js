@@ -1,4 +1,4 @@
-import { parseRelationshipKey } from './relationships.js';
+import { parseDirectionalRelationshipKey } from './relationships.js';
 import { DEFAULT_GAME_VERSION_GROUP } from './data/gameVersions.js';
 
 function emptyProgress() {
@@ -120,8 +120,9 @@ export function startQuizSession() {
 }
 
 function recordRelationshipOutcome(outcome, timestamp) {
-  const relationship = parseRelationshipKey(outcome.key);
+  const relationship = parseDirectionalRelationshipKey(outcome.key);
   const existing = state.progress.relationshipStats[relationship.key] ?? {
+    genericKey: relationship.genericKey, direction: relationship.direction,
     attackingType: relationship.attackingType, defendingType: relationship.defendingType,
     attempts: 0, earnedScore: 0, correctSelections: 0, misses: 0, falseSelections: 0, lastSeen: null
   };
