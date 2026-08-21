@@ -49,3 +49,5 @@
 - Study Pokémon lookup now shows a game-specific “Moves learned by level” table beneath Incoming damage and Outgoing attacks. The selected game is stored in Settings using PokéAPI version groups, initially FireRed / LeafGreen. Pokémon cache level-up learnsets per selected game, while move type, damage, accuracy, and English description data are cached separately. Tapping a move opens a dismissible bottom details banner.
 
 - Study level-up move rows can be starred. Starred state is persisted by normalized move name independently of Pokémon and level, so it is shared anywhere that move appears. The move table can optionally compare one direct previous/next evolution: rows are merged by level and the compared evolution is visually muted.
+
+- Changing the global game now centrally clears game-dependent Pokémon, move, recent-lookup, and autocomplete caches while preserving teams, starred moves, and progress. Pokémon records store compact PokéAPI type history and resolve their displayed/calculated types for the selected game generation (for example, Clefairy is Normal in FireRed / LeafGreen).
