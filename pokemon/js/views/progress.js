@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { getActiveTypes } from '../engine/effectiveness.js';
 import { getNationalDexLimitForVersionGroup } from '../data/gameVersions.js';
+import { getPokemonRecognitionRecordForVersionGroup } from '../data/pokemonRecognition.js';
 import { PRACTICE_PRESETS } from '../quiz/modes.js';
 import { createTypeBadge } from '../components/typeBadge.js';
 import {
@@ -165,7 +166,11 @@ function getRecognitionPoolSize() {
 function getAllRecognitionRecords() {
   return Array.from({ length: getRecognitionPoolSize() }, (_, index) => {
     const pokemonId = index + 1;
-    const saved = state.progress.pokemonRecognitionStats?.[String(pokemonId)];
+    const saved = getPokemonRecognitionRecordForVersionGroup(
+      state.progress.pokemonRecognitionStats,
+      pokemonId,
+      state.settings.gameVersionGroup
+    );
     return saved ? { ...saved } : {
       pokemonId, pokemonName: cachedPokemonName(pokemonId), attempts: 0, earnedScore: 0,
       exactAnswers: 0, correctSelections: 0, misses: 0, falseSelections: 0, lastSeen: null
