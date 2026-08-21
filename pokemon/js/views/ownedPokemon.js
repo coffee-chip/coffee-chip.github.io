@@ -11,7 +11,7 @@ const resolutionFailures = new Map();
 const loadingEntries = new Set();
 let currentRender = null;
 let filterQuery = '';
-let addMessage = '';
+let addError = '';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -151,7 +151,7 @@ function createFilter(entries) {
 }
 
 function createAddForm(render) {
-  const form = el('form', { className: 'panel pokemon-lookup-form owned-pokemon-add-form' });
+  const form = el('div', { className: 'panel pokemon-lookup-form owned-pokemon-add-form' });
   const label = el('label');
   label.append(el('span', { text: 'Add Pokémon' }));
   const searchField = el('div', { className: 'search-field' });
@@ -161,33 +161,23 @@ function createAddForm(render) {
   input.autocomplete = 'off';
   input.autocapitalize = 'none';
   input.spellcheck = false;
-  input.placeholder = 'e.g. Bulbasaur or 1';
-  input.setAttribute('aria-label', 'Pokémon name or Pokédex number');
+  input.placeholder = 'Start typing a Pokémon name';
+  input.setAttribute('aria-label', 'Pokémon name');
   searchField.append(input);
   label.append(searchField);
+  form.append(label);
+  if (addError) form.append(el('p', { className: 'pokemon-lookup-error', text: addError }));
 
-  const submit = el('button', { className: 'primary-button', text: 'Add' });
-  submit.type = 'submit';
-  form.append(label, submit);
-  if (addMessage) form.append(el('p', { className: addMessage.error ? 'pokemon-lookup-error' : 'owned-pokemon-status', text: addMessage.text }));
-
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    const query = input.value.trim();
-    if (!query) {
-      input.focus();
-      return;
-    }
-    submit.disabled = true;
-    addMessage = '';
+  input.addEventListener('pokemon-autocomplete-select', async event => {
+    const name = event.detail?.name;
+    if (!name) return;
+    input.disabled = true;
+    addError = '';
     try {
-      const result = await getPokemon(query);
-      const entry = addOwnedPokemon(result.pokemon);
-      addMessage = entry
-        ? { text: `${result.pokemon.displayName} added to My Pokémon.`, error: false }
-        : { text: 'Could not add that Pokémon.', error: true };
+      const result = await getPokemon(name);
+      if (!addOwnedPokemon(result.pokemon)) addError = 'Could not add that Pokémon.';
     } catch (error) {
-      addMessage = { text: error?.message ?? 'Could not look up that Pokémon.', error: true };
+      addError = error?.message ?? 'Could not look up that Pokémon.';
     }
     render();
   });
