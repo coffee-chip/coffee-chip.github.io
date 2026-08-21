@@ -6,9 +6,6 @@
 .button-selector-option { min-width: 0; padding: .55rem .65rem; font-weight: 400; line-height: 1.2; }
 .button-selector-option[aria-selected="true"], .button-selector-option[aria-checked="true"] { border-color: var(--action-primary); background: var(--action-primary-soft); color: var(--action-primary); font-weight: 700; }
 
-.study-controls-with-tabs { margin-top: 0; }
-.study-tabs { grid-column: 1 / -1; }
-
 .study-results { display: grid; gap: .75rem; }
 .study-heading { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; color: var(--text-muted); }
 .matchup-group { border: 1px solid var(--border-default); border-radius: .75rem; padding: .85rem; background: var(--subtle-background); }
