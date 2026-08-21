@@ -54,10 +54,6 @@ function describePokemonChoice(choice, promptPokemon) {
     : `${choice.displayName} and ${promptPokemon.displayName} have no non-neutral type interactions.`;
 }
 
-function virtualTypePokemon(type) {
-  return { displayName: `a ${titleCase(type)}-type Pokémon`, types: [type] };
-}
-
 function buildPokemonChoiceExplanation(question, result) {
   const promptPokemon = question.display?.pokemon;
   const correctId = result.correctAnswers[0];
@@ -72,34 +68,20 @@ function buildPokemonChoiceExplanation(question, result) {
   const selectedPokemon = question.choicePokemon?.[selectedId];
   if (selectedPokemon && selectedPokemon.id !== correctPokemon.id) {
     lines.push({
-      label: `Your choice: ${selectedPokemon.displayName}`,
+      label: `Your choice: ${selectedPokemon.displayName} (${formatList(selectedPokemon.types.map(titleCase))})`,
       text: describePokemonChoice(selectedPokemon, promptPokemon)
     });
   }
   return lines;
 }
 
-function buildTypeChoiceExplanation(question, result) {
+function buildTypeChoiceExplanation(question) {
   const promptPokemon = question.display?.pokemon;
   if (!promptPokemon) return [];
-  const correctTypes = result.correctAnswers;
-  const incorrectTypes = result.incorrectAnswers;
-  const describeTypes = types => types.flatMap(type => {
-    const candidate = virtualTypePokemon(type);
-    const sentences = [
-      ...describeNonNeutralMatchup(candidate, promptPokemon),
-      ...describeNonNeutralMatchup(promptPokemon, candidate)
-    ];
-    return sentences.length
-      ? sentences
-      : [`A ${titleCase(type)}-type Pokémon and ${promptPokemon.displayName} have no non-neutral type interactions.`];
-  });
-  const lines = [];
-  const correctSentences = describeTypes(correctTypes);
-  if (correctSentences.length) lines.push({ label: 'The advantageous types', text: correctSentences.join(' ') });
-  const incorrectSentences = describeTypes(incorrectTypes);
-  if (incorrectSentences.length) lines.push({ label: 'Your other selections', text: incorrectSentences.join(' ') });
-  return lines;
+  return [{
+    label: `${promptPokemon.displayName}'s type`,
+    text: `${promptPokemon.displayName} is a ${formatList(promptPokemon.types.map(titleCase))}-type Pokémon.`
+  }];
 }
 
 export function getBattleScenarioExplanation(question, result) {
