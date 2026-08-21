@@ -1,7 +1,7 @@
 import { getPokemon } from '../data/pokemonRepository.js';
 import { getActiveTypes, getPokemonTypeAdvantageScore } from '../engine/effectiveness.js';
 import { getPokemonAdvantageScore } from '../engine/pokemonAdvantage.js';
-import { POKEMON_POOLS } from './generators.js';
+import { getPokemonIdsForPool } from './generators.js';
 
 function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
@@ -16,18 +16,13 @@ function shuffled(items) {
   return copy;
 }
 
-function idsForPool(poolId) {
-  const pool = POKEMON_POOLS[poolId] ?? POKEMON_POOLS['gen-1'];
-  return Array.from({ length: pool.maxId - pool.minId + 1 }, (_, index) => pool.minId + index);
-}
-
 async function loadPokemon(id) {
   const { pokemon } = await getPokemon(id);
   return pokemon;
 }
 
-export async function createBattleTypeQuestion({ poolId = 'gen-1' } = {}) {
-  const ids = idsForPool(poolId);
+export async function createBattleTypeQuestion({ poolId = 'available' } = {}) {
+  const ids = getPokemonIdsForPool(poolId);
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const pokemon = await loadPokemon(randomItem(ids));
     const correctAnswers = getActiveTypes().filter(type => getPokemonTypeAdvantageScore([type], pokemon.types) > 0);
@@ -55,8 +50,8 @@ export async function createBattleTypeQuestion({ poolId = 'gen-1' } = {}) {
   throw new Error('Could not generate a battle type scenario with at least one advantageous type.');
 }
 
-export async function createBattlePokemonQuestion({ poolId = 'gen-1' } = {}) {
-  const ids = idsForPool(poolId);
+export async function createBattlePokemonQuestion({ poolId = 'available' } = {}) {
+  const ids = getPokemonIdsForPool(poolId);
   if (ids.length < 5) throw new Error('Battle Pokémon questions require a pool with at least five Pokémon.');
 
   const target = await loadPokemon(randomItem(ids));
