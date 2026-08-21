@@ -12,7 +12,7 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
     quiz: { defaultMode: 'choose-switch', modes: { 'choose-switch': {} } }
   },
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
-  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [], typeChart: null },
+  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] },
   starredMoves: [],
   teams: [
     { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, pokemon: [] },
@@ -124,30 +124,12 @@ function normalizeRecentPokemonIds(value) {
   return [...new Set(value.map(Number).filter(id => Number.isInteger(id) && id > 0))].slice(0, 10);
 }
 
-function normalizeTypeChart(value) {
-  if (!isObject(value) || !isGameVersionGroup(value.versionGroup) || !Number.isInteger(value.generationNumber)
-    || !Array.isArray(value.types) || !isObject(value.offensiveChart) || typeof value.fetchedAt !== 'string') return null;
-  const types = [...new Set(value.types.filter(type => typeof type === 'string' && type.length > 0))];
-  if (!types.length) return null;
-  const offensiveChart = {};
-  for (const type of types) {
-    const relations = value.offensiveChart[type];
-    if (!isObject(relations)) return null;
-    offensiveChart[type] = {};
-    for (const [defendingType, multiplier] of Object.entries(relations)) {
-      if (types.includes(defendingType) && [0, 0.5, 2].includes(multiplier)) offensiveChart[type][defendingType] = multiplier;
-    }
-  }
-  return { versionGroup: value.versionGroup, generationNumber: value.generationNumber, types, offensiveChart, fetchedAt: value.fetchedAt };
-}
-
 function normalizeCache(value) {
   return {
     pokemon: isObject(value?.pokemon) ? value.pokemon : {},
     moves: isObject(value?.moves) ? value.moves : {},
     pokemonNameIndex: normalizePokemonNameIndex(value?.pokemonNameIndex),
-    recentPokemonIds: normalizeRecentPokemonIds(value?.recentPokemonIds),
-    typeChart: normalizeTypeChart(value?.typeChart)
+    recentPokemonIds: normalizeRecentPokemonIds(value?.recentPokemonIds)
   };
 }
 
