@@ -1,8 +1,9 @@
 import { parseDirectionalRelationshipKey } from './relationships.js';
 import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './data/gameVersions.js';
+import { parsePokemonRecognitionKey } from './data/pokemonRecognition.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 10;
+export const STORAGE_VERSION = 11;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -88,12 +89,19 @@ function normalizePokemonRecognitionStats(value) {
   if (!isObject(value)) return normalized;
   for (const [storedKey, record] of Object.entries(value)) {
     if (!isObject(record)) continue;
-    const pokemonId = Number(record.pokemonId ?? storedKey);
-    if (!Number.isInteger(pokemonId) || pokemonId < 1) continue;
+    let recognition;
+    try { recognition = parsePokemonRecognitionKey(storedKey); } catch { continue; }
+    const generationStart = Number(record.generationStart);
+    const generationEnd = record.generationEnd === null ? null : Number(record.generationEnd);
+    if (!Number.isInteger(generationStart) || generationStart < 1
+      || (generationEnd !== null && (!Number.isInteger(generationEnd) || generationEnd < generationStart))) continue;
     const attempts = Math.floor(nonnegativeNumber(record.attempts));
-    normalized[String(pokemonId)] = {
-      pokemonId,
-      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName ? record.pokemonName : `pokemon-${pokemonId}`,
+    normalized[recognition.key] = {
+      pokemonId: recognition.pokemonId,
+      typeSignature: recognition.typeSignature,
+      generationStart,
+      generationEnd,
+      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName ? record.pokemonName : `pokemon-${recognition.pokemonId}`,
       attempts,
       earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
       exactAnswers: Math.min(Math.floor(nonnegativeNumber(record.exactAnswers)), attempts),
@@ -191,10 +199,12 @@ function normalizeTeams(value) {
 }
 
 function normalizeCurrentData(raw) {
-  if (!isObject(raw) || ![9, STORAGE_VERSION].includes(raw.version)) return cloneDefaults();
-  const progress = raw.version === STORAGE_VERSION
-    ? raw.progress
-    : { ...raw.progress, relationshipStats: {} };
+  if (!isObject(raw) || ![9, 10, STORAGE_VERSION].includes(raw.version)) return cloneDefaults();
+  const progress = {
+    ...raw.progress,
+    relationshipStats: raw.version === 9 ? {} : raw.progress?.relationshipStats,
+    pokemonRecognitionStats: raw.version === STORAGE_VERSION ? raw.progress?.pokemonRecognitionStats : {}
+  };
   return {
     version: STORAGE_VERSION,
     settings: normalizeSettings(raw.settings),
