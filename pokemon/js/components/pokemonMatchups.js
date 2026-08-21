@@ -1,5 +1,4 @@
-import { TYPES } from '../data/types.js';
-import { getDefensiveMatchups, getMultiplier } from '../engine/effectiveness.js';
+import { getActiveTypes, getDefensiveMatchups, getMultiplier } from '../engine/effectiveness.js';
 import { createRelationshipKey } from '../relationships.js';
 import { createMnemonicTypeBadge } from './mnemonicBadge.js';
 
@@ -65,7 +64,7 @@ export function createPokemonDefensiveMatchups(defendingTypes, onMnemonic) {
 export function createPokemonOffensiveMatchups(pokemonTypes, onMnemonic) {
   const strong = [];
   const weak = [];
-  for (const defendingType of TYPES) {
+  for (const defendingType of getActiveTypes()) {
     const multipliers = pokemonTypes.map(attackingType => getMultiplier(attackingType, [defendingType]));
     if (multipliers.some(multiplier => multiplier > 1)) strong.push(defendingType);
     else if (multipliers.every(multiplier => multiplier < 1)) weak.push(defendingType);
