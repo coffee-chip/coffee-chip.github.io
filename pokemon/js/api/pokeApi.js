@@ -66,12 +66,6 @@ export async function fetchMove(identifier, options = {}) {
   }
 }
 
-export async function fetchType(identifier, options = {}) {
-  const normalized = String(identifier ?? '').trim().toLowerCase();
-  if (!normalized) throw new PokeApiError('Enter a type name.', { code: 'invalid-identifier' });
-  return fetchJson(\`\${API_BASE}/type/\${encodeURIComponent(normalized)}/\`, options);
-}
-
 export async function fetchPokemonSpecies(identifier, options = {}) {
   const normalized = normalizePokemonIdentifier(identifier);
   return fetchJson(`${API_BASE}/pokemon-species/${encodeURIComponent(normalized)}/`, options);
