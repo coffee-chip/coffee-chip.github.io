@@ -1,5 +1,6 @@
 import { parseDirectionalRelationshipKey } from './relationships.js';
 import { DEFAULT_GAME_VERSION_GROUP } from './data/gameVersions.js';
+import { parsePokemonRecognitionKey } from './data/pokemonRecognition.js';
 
 function emptyProgress() {
   return { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} };
@@ -137,12 +138,18 @@ function recordRelationshipOutcome(outcome, timestamp) {
 
 function recordPokemonRecognition(question, result, timestamp) {
   if (question.objectiveId !== 'recognize-pokemon-type') return;
-  const pokemonId = Number(question.metadata?.pokemonId);
-  if (!Number.isInteger(pokemonId)) return;
-  const key = String(pokemonId);
-  const existing = state.progress.pokemonRecognitionStats[key] ?? {
-    pokemonId,
-    pokemonName: question.metadata?.pokemonName ?? `pokemon-${pokemonId}`,
+  let recognition;
+  try { recognition = parsePokemonRecognitionKey(question.metadata?.pokemonRecognitionKey); } catch { return; }
+  const generationStart = question.metadata?.pokemonRecognitionGenerationStart;
+  const generationEnd = question.metadata?.pokemonRecognitionGenerationEnd;
+  if (!Number.isInteger(generationStart) || generationStart < 1
+    || (generationEnd !== null && (!Number.isInteger(generationEnd) || generationEnd < generationStart))) return;
+  const existing = state.progress.pokemonRecognitionStats[recognition.key] ?? {
+    pokemonId: recognition.pokemonId,
+    typeSignature: recognition.typeSignature,
+    generationStart,
+    generationEnd,
+    pokemonName: question.metadata?.pokemonName ?? `pokemon-${recognition.pokemonId}`,
     attempts: 0,
     earnedScore: 0,
     exactAnswers: 0,
@@ -159,7 +166,7 @@ function recordPokemonRecognition(question, result, timestamp) {
   existing.misses += result.missedAnswers?.length ?? 0;
   existing.falseSelections += result.incorrectAnswers?.length ?? 0;
   existing.lastSeen = timestamp;
-  state.progress.pokemonRecognitionStats[key] = existing;
+  state.progress.pokemonRecognitionStats[recognition.key] = existing;
 }
 
 function recordQuizStat(modeId, score) {
