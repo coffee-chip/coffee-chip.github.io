@@ -118,6 +118,19 @@
   justify-content: center;
 }
 
+.battle-scenario-explanation {
+  display: grid;
+  gap: .4rem;
+  margin-top: .9rem;
+  padding-top: .85rem;
+  border-top: 1px solid var(--border-default);
+}
+
+.battle-scenario-explanation h4,
+.battle-scenario-explanation p {
+  margin: 0;
+}
+
 .quiz-pokemon-choice[aria-pressed="true"] {
   outline: 3px solid var(--focus-ring);
   outline-offset: 1px;
