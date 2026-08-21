@@ -1,5 +1,6 @@
 import { state } from '../state.js';
 import { addPokemonToTeam, getTeams, TEAM_MAX_POKEMON } from '../data/teamRepository.js';
+import { addOwnedPokemon } from '../data/ownedPokemonRepository.js';
 import { createOverflowMenuButton, setOverflowMenuExpanded } from './overflowMenuButton.js';
 
 function closeMenu(root) {
@@ -19,11 +20,32 @@ function openTeamPicker(root, card, pokemon) {
   const menu = document.createElement('div');
   menu.className = 'pokemon-team-menu';
   menu.setAttribute('role', 'dialog');
-  menu.setAttribute('aria-label', `Add ${pokemon.displayName} to a team`);
+  menu.setAttribute('aria-label', `Actions for ${pokemon.displayName}`);
 
   const heading = document.createElement('strong');
-  heading.textContent = 'Add to team…';
+  heading.textContent = 'Add to…';
   menu.append(heading);
+
+  const ownedButton = document.createElement('button');
+  ownedButton.type = 'button';
+  ownedButton.className = 'secondary-button';
+  ownedButton.textContent = 'My Pokémon';
+  ownedButton.addEventListener('click', () => {
+    const entry = addOwnedPokemon(pokemon);
+    menu.replaceChildren();
+    const message = document.createElement('span');
+    message.className = entry ? 'pokemon-team-menu-success' : 'pokemon-team-menu-status';
+    message.textContent = entry
+      ? `${pokemon.displayName} added to My Pokémon.`
+      : 'Could not add that Pokémon.';
+    menu.append(message);
+    window.setTimeout(() => closeMenu(root), 1200);
+  });
+  menu.append(ownedButton);
+
+  const teamHeading = document.createElement('strong');
+  teamHeading.textContent = 'Team';
+  menu.append(teamHeading);
 
   const options = document.createElement('div');
   options.className = 'pokemon-team-menu-options';
