@@ -137,6 +137,7 @@ function warmPokemonNameIndex() {
 }
 
 subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
+document.addEventListener('pokemon-game-data-cleared', warmPokemonNameIndex);
 startRouter(route => {
   state.route = route.name;
   state.routeParams = route.params;
