@@ -3,6 +3,7 @@ import { getActiveTypes, getMultiplier } from '../engine/effectiveness.js';
 import { createRelationship } from '../relationships.js';
 import { getPokemon } from '../data/pokemonRepository.js';
 import { state } from '../state.js';
+import { getGameVersionGroup, getNationalDexLimitForGeneration, getNationalDexLimitForVersionGroup } from '../data/gameVersions.js';
 
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
 function questionRelationship(attackingType, defendingType, answer, allowedOutcomes) {
@@ -56,15 +57,36 @@ export const SAMPLING_STRATEGIES = {
 };
 export const POKEMON_SAMPLING_STRATEGIES = SAMPLING_STRATEGIES;
 
-export const POKEMON_POOLS = {
-  'gen-1': { id: 'gen-1', label: 'Generation 1', minId: 1, maxId: 151 },
-  'gen-2': { id: 'gen-2', label: 'Generation 2', minId: 152, maxId: 251 },
-  'gen-3': { id: 'gen-3', label: 'Generation 3', minId: 252, maxId: 386 },
-  'gen-1-3': { id: 'gen-1-3', label: 'Generations 1–3', minId: 1, maxId: 386 }
-};
+const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
 
-function idsForPool(poolId) {
-  const pool = POKEMON_POOLS[poolId] ?? POKEMON_POOLS['gen-1'];
+export function getPokemonPoolsForVersionGroup(versionGroup = state.settings.gameVersionGroup) {
+  const generationNumber = getGameVersionGroup(versionGroup).generationNumber;
+  const pools = [];
+  let minId = 1;
+  for (let generation = 1; generation <= generationNumber; generation += 1) {
+    const maxId = getNationalDexLimitForGeneration(generation);
+    pools.push({
+      id: `gen-${generation}`,
+      label: `Generation ${ROMAN_NUMERALS[generation - 1]}`,
+      minId,
+      maxId
+    });
+    minId = maxId + 1;
+  }
+  if (generationNumber > 1) {
+    pools.push({
+      id: 'available',
+      label: `Generations I–${ROMAN_NUMERALS[generationNumber - 1]}`,
+      minId: 1,
+      maxId: getNationalDexLimitForVersionGroup(versionGroup)
+    });
+  }
+  return pools;
+}
+
+export function getPokemonIdsForPool(poolId, versionGroup = state.settings.gameVersionGroup) {
+  const pools = getPokemonPoolsForVersionGroup(versionGroup);
+  const pool = pools.find(candidate => candidate.id === poolId) ?? pools.at(-1);
   return Array.from({ length: pool.maxId - pool.minId + 1 }, (_, index) => pool.minId + index);
 }
 
@@ -257,8 +279,8 @@ export function createChooseMoveQuestion({
   };
 }
 
-export async function createPokemonTypeRecognitionQuestion({ poolId = 'gen-1', samplingStrategy = 'adaptive', recentPokemonIds = [] } = {}) {
-  const ids = idsForPool(poolId);
+export async function createPokemonTypeRecognitionQuestion({ poolId = 'available', samplingStrategy = 'adaptive', recentPokemonIds = [] } = {}) {
+  const ids = getPokemonIdsForPool(poolId);
   const id = samplingStrategy === 'random'
     ? randomItem(ids)
     : weightedRandom(ids, pokemonId => getPokemonSamplingWeight(pokemonId, recentPokemonIds));
