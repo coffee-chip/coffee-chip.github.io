@@ -17,7 +17,6 @@ import { enhanceTeamRivalLink } from './components/teamRivalLink.js';
 import { enhanceStudyTabs } from './components/studyTabs.js';
 import { initializeQuizAutoScroll } from './components/quizAutoScroll.js';
 import { getPokemonNameIndex } from './data/pokemonRepository.js';
-import { ensureSelectedTypeChart } from './data/typeChartRepository.js';
 import { getTeam } from './data/teamRepository.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { renderDeveloperOverlay } from './developerOverlay.js';
@@ -51,10 +50,6 @@ const viewRoot = document.querySelector('#app-view');
 const pageTitle = document.querySelector('#page-title');
 const pageHeaderActions = document.querySelector('.page-header-actions');
 const navLinks = [...document.querySelectorAll('[data-route]')];
-let applicationStarted = false;
-let typeChartStatus = 'loading';
-let typeChartError = null;
-let engineChecksRun = false;
 
 function renderUpdateBanner() {
   let banner = document.querySelector('.update-banner');
@@ -111,25 +106,20 @@ function renderTeamHeaderActions(render) {
 
 function render() {
   renderPageHeader();
-  if (typeChartStatus === 'ready') {
-    const view = VIEWS[state.route] ?? VIEWS.quiz;
-    view(viewRoot, render);
-    if (state.route === 'team') {
-      viewRoot.querySelector('.team-detail-back')?.remove();
-      viewRoot.querySelector('.team-detail-heading')?.remove();
-    }
-    renderTeamHeaderActions(render);
-    enhanceStudyTabs(viewRoot);
-    enhancePokemonEvolutionControls(viewRoot);
-    enhancePokemonLookupResult(viewRoot);
-    enhancePokemonLevelUpMoves(viewRoot, render);
-    enhancePokemonTeamMenu(viewRoot);
-    enhanceTeamMemberStudyLinks(viewRoot);
-    enhanceTeamRivalLink(viewRoot);
-  } else {
-    pageHeaderActions.querySelector('.team-page-actions')?.remove();
-    renderTypeChartStatus();
+  const view = VIEWS[state.route] ?? VIEWS.quiz;
+  view(viewRoot, render);
+  if (state.route === 'team') {
+    viewRoot.querySelector('.team-detail-back')?.remove();
+    viewRoot.querySelector('.team-detail-heading')?.remove();
   }
+  renderTeamHeaderActions(render);
+  enhanceStudyTabs(viewRoot);
+  enhancePokemonEvolutionControls(viewRoot);
+  enhancePokemonLookupResult(viewRoot);
+  enhancePokemonLevelUpMoves(viewRoot, render);
+  enhancePokemonTeamMenu(viewRoot);
+  enhanceTeamMemberStudyLinks(viewRoot);
+  enhanceTeamRivalLink(viewRoot);
   const activeNavRoute = state.route === 'team' ? 'teams' : state.route;
   for (const link of navLinks) {
     if (link.dataset.route === activeNavRoute) link.setAttribute('aria-current', 'page');
@@ -146,79 +136,27 @@ function warmPokemonNameIndex() {
   }).catch(error => console.warn('Could not preload Pokémon autocomplete names.', error));
 }
 
-function renderTypeChartStatus() {
-  const page = document.createElement('section');
-  page.className = 'page';
-  const panel = document.createElement('section');
-  panel.className = 'panel';
-  const message = document.createElement('p');
-  if (typeChartStatus === 'error') {
-    message.textContent = 'Could not load the selected game’s type relationships. ' + (typeChartError?.message ?? 'Connect to the internet and try again.');
-    const retry = document.createElement('button');
-    retry.type = 'button';
-    retry.className = 'primary-button';
-    retry.textContent = 'Try again';
-    retry.addEventListener('click', loadSelectedTypeChart);
-    panel.append(message, retry);
-  } else {
-    message.textContent = 'Loading game data…';
-    panel.append(message);
-  }
-  page.append(panel);
-  viewRoot.replaceChildren(page);
-}
-
-function runEngineChecks() {
-  if (engineChecksRun) return;
-  engineChecksRun = true;
-  const engineResults = runEngineSelfTests();
-  console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
-  if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
-}
-
-async function loadSelectedTypeChart() {
-  typeChartStatus = 'loading';
-  typeChartError = null;
+subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
+document.addEventListener('pokemon-game-data-cleared', warmPokemonNameIndex);
+startRouter(route => {
+  state.route = route.name;
+  state.routeParams = route.params;
   render();
-  try {
-    await ensureSelectedTypeChart();
-  } catch (error) {
-    console.warn('Could not initialize selected game type data.', error);
-    typeChartStatus = 'error';
-    typeChartError = error;
-    render();
-    return;
-  }
-  typeChartStatus = 'ready';
-  runEngineChecks();
-  render();
-}
+});
+registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
+if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
+else window.setTimeout(warmPokemonNameIndex, 0);
 
-function initializeApplication() {
-  if (applicationStarted) return;
-  applicationStarted = true;
-  subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
-  document.addEventListener('pokemon-game-data-cleared', warmPokemonNameIndex);
-  startRouter(route => {
-    state.route = route.name;
-    state.routeParams = route.params;
-    render();
-  });
-  registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
-  if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
-  else window.setTimeout(warmPokemonNameIndex, 0);
-
-  const contractResults = validateApplicationContracts();
-  console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
-  const failedContracts = contractResults.filter(test => !test.passed);
-  if (failedContracts.length) throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
-  const architectureResults = validateQuizArchitecture();
-  console.group('Quiz architecture checks'); console.table(architectureResults); console.groupEnd();
-  if (architectureResults.some(test => !test.passed)) console.error('Quiz architecture validation failed.');
-  const iconResults = validateTypeIcons();
-  console.group('Type icon checks'); console.table(iconResults); console.groupEnd();
-  if (iconResults.some(test => !test.passed)) console.error('One or more type icons are missing.');
-  loadSelectedTypeChart();
-}
-
-initializeApplication();
+const contractResults = validateApplicationContracts();
+console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
+const failedContracts = contractResults.filter(test => !test.passed);
+if (failedContracts.length) throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
+const engineResults = runEngineSelfTests();
+console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
+if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
+const architectureResults = validateQuizArchitecture();
+console.group('Quiz architecture checks'); console.table(architectureResults); console.groupEnd();
+if (architectureResults.some(test => !test.passed)) console.error('Quiz architecture validation failed.');
+const iconResults = validateTypeIcons();
+console.group('Type icon checks'); console.table(iconResults); console.groupEnd();
+if (iconResults.some(test => !test.passed)) console.error('One or more type icons are missing.');
