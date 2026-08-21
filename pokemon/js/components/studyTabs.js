@@ -11,7 +11,7 @@ export function enhanceStudyTabs(root) {
   const controls = root.querySelector('.study-controls');
   const modeSelect = controls?.querySelector('select');
   const modeLabel = modeSelect?.closest('label');
-  if (!controls || !modeSelect || !modeLabel || controls.querySelector('.study-tabs')) return;
+  if (!controls || !modeSelect || !modeLabel || root.querySelector('.study-tabs')) return;
 
   const tabs = document.createElement('div');
   tabs.className = 'button-selector button-selector-three-column study-tabs';
@@ -33,7 +33,7 @@ export function enhanceStudyTabs(root) {
     tabs.append(button);
   }
 
-  controls.prepend(tabs);
+  controls.before(tabs);
   modeLabel.remove();
-  controls.classList.add('study-controls-with-tabs');
+  if (!controls.children.length) controls.remove();
 }
