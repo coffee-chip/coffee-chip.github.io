@@ -212,4 +212,11 @@ export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
   catch (error) { if (cached) return { names: cached.names, source: 'stale-cache', stale: true, error }; throw error; }
 }
 export function getPokemonCacheEntryCount() { return new Set(Object.values(state.cache.pokemon ?? {}).filter(isValidCachedPokemon).map(record => record.id)).size; }
-export function clearGameDataCache() { state.cache.pokemon = {}; state.cache.moves = {}; state.cache.pokemonNameIndex = null; state.cache.recentPokemonIds = []; return saveCache(state.cache); }
+export function clearGameDataCache({ typeChart = state.cache.typeChart } = {}) {
+  state.cache.pokemon = {};
+  state.cache.moves = {};
+  state.cache.pokemonNameIndex = null;
+  state.cache.recentPokemonIds = [];
+  state.cache.typeChart = typeChart;
+  return saveCache(state.cache);
+}
