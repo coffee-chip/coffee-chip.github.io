@@ -23,8 +23,11 @@ function getActiveSearchField() {
 function selectSuggestion(input, name) {
   input.value = name;
   input.dispatchEvent(new Event('input', { bubbles: true }));
-  input.focus();
   closeSuggestions();
+  input.dispatchEvent(new CustomEvent('pokemon-autocomplete-select', {
+    bubbles: true,
+    detail: { name }
+  }));
 }
 
 function findMatches(query) {
