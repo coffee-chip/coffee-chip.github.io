@@ -34,7 +34,7 @@ export const state = {
   starredMoves: [],
   teams: defaultTeams(),
   progress: emptyProgress(),
-  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] }
+  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [], typeChart: null }
 };
 
 export function getQuizModeSettings(modeId = state.quiz.mode) {
@@ -94,7 +94,8 @@ export function getPersistentSnapshot() {
       pokemon: { ...state.cache.pokemon },
       moves: { ...state.cache.moves },
       pokemonNameIndex: state.cache.pokemonNameIndex ? structuredClone(state.cache.pokemonNameIndex) : null,
-      recentPokemonIds: [...state.cache.recentPokemonIds]
+    recentPokemonIds: [...state.cache.recentPokemonIds],
+    typeChart: state.cache.typeChart ? structuredClone(state.cache.typeChart) : null
     },
     starredMoves: [...state.starredMoves],
     teams: structuredClone(state.teams)
