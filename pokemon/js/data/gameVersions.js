@@ -30,6 +30,17 @@ export const GAME_VERSION_GROUPS = Object.freeze([
 ]);
 
 const GAME_VERSION_GROUP_BY_ID = new Map(GAME_VERSION_GROUPS.map(game => [game.id, game]));
+const NATIONAL_DEX_LIMIT_BY_GENERATION = Object.freeze({
+  1: 151,
+  2: 251,
+  3: 386,
+  4: 493,
+  5: 649,
+  6: 721,
+  7: 809,
+  8: 905,
+  9: 1025
+});
 
 export function isGameVersionGroup(value) {
   return GAME_VERSION_GROUP_BY_ID.has(value);
@@ -37,4 +48,16 @@ export function isGameVersionGroup(value) {
 
 export function getGameVersionGroup(versionGroup = DEFAULT_GAME_VERSION_GROUP) {
   return GAME_VERSION_GROUP_BY_ID.get(versionGroup) ?? GAME_VERSION_GROUP_BY_ID.get(DEFAULT_GAME_VERSION_GROUP);
+}
+
+export function getNationalDexLimitForGeneration(generationNumber) {
+  return NATIONAL_DEX_LIMIT_BY_GENERATION[generationNumber] ?? NATIONAL_DEX_LIMIT_BY_GENERATION[9];
+}
+
+export function getNationalDexLimitForVersionGroup(versionGroup = DEFAULT_GAME_VERSION_GROUP) {
+  return getNationalDexLimitForGeneration(getGameVersionGroup(versionGroup).generationNumber);
+}
+
+export function isPokemonAvailableInVersionGroup(pokemonId, versionGroup = DEFAULT_GAME_VERSION_GROUP) {
+  return Number.isInteger(pokemonId) && pokemonId >= 1 && pokemonId <= getNationalDexLimitForVersionGroup(versionGroup);
 }
