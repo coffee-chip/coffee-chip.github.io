@@ -6,8 +6,9 @@ import { state } from '../state.js';
 import { getGameVersionGroup, getNationalDexLimitForGeneration, getNationalDexLimitForVersionGroup } from '../data/gameVersions.js';
 
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
-function questionRelationship(attackingType, defendingType, answer, allowedOutcomes) {
-  return createRelationship(attackingType, defendingType, { answer, allowedOutcomes });
+function addRelationship(relationships, attackingType, defendingType, answer, allowedOutcomes) {
+  const relationship = createRelationship(attackingType, defendingType, { answer, allowedOutcomes });
+  if (relationship.key) relationships.push(relationship);
 }
 function labelTypes(types) { return types.map(type => TYPE_META[type].label).join(' / '); }
 function combinations(items, count, start = 0, prefix = [], result = []) {
@@ -197,9 +198,9 @@ export function createChooseSwitchQuestion({
     const overallCorrect = criterionDefinition.qualifies(components.map(component => component.multiplier));
     for (const component of components) {
       if (overallCorrect && component.matches) {
-        relationships.push(questionRelationship(component.attackingType, defendingType, defendingType, ['correct', 'missed']));
+        addRelationship(relationships, component.attackingType, defendingType, defendingType, ['correct', 'missed']);
       } else if (!overallCorrect && !component.matches) {
-        relationships.push(questionRelationship(component.attackingType, defendingType, defendingType, ['false-selection']));
+        addRelationship(relationships, component.attackingType, defendingType, defendingType, ['false-selection']);
       }
     }
   }
@@ -250,9 +251,9 @@ export function createChooseMoveQuestion({
     }));
     for (const component of components) {
       if (combinedMatches && component.matches) {
-        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['correct', 'missed']));
+        addRelationship(relationships, attackingType, component.defendingType, attackingType, ['correct', 'missed']);
       } else if (!combinedMatches && components.every(item => !item.matches)) {
-        relationships.push(questionRelationship(attackingType, component.defendingType, attackingType, ['false-selection']));
+        addRelationship(relationships, attackingType, component.defendingType, attackingType, ['false-selection']);
       }
     }
   }
