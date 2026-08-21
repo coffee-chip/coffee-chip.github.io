@@ -7,18 +7,18 @@ export function getActiveTypes() {
   return getTypesForVersionGroup(state.settings.gameVersionGroup);
 }
 
-function getActiveChart() {
-  return getOffensiveChartForVersionGroup(state.settings.gameVersionGroup);
-}
-
-export function getMultiplier(attackingType, defendingTypes) {
-  const chart = getActiveChart();
-  const types = getActiveTypes();
+export function getMultiplierForVersionGroup(attackingType, defendingTypes, versionGroup) {
+  const chart = getOffensiveChartForVersionGroup(versionGroup);
+  const types = getTypesForVersionGroup(versionGroup);
   if (!chart[attackingType]) throw new Error(`Unknown attacking type for the selected game: ${attackingType}`);
   return defendingTypes.reduce((total, defendingType) => {
     if (!types.includes(defendingType)) throw new Error(`Unknown defending type for the selected game: ${defendingType}`);
     return total * (chart[attackingType][defendingType] ?? 1);
   }, 1);
+}
+
+export function getMultiplier(attackingType, defendingTypes) {
+  return getMultiplierForVersionGroup(attackingType, defendingTypes, state.settings.gameVersionGroup);
 }
 
 function validatePokemonTypes(pokemonTypes, label = 'Pokémon types') {
