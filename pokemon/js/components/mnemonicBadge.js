@@ -10,7 +10,7 @@ function createLightbulbIcon() {
 }
 
 export function createMnemonicTypeBadge(type, relationshipKeys, onActivate) {
-  const keys = Array.isArray(relationshipKeys) ? relationshipKeys : [relationshipKeys];
+  const keys = (Array.isArray(relationshipKeys) ? relationshipKeys : [relationshipKeys]).filter(Boolean);
   const mnemonics = keys.map(getRelationshipMnemonic).filter(Boolean);
   const hasMnemonic = mnemonics.length > 0;
 
