@@ -1,12 +1,23 @@
-import { OFFENSIVE_CHART, TYPES } from '../data/types.js';
+import { getOffensiveChartForVersionGroup, getTypesForVersionGroup } from '../data/types.js';
+import { state } from '../state.js';
 
 export const MULTIPLIER_ORDER = [4, 2, 1, 0.5, 0.25, 0];
 
+export function getActiveTypes() {
+  return getTypesForVersionGroup(state.settings.gameVersionGroup);
+}
+
+function getActiveChart() {
+  return getOffensiveChartForVersionGroup(state.settings.gameVersionGroup);
+}
+
 export function getMultiplier(attackingType, defendingTypes) {
-  if (!OFFENSIVE_CHART[attackingType]) throw new Error(`Unknown attacking type: ${attackingType}`);
+  const chart = getActiveChart();
+  const types = getActiveTypes();
+  if (!chart[attackingType]) throw new Error(`Unknown attacking type for the selected game: ${attackingType}`);
   return defendingTypes.reduce((total, defendingType) => {
-    if (!TYPES.includes(defendingType)) throw new Error(`Unknown defending type: ${defendingType}`);
-    return total * (OFFENSIVE_CHART[attackingType][defendingType] ?? 1);
+    if (!types.includes(defendingType)) throw new Error(`Unknown defending type for the selected game: ${defendingType}`);
+    return total * (chart[attackingType][defendingType] ?? 1);
   }, 1);
 }
 
@@ -15,7 +26,7 @@ function validatePokemonTypes(pokemonTypes, label = 'Pokémon types') {
     throw new Error(`${label} must contain one or two types.`);
   }
   for (const type of pokemonTypes) {
-    if (!TYPES.includes(type)) throw new Error(`Unknown type: ${type}`);
+    if (!getActiveTypes().includes(type)) throw new Error(`Unknown type for the selected game: ${type}`);
   }
 }
 
@@ -50,14 +61,14 @@ export function getPokemonTypeAdvantageScore(pokemonTypes, otherPokemonTypes) {
 }
 
 export function getDefendingTypesAtMultiplier(attackingType, multiplier) {
-  return TYPES.filter(defendingType => getMultiplier(attackingType, [defendingType]) === multiplier);
+  return getActiveTypes().filter(defendingType => getMultiplier(attackingType, [defendingType]) === multiplier);
 }
 
 export function getOffensiveMatchups(attackingType) {
   return Object.fromEntries(
     [2, 1, 0.5, 0].map(multiplier => [
       multiplier,
-      TYPES.filter(defendingType => getMultiplier(attackingType, [defendingType]) === multiplier)
+      getActiveTypes().filter(defendingType => getMultiplier(attackingType, [defendingType]) === multiplier)
     ])
   );
 }
@@ -68,7 +79,7 @@ export function getDefensiveMatchups(defendingTypes) {
   return Object.fromEntries(
     MULTIPLIER_ORDER.map(multiplier => [
       multiplier,
-      TYPES.filter(attackingType => getMultiplier(attackingType, defendingTypes) === multiplier)
+      getActiveTypes().filter(attackingType => getMultiplier(attackingType, defendingTypes) === multiplier)
     ])
   );
 }
@@ -80,7 +91,7 @@ export function runEngineSelfTests() {
     ['ice', ['fire', 'steel'], 0.25],
     ['electric', ['water', 'flying'], 4]
   ];
-  const results = multiplierCases.map(([attack, defend, expected]) => {
+  const results = multiplierCases.filter(([attack, defend]) => [attack, ...defend].every(type => getActiveTypes().includes(type))).map(([attack, defend, expected]) => {
     const actual = getMultiplier(attack, defend);
     return {
       name: `${attack} → ${defend.join('/')}: expected ${expected}×`,
@@ -98,6 +109,7 @@ export function runEngineSelfTests() {
     [['normal'], ['ghost'], 0]
   ];
   for (const [firstTypes, secondTypes, expected] of pokemonAdvantageCases) {
+    if (![...firstTypes, ...secondTypes].every(type => getActiveTypes().includes(type))) continue;
     const actual = getPokemonTypeAdvantageScore(firstTypes, secondTypes);
     results.push({
       name: `${firstTypes.join('/')} vs ${secondTypes.join('/')}: expected advantage ${expected}`,
