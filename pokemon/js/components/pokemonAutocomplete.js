@@ -23,8 +23,8 @@ function getActiveSearchField() {
 function selectSuggestion(input, name) {
   input.value = name;
   input.dispatchEvent(new Event('input', { bubbles: true }));
-  closeSuggestions();
   input.focus();
+  closeSuggestions();
 }
 
 function findMatches(query) {
