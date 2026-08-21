@@ -102,6 +102,14 @@ export function getPersistentSnapshot() {
 }
 
 export function resetProgress() { state.progress = emptyProgress(); }
+export function resetStudyPokemonLookup() {
+  state.study.pokemonQuery = '';
+  state.study.pokemonStatus = 'idle';
+  state.study.pokemonResult = null;
+  state.study.pokemonSource = null;
+  state.study.pokemonError = null;
+  state.study.moveComparisonPokemonName = null;
+}
 export function resetQuestionState() { state.quiz.selectedAnswers = new Set(); state.quiz.result = null; state.quiz.question = null; }
 
 export function startQuizSession() {
