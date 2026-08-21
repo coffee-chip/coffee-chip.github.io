@@ -1,5 +1,5 @@
 import { getActiveTypes, getDefensiveMatchups, getMultiplier } from '../engine/effectiveness.js';
-import { createRelationshipKey } from '../relationships.js';
+import { createRelationship } from '../relationships.js';
 import { createMnemonicTypeBadge } from './mnemonicBadge.js';
 
 const GROUP_LABELS = {
@@ -21,8 +21,8 @@ function createMnemonicList(types, defendingTypes, onMnemonic) {
   const list = el('span', { className: 'type-badge-list' });
   for (const attackingType of types) {
     const relationshipKeys = defendingTypes.map(defendingType =>
-      createRelationshipKey(attackingType, defendingType)
-    );
+      createRelationship(attackingType, defendingType).key
+    ).filter(Boolean);
     list.append(createMnemonicTypeBadge(attackingType, relationshipKeys, onMnemonic));
   }
   return list;
@@ -31,7 +31,7 @@ function createMnemonicList(types, defendingTypes, onMnemonic) {
 function createOutgoingMnemonicList(types, pokemonTypes, onMnemonic) {
   const list = el('span', { className: 'type-badge-list' });
   for (const defendingType of types) {
-    const relationshipKeys = pokemonTypes.map(attackingType => createRelationshipKey(attackingType, defendingType));
+    const relationshipKeys = pokemonTypes.map(attackingType => createRelationship(attackingType, defendingType).key).filter(Boolean);
     list.append(createMnemonicTypeBadge(defendingType, relationshipKeys, onMnemonic));
   }
   return list;
