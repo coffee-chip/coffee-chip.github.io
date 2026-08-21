@@ -2,7 +2,7 @@ import { VIEWS } from './views/index.js';
 import { PRACTICE_PRESETS } from './quiz/modes.js';
 import { QUESTION_GENERATORS } from './quiz/generators.js';
 
-const REQUIRED_ROUTES = ['quiz', 'study', 'teams', 'team', 'progress', 'settings', 'debug'];
+const REQUIRED_ROUTES = ['quiz', 'study', 'teams', 'my-pokemon', 'team', 'progress', 'settings', 'debug'];
 
 function result(name, passed, detail = '') {
   return { name, passed, detail };
