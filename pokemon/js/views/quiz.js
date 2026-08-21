@@ -10,7 +10,7 @@ import {
 } from '../state.js';
 import { saveSettings, saveProgress } from '../storage.js';
 import { createQuestionForMode, PRACTICE_PRESETS } from '../quiz/modes.js';
-import { POKEMON_POOLS, SAMPLING_STRATEGIES } from '../quiz/generators.js';
+import { getPokemonPoolsForVersionGroup, SAMPLING_STRATEGIES } from '../quiz/generators.js';
 import { scoreQuestion } from '../quiz/scoring.js';
 import { renderAnswerDisplay } from '../quiz/displays.js';
 import { createTypeBadge } from '../components/typeBadge.js';
@@ -265,10 +265,11 @@ function buildQuizTypeSelector(refreshQuiz) {
 function buildRecognitionFields() {
   const fragment = document.createDocumentFragment();
   const settings = getQuizModeSettings('pokemon-type-recognition');
-  settings.pokemonPool ??= 'gen-1';
+  const pools = getPokemonPoolsForVersionGroup();
+  if (!pools.some(pool => pool.id === settings.pokemonPool)) settings.pokemonPool = pools.at(-1).id;
   settings.samplingStrategy ??= 'adaptive';
 
-  const poolSelect = createSelect(Object.values(POKEMON_POOLS), settings.pokemonPool);
+  const poolSelect = createSelect(pools, settings.pokemonPool);
   poolSelect.addEventListener('change', () => {
     settings.pokemonPool = poolSelect.value;
     saveSettings(state.settings);
@@ -291,7 +292,8 @@ function buildBattleScenarioFields() {
   const fragment = document.createDocumentFragment();
   const settings = getQuizModeSettings('battle-scenario');
   settings.answers ??= 'both';
-  settings.pokemonPool ??= 'gen-1';
+  const pools = getPokemonPoolsForVersionGroup();
+  if (!pools.some(pool => pool.id === settings.pokemonPool)) settings.pokemonPool = pools.at(-1).id;
 
   const answerSelect = createSelect(BATTLE_ANSWER_OPTIONS, settings.answers);
   answerSelect.addEventListener('change', () => {
@@ -299,7 +301,7 @@ function buildBattleScenarioFields() {
     saveSettings(state.settings);
   });
 
-  const poolSelect = createSelect(Object.values(POKEMON_POOLS), settings.pokemonPool);
+  const poolSelect = createSelect(pools, settings.pokemonPool);
   poolSelect.addEventListener('change', () => {
     settings.pokemonPool = poolSelect.value;
     saveSettings(state.settings);
