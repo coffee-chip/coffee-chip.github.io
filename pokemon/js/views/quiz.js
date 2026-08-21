@@ -13,6 +13,7 @@ import { createQuestionForMode, PRACTICE_PRESETS } from '../quiz/modes.js';
 import { getPokemonPoolsForVersionGroup, SAMPLING_STRATEGIES } from '../quiz/generators.js';
 import { scoreQuestion } from '../quiz/scoring.js';
 import { renderAnswerDisplay } from '../quiz/displays.js';
+import { getBattleScenarioExplanation } from '../quiz/battleScenarioExplanations.js';
 import { createTypeBadge } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { parseDirectionalRelationshipKey } from '../relationships.js';
@@ -228,6 +229,17 @@ function renderFeedback(result, question) {
     feedback.append(feedbackRow('Correctly selected', result.correctlySelected, question));
     feedback.append(feedbackRow('Missed', result.missedAnswers, question));
     feedback.append(feedbackRow('Incorrectly selected', result.incorrectAnswers, question));
+  }
+  const explanation = getBattleScenarioExplanation(question, result);
+  if (explanation.length) {
+    const section = el('section', { className: 'battle-scenario-explanation' });
+    section.append(el('h4', { text: 'Why' }));
+    for (const line of explanation) {
+      const paragraph = el('p');
+      paragraph.append(el('strong', { text: `${line.label}: ` }), document.createTextNode(line.text));
+      section.append(paragraph);
+    }
+    feedback.append(section);
   }
   return feedback;
 }
