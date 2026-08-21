@@ -4,6 +4,7 @@ import { createRelationship } from '../relationships.js';
 import { getPokemon } from '../data/pokemonRepository.js';
 import { state } from '../state.js';
 import { getGameVersionGroup, getNationalDexLimitForGeneration, getNationalDexLimitForVersionGroup } from '../data/gameVersions.js';
+import { createPokemonRecognitionContext, getPokemonRecognitionRecordForVersionGroup } from '../data/pokemonRecognition.js';
 
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
 function addRelationship(relationships, attackingType, defendingType, answer, allowedOutcomes) {
@@ -91,8 +92,8 @@ export function getPokemonIdsForPool(poolId, versionGroup = state.settings.gameV
   return Array.from({ length: pool.maxId - pool.minId + 1 }, (_, index) => pool.minId + index);
 }
 
-export function getPokemonSamplingWeight(pokemonId, recentPokemonIds = []) {
-  const stats = state.progress.pokemonRecognitionStats?.[String(pokemonId)];
+export function getPokemonSamplingWeight(pokemonId, recentPokemonIds = [], versionGroup = state.settings.gameVersionGroup) {
+  const stats = getPokemonRecognitionRecordForVersionGroup(state.progress.pokemonRecognitionStats, pokemonId, versionGroup);
   const attempts = stats?.attempts ?? 0;
   const earnedScore = stats?.earnedScore ?? 0;
   const mastery = (earnedScore + 1) / (attempts + 2);
@@ -286,6 +287,7 @@ export async function createPokemonTypeRecognitionQuestion({ poolId = 'available
     ? randomItem(ids)
     : weightedRandom(ids, pokemonId => getPokemonSamplingWeight(pokemonId, recentPokemonIds));
   const { pokemon } = await getPokemon(id);
+  const recognition = createPokemonRecognitionContext(pokemon, state.settings.gameVersionGroup);
   return {
     id: `recognize-pokemon-type:${pokemon.id}:${Date.now()}`,
     generatorId: 'recognize-pokemon-type',
@@ -300,6 +302,9 @@ export async function createPokemonTypeRecognitionQuestion({ poolId = 'available
     metadata: {
       pokemonId: pokemon.id,
       pokemonName: pokemon.name,
+      pokemonRecognitionKey: recognition.key,
+      pokemonRecognitionGenerationStart: recognition.generationStart,
+      pokemonRecognitionGenerationEnd: recognition.generationEnd,
       pool: poolId,
       samplingStrategy,
       promptKey: `pokemon:${pokemon.id}`
