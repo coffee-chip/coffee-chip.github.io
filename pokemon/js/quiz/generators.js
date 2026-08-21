@@ -1,5 +1,5 @@
-import { TYPES, TYPE_META } from '../data/types.js';
-import { getMultiplier } from '../engine/effectiveness.js';
+import { TYPE_META } from '../data/types.js';
+import { getActiveTypes, getMultiplier } from '../engine/effectiveness.js';
 import { createRelationship } from '../relationships.js';
 import { getPokemon } from '../data/pokemonRepository.js';
 import { state } from '../state.js';
@@ -90,12 +90,12 @@ function relationshipPriority(attackingType, defendingType) {
 function matchupCandidateWeight(types, direction, recentPromptKeys) {
   const priorities = [];
   if (direction === 'attacking') {
-    for (const attackingType of types) for (const defendingType of TYPES) {
+    for (const attackingType of types) for (const defendingType of getActiveTypes()) {
       const priority = relationshipPriority(attackingType, defendingType);
       if (priority !== null) priorities.push(priority);
     }
   } else {
-    for (const defendingType of types) for (const attackingType of TYPES) {
+    for (const defendingType of types) for (const attackingType of getActiveTypes()) {
       const priority = relationshipPriority(attackingType, defendingType);
       if (priority !== null) priorities.push(priority);
     }
@@ -108,7 +108,7 @@ function matchupCandidateWeight(types, direction, recentPromptKeys) {
 }
 
 function choosePromptTypes(count, direction, samplingStrategy, recentPromptKeys) {
-  const candidates = combinations(TYPES, count);
+  const candidates = combinations(getActiveTypes(), count);
   if (samplingStrategy === 'random') return randomItem(candidates);
   return weightedRandom(candidates, types => matchupCandidateWeight(types, direction, recentPromptKeys));
 }
@@ -162,12 +162,12 @@ export function createChooseSwitchQuestion({
   const count = defenderCount ?? attackerCount;
   if (![1, 2].includes(count)) throw new Error('Choose-switch questions support one or two attacking types.');
   const attackingTypes = choosePromptTypes(count, 'attacking', samplingStrategy, recentPromptKeys);
-  const correctAnswers = TYPES.filter(defendingType => {
+  const correctAnswers = getActiveTypes().filter(defendingType => {
     const multipliers = attackingTypes.map(attackingType => getMultiplier(attackingType, [defendingType]));
     return criterionDefinition.qualifies(multipliers);
   });
   const relationships = [];
-  for (const defendingType of TYPES) {
+  for (const defendingType of getActiveTypes()) {
     const components = attackingTypes.map(attackingType => {
       const multiplier = getMultiplier(attackingType, [defendingType]);
       return { attackingType, multiplier, matches: criterionDefinition.componentMatches(multiplier) };
@@ -189,7 +189,7 @@ export function createChooseSwitchQuestion({
     formatId: 'type-multi-select',
     prompt: criterionDefinition.prompt(attackingTypes),
     answerType: 'type-multi-select',
-    choices: [...TYPES],
+    choices: [...getActiveTypes()],
     correctAnswers,
     relationships,
     metadata: {
@@ -218,9 +218,9 @@ export function createChooseMoveQuestion({
   if (!criterionDefinition) throw new Error(`Unknown choose-move criterion: ${criterion}`);
   if (![1, 2].includes(defenderCount)) throw new Error('Choose-move questions support one or two defending types.');
   const defendingTypes = choosePromptTypes(defenderCount, 'defending', samplingStrategy, recentPromptKeys);
-  const correctAnswers = TYPES.filter(attackingType => criterionDefinition.matches(getMultiplier(attackingType, defendingTypes)));
+  const correctAnswers = getActiveTypes().filter(attackingType => criterionDefinition.matches(getMultiplier(attackingType, defendingTypes)));
   const relationships = [];
-  for (const attackingType of TYPES) {
+  for (const attackingType of getActiveTypes()) {
     const combinedMatches = criterionDefinition.matches(getMultiplier(attackingType, defendingTypes));
     const components = defendingTypes.map(defendingType => ({
       defendingType,
@@ -242,7 +242,7 @@ export function createChooseMoveQuestion({
     formatId: 'type-multi-select',
     prompt: criterionDefinition.prompt(defendingTypes),
     answerType: 'type-multi-select',
-    choices: [...TYPES],
+    choices: [...getActiveTypes()],
     correctAnswers,
     relationships,
     metadata: {
@@ -270,7 +270,7 @@ export async function createPokemonTypeRecognitionQuestion({ poolId = 'gen-1', s
     formatId: 'type-multi-select',
     prompt: `What type or types is ${pokemon.displayName}?`,
     answerType: 'type-multi-select',
-    choices: [...TYPES],
+    choices: [...getActiveTypes()],
     correctAnswers: [...pokemon.types],
     relationships: [],
     display: { kind: 'pokemon', pokemon },
