@@ -1,13 +1,14 @@
-import { getSelectedTypeChart } from '../data/typeChartRepository.js';
+import { getOffensiveChartForVersionGroup, getTypesForVersionGroup } from '../data/types.js';
+import { state } from '../state.js';
 
 export const MULTIPLIER_ORDER = [4, 2, 1, 0.5, 0.25, 0];
 
 export function getActiveTypes() {
-  return [...getSelectedTypeChart().types];
+  return getTypesForVersionGroup(state.settings.gameVersionGroup);
 }
 
 function getActiveChart() {
-  return getSelectedTypeChart().offensiveChart;
+  return getOffensiveChartForVersionGroup(state.settings.gameVersionGroup);
 }
 
 export function getMultiplier(attackingType, defendingTypes) {
