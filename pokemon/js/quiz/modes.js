@@ -63,13 +63,13 @@ function presetOptions(modeId) {
   const settings = state.settings.quiz.modes[modeId] ?? {};
   if (modeId === 'pokemon-type-recognition') {
     return {
-      poolId: settings.pokemonPool ?? 'gen-1',
+      poolId: settings.pokemonPool ?? 'available',
       samplingStrategy: settings.samplingStrategy ?? 'adaptive',
       recentPokemonIds: recentMetadataValues('pokemonId').map(Number).filter(Number.isInteger)
     };
   }
   if (modeId === 'battle-scenario') {
-    return { poolId: settings.pokemonPool ?? 'gen-1' };
+    return { poolId: settings.pokemonPool ?? 'available' };
   }
   return {
     samplingStrategy: settings.samplingStrategy ?? 'adaptive',
