@@ -1,4 +1,4 @@
-const APP_VERSION = '2026.08.19.2';
+const APP_VERSION = '2026.08.20.1';
 const CACHE_PREFIX = 'pokemon-type-trainer-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const CORE_ASSETS = [
@@ -45,6 +45,7 @@ const CORE_ASSETS = [
   './js/data/types.js',
   './js/data/mnemonics.js',
   './js/data/gameVersions.js',
+  './js/data/gameSelection.js',
   './js/data/moveRepository.js',
   './js/data/starredMoveRepository.js',
   './js/data/pokemonRepository.js',
