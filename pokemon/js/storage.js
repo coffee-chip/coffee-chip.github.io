@@ -114,9 +114,10 @@ function normalizeProgress(value) {
 }
 
 function normalizePokemonNameIndex(value) {
-  if (!isObject(value) || !Array.isArray(value.names) || typeof value.fetchedAt !== 'string') return null;
+  if (!isObject(value) || !isGameVersionGroup(value.versionGroup)
+    || !Array.isArray(value.names) || typeof value.fetchedAt !== 'string') return null;
   const names = [...new Set(value.names.filter(name => typeof name === 'string' && name.length > 0))];
-  return names.length ? { names, fetchedAt: value.fetchedAt } : null;
+  return names.length ? { names, versionGroup: value.versionGroup, fetchedAt: value.fetchedAt } : null;
 }
 
 function normalizeRecentPokemonIds(value) {
