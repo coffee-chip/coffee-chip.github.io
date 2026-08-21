@@ -12,8 +12,6 @@ let resetStage = 'idle';
 let resetMessage = '';
 let serviceMessage = '';
 let pokemonCacheMessage = '';
-let gameDataMessage = '';
-let gameChangeInFlight = false;
 let currentRender = null;
 subscribeServiceWorker(() => { if (state.route === 'settings' && currentRender) currentRender(); });
 
@@ -58,36 +56,12 @@ function appendGameDataControl(panel, render) {
     option.selected = state.settings.gameVersionGroup === game.id;
     group.append(option);
   }
-  gameSelect.disabled = gameChangeInFlight;
   gameSelect.addEventListener('change', () => {
-    if (gameChangeInFlight) return;
-    const selectedGame = gameSelect.options[gameSelect.selectedIndex]?.textContent ?? 'selected game';
-    gameChangeInFlight = true;
-    gameDataMessage = 'Loading type relationships for ' + selectedGame + '…';
+    setGameVersionGroup(gameSelect.value);
     render();
-    setGameVersionGroup(gameSelect.value)
-      .then(result => {
-        gameChangeInFlight = false;
-        if (result.error) {
-          gameDataMessage = result.changed
-            ? 'The game changed, but the new data could not be saved: ' + result.error.message
-            : 'Could not change games: ' + result.error.message;
-        } else gameDataMessage = '';
-        render();
-      })
-      .catch(error => {
-        gameChangeInFlight = false;
-        gameDataMessage = 'Could not change games: ' + (error?.message ?? 'Unexpected error.');
-        render();
-      });
   });
   gameLabel.append(gameSelect);
   panel.append(gameLabel);
-  if (gameDataMessage) {
-    const status = el('p', { className: 'settings-status', text: gameDataMessage });
-    status.setAttribute('role', 'status');
-    panel.append(status);
-  }
 }
 
 function appendAppearanceControls(panel) {
@@ -183,10 +157,10 @@ export function renderSettings(container, render) {
   updateActions.append(clearButton);
   developerPanel.append(updateActions);
 
-  developerPanel.append(el('p', { className: 'muted', text: `Type chart: ${state.cache.typeChart ? 'cached' : 'not cached'} · Cached Pokémon: ${getPokemonCacheEntryCount()} · Cached moves: ${getMoveCacheEntryCount()} · Name index: ${state.cache.pokemonNameIndex ? 'cached' : 'not cached'}` }));
+  developerPanel.append(el('p', { className: 'muted', text: `Cached Pokémon: ${getPokemonCacheEntryCount()} · Cached moves: ${getMoveCacheEntryCount()} · Name index: ${state.cache.pokemonNameIndex ? 'cached' : 'not cached'}` }));
   const clearPokemonButton = el('button', { className: 'secondary-button', text: 'Clear Pokémon cache' });
   clearPokemonButton.type = 'button';
-  clearPokemonButton.addEventListener('click', () => { const cleared = clearGameDataCache(); pokemonCacheMessage = cleared ? 'Pokémon records, move data, and autocomplete names were cleared. The selected game’s type chart remains cached.' : 'Pokémon cache was cleared for this session, but could not be saved.'; render(); });
+  clearPokemonButton.addEventListener('click', () => { const cleared = clearGameDataCache(); pokemonCacheMessage = cleared ? 'Pokémon records, move data, and autocomplete names were cleared.' : 'Pokémon cache was cleared for this session, but could not be saved.'; render(); });
   developerPanel.append(clearPokemonButton);
 
   if (serviceMessage || serviceWorkerState.message) { const status = el('p', { className: 'settings-status', text: serviceMessage || serviceWorkerState.message }); status.setAttribute('role', 'status'); developerPanel.append(status); }
