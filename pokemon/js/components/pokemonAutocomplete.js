@@ -78,4 +78,8 @@ export function initializePokemonAutocomplete() {
     if (Array.isArray(event.detail?.names)) names = event.detail.names;
     if (activeInput?.isConnected && document.activeElement === activeInput) renderSuggestions(activeInput);
   });
+  document.addEventListener('pokemon-game-data-cleared', () => {
+    names = [];
+    closeSuggestions();
+  });
 }
