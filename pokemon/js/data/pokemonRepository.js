@@ -1,5 +1,5 @@
 import { TYPES } from './types.js';
-import { DEFAULT_GAME_VERSION_GROUP, getGameVersionGroup, isGameVersionGroup } from './gameVersions.js';
+import { DEFAULT_GAME_VERSION_GROUP, getGameVersionGroup, getNationalDexLimitForVersionGroup, isGameVersionGroup, isPokemonAvailableInVersionGroup } from './gameVersions.js';
 import { state } from '../state.js';
 import { saveCache } from '../storage.js';
 import { fetchEvolutionChain, fetchPokemon, fetchPokemonNameIndex, fetchPokemonSpecies, normalizePokemonIdentifier, PokeApiError } from '../api/pokeApi.js';
@@ -31,7 +31,11 @@ function resolveTypesForGeneration(pokemon, versionGroup) {
   return [...(historical?.types ?? pokemon.currentTypes)];
 }
 function materializePokemonForGame(pokemon, versionGroup) {
-  return { ...pokemon, types: resolveTypesForGeneration(pokemon, versionGroup) };
+  return {
+    ...pokemon,
+    types: resolveTypesForGeneration(pokemon, versionGroup),
+    evolution: filterEvolutionForVersionGroup(pokemon.evolution, versionGroup)
+  };
 }
 function normalizeLevelUpMoves(raw, versionGroup) {
   const movesByName = new Map();
@@ -69,7 +73,8 @@ function normalizeApiPokemon(raw, versionGroup) {
   };
 }
 function isValidEvolutionTarget(value) {
-  return value && typeof value.name === 'string' && value.name.length > 0 && Array.isArray(value.conditions);
+  return value && Number.isInteger(value.id) && value.id > 0
+    && typeof value.name === 'string' && value.name.length > 0 && Array.isArray(value.conditions);
 }
 function isValidEvolution(value) {
   return value && Array.isArray(value.previous) && Array.isArray(value.next)
@@ -89,7 +94,12 @@ function isValidCachedPokemon(value) {
     && isValidTypeList(value.types) && isValidTypeList(value.currentTypes) && isValidTypeHistory(value.typeHistory)
     && typeof value.fetchedAt === 'string';
 }
-function isValidNameIndex(value) { return value && Array.isArray(value.names) && value.names.length > 0 && value.names[0] === 'bulbasaur' && value.names.every(name => typeof name === 'string' && name.length > 0) && typeof value.fetchedAt === 'string'; }
+function isValidNameIndex(value, versionGroup = state.settings.gameVersionGroup) {
+  return value && value.versionGroup === versionGroup
+    && Array.isArray(value.names) && value.names.length > 0 && value.names[0] === 'bulbasaur'
+    && value.names.every(name => typeof name === 'string' && name.length > 0)
+    && typeof value.fetchedAt === 'string';
+}
 function isFresh(record, maxAgeMs) { const fetchedAt = Date.parse(record.fetchedAt); return Number.isFinite(fetchedAt) && Date.now()-fetchedAt < maxAgeMs; }
 function getCached(identifier) {
   const normalized = normalizePokemonIdentifier(identifier);
@@ -98,8 +108,12 @@ function getCached(identifier) {
   return Object.values(state.cache.pokemon ?? {}).find(record => isValidCachedPokemon(record) && (record.name === normalized || String(record.id) === normalized)) ?? null;
 }
 function cachePokemon(pokemon) { state.cache.pokemon[pokemon.name] = pokemon; state.cache.pokemon[String(pokemon.id)] = pokemon; saveCache(state.cache); }
-function cachePokemonNameIndex(names) {
-  state.cache.pokemonNameIndex = { names: [...new Set(names)], fetchedAt: new Date().toISOString() };
+function cachePokemonNameIndex(names, versionGroup) {
+  state.cache.pokemonNameIndex = {
+    names: [...new Set(names)],
+    versionGroup,
+    fetchedAt: new Date().toISOString()
+  };
   saveCache(state.cache);
   return state.cache.pokemonNameIndex;
 }
@@ -125,26 +139,40 @@ function normalizeEvolutionCondition(detail = {}) {
     turnUpsideDown: detail.turn_upside_down === true
   };
 }
+function pokemonSpeciesId(url) {
+  const match = typeof url === 'string' && url.match(/\/pokemon-species\/(\d+)\/?$/);
+  const id = Number(match?.[1]);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
 function evolutionTarget(link) {
   const name = link?.species?.name;
-  if (typeof name !== 'string' || !name) return null;
+  const id = pokemonSpeciesId(link?.species?.url);
+  if (!id || typeof name !== 'string' || !name) return null;
   const details = Array.isArray(link.evolution_details) && link.evolution_details.length ? link.evolution_details : [{}];
-  return { name, conditions: details.map(normalizeEvolutionCondition) };
+  return { id, name, conditions: details.map(normalizeEvolutionCondition) };
 }
-function findEvolutionContext(link, targetName, parentName = null) {
+function findEvolutionContext(link, targetName, parent = null) {
   if (!link?.species?.name) return null;
   if (link.species.name === targetName) {
     const incomingDetails = Array.isArray(link.evolution_details) && link.evolution_details.length ? link.evolution_details : [{}];
     return {
-      previous: parentName ? [{ name: parentName, conditions: incomingDetails.map(normalizeEvolutionCondition) }] : [],
+      previous: parent ? [{ ...parent, conditions: incomingDetails.map(normalizeEvolutionCondition) }] : [],
       next: (link.evolves_to ?? []).map(evolutionTarget).filter(Boolean)
     };
   }
   for (const child of link.evolves_to ?? []) {
-    const match = findEvolutionContext(child, targetName, link.species.name);
+    const match = findEvolutionContext(child, targetName, evolutionTarget(link));
     if (match) return match;
   }
   return null;
+}
+function filterEvolutionForVersionGroup(evolution, versionGroup) {
+  if (!isValidEvolution(evolution)) return evolution;
+  const available = target => isPokemonAvailableInVersionGroup(target.id, versionGroup);
+  return {
+    previous: evolution.previous.filter(available),
+    next: evolution.next.filter(available)
+  };
 }
 async function enrichWithEvolution(pokemon) {
   if (isValidEvolution(pokemon.evolution)) return pokemon;
@@ -167,10 +195,22 @@ function mergePokemon(existing, refreshed) {
     levelUpMoves: { ...(existing?.levelUpMoves ?? {}), ...(refreshed.levelUpMoves ?? {}) }
   };
 }
+function unavailablePokemonError(versionGroup) {
+  return new PokeApiError(`That Pokémon is not available in ${getGameVersionGroup(versionGroup).label}.`, { code: 'unavailable-in-game' });
+}
+export function isPokemonAvailableForVersionGroup(pokemon, versionGroup = state.settings.gameVersionGroup) {
+  return isPokemonAvailableInVersionGroup(pokemon?.id, versionGroup);
+}
 export async function getPokemon(identifier, { forceRefresh = false, versionGroup = state.settings.gameVersionGroup } = {}) {
   const normalized = normalizePokemonIdentifier(identifier);
   const selectedVersionGroup = isGameVersionGroup(versionGroup) ? versionGroup : DEFAULT_GAME_VERSION_GROUP;
+  if (/^\d+$/.test(normalized) && !isPokemonAvailableInVersionGroup(Number(normalized), selectedVersionGroup)) {
+    throw unavailablePokemonError(selectedVersionGroup);
+  }
   const cached = getCached(normalized);
+  if (cached && !isPokemonAvailableForVersionGroup(cached, selectedVersionGroup)) {
+    throw unavailablePokemonError(selectedVersionGroup);
+  }
   if (cached && !forceRefresh && isFresh(cached, CACHE_MAX_AGE_MS) && hasLevelUpMoves(cached, selectedVersionGroup)) {
     if (isValidEvolution(cached.evolution)) {
       return { pokemon: materializePokemonForGame(cached, selectedVersionGroup), source: 'cache', stale: false };
@@ -182,6 +222,9 @@ export async function getPokemon(identifier, { forceRefresh = false, versionGrou
   try {
     const raw = await fetchPokemon(normalized);
     const refreshed = normalizeApiPokemon(raw, selectedVersionGroup);
+    if (!isPokemonAvailableForVersionGroup(refreshed, selectedVersionGroup)) {
+      throw unavailablePokemonError(selectedVersionGroup);
+    }
     const pokemon = await enrichWithEvolution(mergePokemon(cached, refreshed));
     cachePokemon(pokemon);
     return { pokemon: materializePokemonForGame(pokemon, selectedVersionGroup), source: 'network', stale: false };
@@ -200,15 +243,29 @@ export function rememberPokemonLookup(pokemon) {
   state.cache.recentPokemonIds = [pokemon.id, ...current.filter(id => id !== pokemon.id)].slice(0, RECENT_POKEMON_LIMIT);
   return saveCache(state.cache);
 }
-export function getRecentPokemonLookups() {
+export function getRecentPokemonLookups(versionGroup = state.settings.gameVersionGroup) {
   const ids = Array.isArray(state.cache.recentPokemonIds) ? state.cache.recentPokemonIds : [];
-  return ids.map(id => getCached(String(id))).filter(isValidCachedPokemon);
+  const recent = ids.map(id => getCached(String(id)))
+    .filter(pokemon => isValidCachedPokemon(pokemon) && isPokemonAvailableForVersionGroup(pokemon, versionGroup));
+  const availableIds = recent.map(pokemon => pokemon.id);
+  if (availableIds.length !== ids.length) {
+    state.cache.recentPokemonIds = availableIds;
+    saveCache(state.cache);
+  }
+  return recent;
 }
-export function getCachedPokemonNameIndex() { return isValidNameIndex(state.cache.pokemonNameIndex) ? state.cache.pokemonNameIndex : null; }
-export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
-  const cached = getCachedPokemonNameIndex();
+export function getCachedPokemonNameIndex(versionGroup = state.settings.gameVersionGroup) {
+  return isValidNameIndex(state.cache.pokemonNameIndex, versionGroup) ? state.cache.pokemonNameIndex : null;
+}
+export async function getPokemonNameIndex({ forceRefresh = false, versionGroup = state.settings.gameVersionGroup } = {}) {
+  const selectedVersionGroup = isGameVersionGroup(versionGroup) ? versionGroup : DEFAULT_GAME_VERSION_GROUP;
+  const cached = getCachedPokemonNameIndex(selectedVersionGroup);
   if (cached && !forceRefresh && isFresh(cached, NAME_INDEX_MAX_AGE_MS)) return { names: cached.names, source: 'cache', stale: false };
-  try { const names = await fetchPokemonNameIndex(); const index = cachePokemonNameIndex(names); return { names: index.names, source: 'network', stale: false }; }
+  try {
+    const names = await fetchPokemonNameIndex();
+    const index = cachePokemonNameIndex(names.slice(0, getNationalDexLimitForVersionGroup(selectedVersionGroup)), selectedVersionGroup);
+    return { names: index.names, source: 'network', stale: false };
+  }
   catch (error) { if (cached) return { names: cached.names, source: 'stale-cache', stale: true, error }; throw error; }
 }
 export function getPokemonCacheEntryCount() { return new Set(Object.values(state.cache.pokemon ?? {}).filter(isValidCachedPokemon).map(record => record.id)).size; }
