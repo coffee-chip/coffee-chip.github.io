@@ -1,7 +1,6 @@
-import { state } from '../state.js';
 import { getCachedPokemonNameIndex } from '../data/pokemonRepository.js';
 
-const INPUT_SELECTOR = '.pokemon-lookup-form input[type="search"]';
+const INPUT_SELECTOR = 'input[data-pokemon-autocomplete]';
 const MAX_SUGGESTIONS = 5;
 let names = getCachedPokemonNameIndex()?.names ?? [];
 let activeInput = null;
@@ -46,7 +45,6 @@ function renderSuggestions(input) {
     option.addEventListener('pointerdown', event => {
       event.preventDefault();
       input.value = name;
-      state.study.pokemonQuery = name;
       input.dispatchEvent(new Event('input', { bubbles: true }));
       closeSuggestions();
       input.focus();

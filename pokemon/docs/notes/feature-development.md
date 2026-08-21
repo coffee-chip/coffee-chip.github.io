@@ -4,6 +4,7 @@
 
 - Team detail view launched from team cards at `#team/<team-id>`.
 - Team detail roster shows each Pokémon and its types.
+- My Pokémon is a Teams-adjacent personal roster: it stores a Pokémon record, optional nickname, and stable individual entry ID; it does not store per-entry game context, moves, levels, stats, or other catalog details. Entries survive game changes while their displayed types resolve through the active game when available.
 - Removing a Pokémon from a team reuses the team-delete interaction pattern: an × trigger followed by an inline confirmation with Cancel/Remove actions.
 - Team members can be drag-reordered using the same pointer/hold/insertion-marker interaction pattern as team cards; reorder persists only within that team.
 - Team members have an edit control for a team-local display-name alias. The alias is stored on the team Pokémon snapshot and does not modify the shared Pokémon cache/repository. Clearing the edit field resets to the canonical fetched display name.

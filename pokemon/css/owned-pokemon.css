@@ -1,0 +1,42 @@
+.owned-pokemon-page { display: grid; gap: 1rem; }
+.owned-pokemon-page .button-selector { margin-block-end: 0; }
+.owned-pokemon-add-form { margin: 0; }
+.owned-pokemon-status { margin: 0; padding: .75rem; border-radius: .5rem; color: var(--status-success); background: var(--status-success-soft); }
+.owned-pokemon-roster { display: grid; gap: .75rem; }
+.owned-pokemon-filter { display: grid; gap: .35rem; }
+.owned-pokemon-filter input { width: 100%; min-height: 2.75rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }
+.owned-pokemon-count { margin: 0; }
+.owned-pokemon-list { display: grid; gap: .65rem; }
+.owned-pokemon-list > .panel { margin: 0; }
+.owned-pokemon-card { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr); align-items: center; gap: .75rem; padding: .65rem; }
+.owned-pokemon-visual { display: grid; place-items: center; width: 3.75rem; height: 3.75rem; border-radius: .55rem; background: var(--subtle-background); overflow: hidden; }
+.owned-pokemon-visual img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.owned-pokemon-placeholder { color: var(--text-muted); font-size: .75rem; }
+.owned-pokemon-study-link { cursor: pointer; }
+.owned-pokemon-study-link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.owned-pokemon-content { display: grid; min-width: 0; gap: .3rem; }
+.owned-pokemon-header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .5rem; }
+.owned-pokemon-names { display: grid; min-width: 0; gap: .08rem; }
+.owned-pokemon-name { min-width: 0; color: var(--heading-color); overflow-wrap: anywhere; }
+.owned-pokemon-species { font-size: .88rem; }
+.owned-pokemon-actions { display: flex; flex: 0 0 auto; gap: .3rem; }
+.owned-pokemon-action-button { display: grid; place-items: center; width: 2rem; min-width: 2rem; height: 2rem; min-height: 2rem; padding: 0; font-size: 1.05rem; line-height: 1; }
+.owned-pokemon-game-note { line-height: 1.3; }
+.owned-pokemon-edit-form, .owned-pokemon-remove-confirmation { grid-column: 1 / -1; display: grid; gap: .6rem; width: 100%; padding-top: .7rem; border-top: 1px solid var(--border-default); }
+.owned-pokemon-edit-form { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.owned-pokemon-edit-form input { width: 100%; min-width: 0; min-height: 2.5rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }
+.owned-pokemon-edit-actions, .owned-pokemon-remove-actions { display: flex; gap: .4rem; }
+.owned-pokemon-edit-actions button, .owned-pokemon-remove-actions button { min-height: 2.5rem; white-space: nowrap; }
+.owned-pokemon-remove-confirmation { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.owned-pokemon-remove-confirmation > span { min-width: 0; overflow-wrap: anywhere; }
+
+@media (hover: hover) {
+  .owned-pokemon-study-link:hover { background: var(--action-primary-soft); }
+}
+
+@media (max-width: 24rem) {
+  .owned-pokemon-card { grid-template-columns: 3.25rem minmax(0, 1fr); }
+  .owned-pokemon-visual { width: 3.25rem; height: 3.25rem; }
+  .owned-pokemon-edit-form, .owned-pokemon-remove-confirmation { grid-template-columns: 1fr; }
+  .owned-pokemon-edit-actions, .owned-pokemon-remove-actions { justify-content: flex-end; }
+}

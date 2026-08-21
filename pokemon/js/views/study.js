@@ -212,6 +212,7 @@ function renderPokemonLookup(page, render) {
   const searchField = el('div', { className: 'search-field' });
   const input = document.createElement('input');
   input.type = 'search';
+  input.dataset.pokemonAutocomplete = 'true';
   input.autocomplete = 'off';
   input.autocapitalize = 'none';
   input.spellcheck = false;

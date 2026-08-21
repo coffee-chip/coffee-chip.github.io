@@ -1,4 +1,4 @@
-const VALID_ROUTES = new Set(['quiz', 'study', 'teams', 'team', 'progress', 'settings', 'debug']);
+const VALID_ROUTES = new Set(['quiz', 'study', 'teams', 'my-pokemon', 'team', 'progress', 'settings', 'debug']);
 
 export function getRoute() {
   const hash = location.hash.replace(/^#/, '') || 'quiz';

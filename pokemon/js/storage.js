@@ -15,6 +15,7 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
   cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] },
   starredMoves: [],
+  ownedPokemon: [],
   teams: [
     { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, pokemon: [] },
     { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, pokemon: [] }
@@ -151,6 +152,31 @@ function normalizeStarredMoves(value) {
     .filter(Boolean))];
 }
 
+function normalizeOwnedPokemon(value) {
+  if (!isObject(value)) return null;
+  const id = typeof value.id === 'string' && value.id.trim() ? value.id.trim() : null;
+  const pokemonId = Number(value.pokemonId);
+  if (!id || !Number.isInteger(pokemonId) || pokemonId < 1) return null;
+  const name = typeof value.name === 'string' && value.name ? value.name : `pokemon-${pokemonId}`;
+  const displayName = typeof value.displayName === 'string' && value.displayName ? value.displayName : `Pokémon #${pokemonId}`;
+  const nickname = typeof value.nickname === 'string' && value.nickname.trim() ? value.nickname.trim().slice(0, 60) : null;
+  const spriteUrl = typeof value.spriteUrl === 'string' && value.spriteUrl ? value.spriteUrl : null;
+  return { id, pokemonId, name, displayName, nickname, spriteUrl };
+}
+
+function normalizeOwnedPokemonList(value) {
+  if (!Array.isArray(value)) return [];
+  const seenIds = new Set();
+  const normalized = [];
+  for (const entry of value) {
+    const ownedPokemon = normalizeOwnedPokemon(entry);
+    if (!ownedPokemon || seenIds.has(ownedPokemon.id)) continue;
+    seenIds.add(ownedPokemon.id);
+    normalized.push(ownedPokemon);
+  }
+  return normalized;
+}
+
 function normalizeTeamPokemon(value) {
   if (!isObject(value)) return null;
   const id = Number(value.id);
@@ -211,6 +237,7 @@ function normalizeCurrentData(raw) {
     progress: normalizeProgress(progress),
     cache: normalizeCache(raw.cache),
     starredMoves: normalizeStarredMoves(raw.starredMoves),
+    ownedPokemon: normalizeOwnedPokemonList(raw.ownedPokemon),
     teams: normalizeTeams(raw.teams)
   };
 }
@@ -239,13 +266,14 @@ export function loadPersistentData() {
   }
 }
 
-export function savePersistentData({ settings, progress, cache, starredMoves, teams }) {
+export function savePersistentData({ settings, progress, cache, starredMoves, ownedPokemon, teams }) {
   return write({
     version: STORAGE_VERSION,
     settings: normalizeSettings(settings),
     progress: normalizeProgress(progress),
     cache: normalizeCache(cache),
     starredMoves: normalizeStarredMoves(starredMoves),
+    ownedPokemon: normalizeOwnedPokemonList(ownedPokemon),
     teams: normalizeTeams(teams)
   });
 }
@@ -254,6 +282,7 @@ export function saveSettings(settings) { return updateSection('settings', settin
 export function saveProgress(progress) { return updateSection('progress', progress, normalizeProgress); }
 export function saveCache(cache) { return updateSection('cache', cache, normalizeCache); }
 export function saveStarredMoves(starredMoves) { return updateSection('starredMoves', starredMoves, normalizeStarredMoves); }
+export function saveOwnedPokemon(ownedPokemon) { return updateSection('ownedPokemon', ownedPokemon, normalizeOwnedPokemonList); }
 export function saveTeams(teams) { return updateSection('teams', teams, normalizeTeams); }
 export function clearPersistentData() {
   try { localStorage.removeItem(STORAGE_KEY); return true; }

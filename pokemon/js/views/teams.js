@@ -1,5 +1,6 @@
 import { createTeam, getTeams, reorderTeams } from '../data/teamRepository.js';
 import { createTeamActionsButton } from '../components/teamActionsMenu.js';
+import { createTeamOverviewNavigation } from '../components/teamOverviewNavigation.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -157,6 +158,6 @@ export function renderTeams(container, render) {
   const list = el('div', { className: 'team-list' });
   getTeams().forEach((team, index) => list.append(createTeamCard(team, index, render)));
   list.append(createNewTeamCard(render));
-  page.append(list);
+  page.append(createTeamOverviewNavigation('teams'), list);
   container.replaceChildren(page);
 }
