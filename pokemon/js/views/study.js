@@ -4,7 +4,7 @@ import { getActiveTypes, getOffensiveMatchups, getDefensiveMatchups } from '../e
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { createRelationship, parseDirectionalRelationshipKey } from '../relationships.js';
-import { getCachedPokemonNameIndex, getPokemon, getRecentPokemonLookups, rememberPokemonLookup } from '../data/pokemonRepository.js';
+import { getPokemon, getRecentPokemonLookups, rememberPokemonLookup } from '../data/pokemonRepository.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective', 2: '2× — super effective', 1: '1× — neutral',
@@ -13,8 +13,6 @@ const MULTIPLIER_LABELS = {
 
 let activeMnemonicKey = null;
 let activeMnemonicBanner = null;
-let activePokemonDatalist = null;
-let datalistPopulationToken = 0;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -185,30 +183,11 @@ function renderRecentPokemon(page, render) {
   page.append(section);
 }
 
-function populatePokemonDatalist(datalist, names) {
-  const token = ++datalistPopulationToken;
-  datalist.replaceChildren();
-  let index = 0;
-  function appendBatch() {
-    if (token !== datalistPopulationToken || datalist !== activePokemonDatalist || !datalist.isConnected) return;
-    const fragment = document.createDocumentFragment();
-    const end = Math.min(index + 100, names.length);
-    for (; index < end; index += 1) {
-      const option = document.createElement('option');
-      option.value = names[index];
-      fragment.append(option);
-    }
-    datalist.append(fragment);
-    if (index < names.length) window.setTimeout(appendBatch, 0);
-  }
-  window.setTimeout(appendBatch, 0);
-}
-
 function renderPokemonLookup(page, render) {
   renderRecentPokemon(page, render);
-  const form = el('form', { className: 'panel pokemon-lookup-form' });
+  const form = el('div', { className: 'panel pokemon-lookup-form' });
   const label = el('label');
-  label.append(el('span', { text: 'Pokémon name or Pokédex number' }));
+  label.append(el('span', { text: 'Pokémon name' }));
   const searchField = el('div', { className: 'search-field' });
   const input = document.createElement('input');
   input.type = 'search';
@@ -216,10 +195,13 @@ function renderPokemonLookup(page, render) {
   input.autocomplete = 'off';
   input.autocapitalize = 'none';
   input.spellcheck = false;
-  input.placeholder = 'e.g. Bulbasaur or 1';
+  input.placeholder = 'Start typing a Pokémon name';
   input.value = state.study.pokemonQuery;
-  input.setAttribute('list', 'pokemon-name-options');
   input.addEventListener('input', () => { state.study.pokemonQuery = input.value; });
+  input.addEventListener('pokemon-autocomplete-select', event => {
+    const name = event.detail?.name;
+    if (name) lookupPokemon(name, render);
+  });
   const clear = el('button', { className: 'transparent-button icon-button search-field-clear', text: '×' });
   clear.type = 'button';
   clear.setAttribute('aria-label', 'Clear Pokémon search');
@@ -231,27 +213,13 @@ function renderPokemonLookup(page, render) {
   });
   searchField.append(input, clear);
   label.append(searchField);
-  const datalist = document.createElement('datalist');
-  datalist.id = 'pokemon-name-options';
-  activePokemonDatalist = datalist;
-  const cachedIndex = getCachedPokemonNameIndex();
-  if (cachedIndex) populatePokemonDatalist(datalist, cachedIndex.names);
-  const submit = el('button', { className: 'primary-button', text: 'Search' });
-  submit.type = 'submit';
-  submit.disabled = state.study.pokemonStatus === 'loading';
-  form.append(label, datalist, submit);
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    lookupPokemon(state.study.pokemonQuery, render);
-  });
+  form.append(label);
   page.append(form);
   renderPokemonResult(page);
 }
 
 export function renderStudy(container, render) {
   dismissMnemonicBanner();
-  activePokemonDatalist = null;
-  datalistPopulationToken += 1;
   const page = el('section', { className: 'page' });
   const controls = el('div', { className: 'panel study-controls' });
   const modeLabel = el('label');
@@ -297,7 +265,4 @@ export function renderStudy(container, render) {
   container.replaceChildren(page);
 }
 
-document.addEventListener('pokemon-name-index-ready', event => {
-  if (activePokemonDatalist && Array.isArray(event.detail?.names)) populatePokemonDatalist(activePokemonDatalist, event.detail.names);
-});
 window.addEventListener('hashchange', () => { if (location.hash !== '#study') dismissMnemonicBanner(); });
