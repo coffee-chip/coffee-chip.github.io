@@ -1,8 +1,8 @@
-import { parseRelationshipKey } from './relationships.js';
+import { parseDirectionalRelationshipKey } from './relationships.js';
 import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './data/gameVersions.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 9;
+export const STORAGE_VERSION = 10;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -65,9 +65,11 @@ function normalizeRelationshipStats(value) {
   for (const [storedKey, record] of Object.entries(value)) {
     if (!isObject(record)) continue;
     let relationship;
-    try { relationship = parseRelationshipKey(storedKey); } catch { continue; }
+    try { relationship = parseDirectionalRelationshipKey(storedKey); } catch { continue; }
     const attempts = Math.floor(nonnegativeNumber(record.attempts));
     normalized[relationship.key] = {
+      genericKey: relationship.genericKey,
+      direction: relationship.direction,
       attackingType: relationship.attackingType,
       defendingType: relationship.defendingType,
       attempts,
@@ -189,11 +191,14 @@ function normalizeTeams(value) {
 }
 
 function normalizeCurrentData(raw) {
-  if (!isObject(raw) || raw.version !== STORAGE_VERSION) return cloneDefaults();
+  if (!isObject(raw) || ![9, STORAGE_VERSION].includes(raw.version)) return cloneDefaults();
+  const progress = raw.version === STORAGE_VERSION
+    ? raw.progress
+    : { ...raw.progress, relationshipStats: {} };
   return {
     version: STORAGE_VERSION,
     settings: normalizeSettings(raw.settings),
-    progress: normalizeProgress(raw.progress),
+    progress: normalizeProgress(progress),
     cache: normalizeCache(raw.cache),
     starredMoves: normalizeStarredMoves(raw.starredMoves),
     teams: normalizeTeams(raw.teams)
