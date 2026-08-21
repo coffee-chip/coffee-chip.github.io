@@ -45,7 +45,7 @@ function populateMoveBanner(banner, move, versionGroup) {
   const heading = el('div', { className: 'move-details-heading' });
   heading.append(createTypeIcon(data.type), el('strong', { text: move.displayName }));
   const stats = el('div', { className: 'move-details-stats' });
-  for (const [label, value] of [['Damage', formatValue(data.power)], ['Accuracy', formatValue(data.accuracy, '%')]]) {
+  for (const [label, value] of [['Power', formatValue(data.power)], ['Class', titleCase(data.damageClass)], ['Accuracy', formatValue(data.accuracy, '%')]]) {
     const stat = el('span');
     stat.append(el('strong', { text: label }), el('span', { text: value }));
     stats.append(stat);
