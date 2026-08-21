@@ -1,7 +1,6 @@
-import { TYPES } from '../data/types.js';
 import { getPokemon } from '../data/pokemonRepository.js';
 import { getTeam, removePokemonFromTeam, reorderPokemonInTeam, setTeamPokemonAlias } from '../data/teamRepository.js';
-import { getMultiplier, getTypeAdvantageScore } from '../engine/effectiveness.js';
+import { getActiveTypes, getMultiplier, getTypeAdvantageScore } from '../engine/effectiveness.js';
 import { state } from '../state.js';
 import { createTypeList, createTypeIcon } from '../components/typeBadge.js';
 import { createTeamActionsButton } from '../components/teamActionsMenu.js';
@@ -87,7 +86,7 @@ function createAdvantageIconList(types) {
 }
 function createMemberAdvantagePanel(pokemon) {
   const positive = [], negative = [];
-  for (const type of TYPES) { const score = getTypeAdvantageScore(pokemon.types, type); if (score > 0) positive.push(type); else if (score < 0) negative.push(type); }
+  for (const type of getActiveTypes()) { const score = getTypeAdvantageScore(pokemon.types, type); if (score > 0) positive.push(type); else if (score < 0) negative.push(type); }
   const panel = el('section', { className: 'team-member-advantage-panel' });
   const positiveRow = el('div', { className: 'team-member-advantage-row' });
   const negativeRow = el('div', { className: 'team-member-advantage-row' });
@@ -177,7 +176,7 @@ function createAnalysisTable(pokemon, mode, relationships, team) {
   const wrapper = el('div', { className: 'team-matchup-table-scroll' }), table = el('table', { className: 'team-matchup-table' }), caption = document.createElement('caption'); caption.textContent = getAnalysisCaption(mode, relationships); table.append(caption);
   const head = document.createElement('thead'), headRow = document.createElement('tr'), corner = document.createElement('th'); corner.scope = 'col'; corner.setAttribute('aria-label', 'Type'); headRow.append(corner); for (const member of pokemon) headRow.append(createPokemonColumnHeader(member)); head.append(headRow); table.append(head);
   const body = document.createElement('tbody');
-  for (const type of TYPES) { const row = document.createElement('tr'), typeHeader = document.createElement('th'); typeHeader.scope = 'row'; typeHeader.title = type; typeHeader.setAttribute('aria-label', `${type} type`); typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' })); row.append(typeHeader); for (const member of pokemon) { const results = [...relationships].map(relationship => ({ ...getMatchupResult(member, type, mode, relationship), role: getRelationshipRole(mode, relationship, team.isOpponent === true) })); row.append(createMatchupCell(results)); } body.append(row); }
+  for (const type of getActiveTypes()) { const row = document.createElement('tr'), typeHeader = document.createElement('th'); typeHeader.scope = 'row'; typeHeader.title = type; typeHeader.setAttribute('aria-label', `${type} type`); typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' })); row.append(typeHeader); for (const member of pokemon) { const results = [...relationships].map(relationship => ({ ...getMatchupResult(member, type, mode, relationship), role: getRelationshipRole(mode, relationship, team.isOpponent === true) })); row.append(createMatchupCell(results)); } body.append(row); }
   table.append(body); wrapper.append(table); return wrapper;
 }
 function createAnalysisSelector(className, label, options, activeValue, onChange) {
@@ -204,7 +203,7 @@ function createOverallMatchupMatrix(team) {
   const isOpponent = team.isOpponent === true, role = isOpponent ? 'danger' : 'success', wrapper = el('div', { className: 'team-matchup-table-scroll' }), table = el('table', { className: 'team-matchup-table team-overall-matchup-table' }), caption = document.createElement('caption'); caption.textContent = isOpponent ? 'Types that have an overall advantage against each opponent Pokémon.' : 'Types that each Pokémon has an overall advantage against.'; table.append(caption);
   const head = document.createElement('thead'), headRow = document.createElement('tr'), corner = document.createElement('th'); corner.scope = 'col'; corner.setAttribute('aria-label', 'Type'); headRow.append(corner); for (const member of pokemon) headRow.append(createPokemonColumnHeader(member)); head.append(headRow); table.append(head);
   const body = document.createElement('tbody');
-  for (const type of TYPES) { const row = document.createElement('tr'), typeHeader = document.createElement('th'); typeHeader.scope = 'row'; typeHeader.title = type; typeHeader.setAttribute('aria-label', `${type} type`); typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' })); row.append(typeHeader); for (const member of pokemon) { const score = getTypeAdvantageScore(member.types, type), shouldMark = isOpponent ? score < 0 : score > 0, cell = document.createElement('td'); if (shouldMark) { const intensity = getAdvantageIntensity(score), dot = el('span', { className: `team-advantage-dot team-advantage-dot-${role} team-advantage-dot-${intensity}` }), perspectiveScore = isOpponent ? -score : score, label = isOpponent ? `${type} has advantage score ${perspectiveScore} against ${member.displayName}` : `${member.displayName} has advantage score ${score} against ${type}`; dot.setAttribute('aria-label', label); dot.title = label; cell.append(dot); } row.append(cell); } body.append(row); }
+  for (const type of getActiveTypes()) { const row = document.createElement('tr'), typeHeader = document.createElement('th'); typeHeader.scope = 'row'; typeHeader.title = type; typeHeader.setAttribute('aria-label', `${type} type`); typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' })); row.append(typeHeader); for (const member of pokemon) { const score = getTypeAdvantageScore(member.types, type), shouldMark = isOpponent ? score < 0 : score > 0, cell = document.createElement('td'); if (shouldMark) { const intensity = getAdvantageIntensity(score), dot = el('span', { className: `team-advantage-dot team-advantage-dot-${role} team-advantage-dot-${intensity}` }), perspectiveScore = isOpponent ? -score : score, label = isOpponent ? `${type} has advantage score ${perspectiveScore} against ${member.displayName}` : `${member.displayName} has advantage score ${score} against ${type}`; dot.setAttribute('aria-label', label); dot.title = label; cell.append(dot); } row.append(cell); } body.append(row); }
   table.append(body); wrapper.append(table); section.append(wrapper); return section;
 }
 async function loadTeamPokemon(team, render) {
