@@ -1,6 +1,6 @@
 const OPTIONS = Object.freeze([
-  ['teams', 'Teams'],
-  ['my-pokemon', 'My Pokémon']
+  ['my-pokemon', 'My Pokémon'],
+  ['teams', 'Teams']
 ]);
 
 export function createTeamOverviewNavigation(activeRoute) {
