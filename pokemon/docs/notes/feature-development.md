@@ -28,6 +28,7 @@
 - Battle scenario quiz mode uses combined advantage scoring against a displayed Pokémon. Its Answers setting supports Types, Pokémon, or Both.
 - Battle scenario type questions ask which hypothetical single-type Pokémon would have positive combined advantage against the displayed Pokémon.
 - Battle scenario Pokémon questions show four candidate Pokémon and ask which has the greatest combined type advantage; generation retries until there is a unique highest-scoring candidate so the question remains single-select.
+- Answer feedback for Battle Scenario always includes a focused explanation. It describes non-neutral attacks between the prompt Pokémon and the best option, then the prompt and the user's different choice when applicable; it deliberately does not compare every candidate. Type-answer scenarios follow the same rule for the advantageous and wrongly selected hypothetical single-type Pokémon.
 
 ## Implementation ideas
 
