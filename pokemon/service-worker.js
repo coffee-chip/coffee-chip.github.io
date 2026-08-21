@@ -1,4 +1,4 @@
-const APP_VERSION = '2026.08.21.1';
+const APP_VERSION = '2026.08.21.2';
 const CACHE_PREFIX = 'pokemon-type-trainer-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const CORE_ASSETS = [
@@ -16,6 +16,7 @@ const CORE_ASSETS = [
   './css/study-navigation.css',
   './css/quiz-pokemon.css',
   './css/teams.css',
+  './css/owned-pokemon.css',
   './css/team-member-controls.css',
   './css/team-actions-menu.css',
   './css/team-rival.css',
@@ -37,6 +38,8 @@ const CORE_ASSETS = [
   './js/components/pokemonLevelUpMoves.js',
   './js/components/pokemonEvolutionControls.js',
   './js/components/pokemonTeamMenu.js',
+  './js/components/pokemonStudyNavigation.js',
+  './js/components/teamOverviewNavigation.js',
   './js/components/teamActionsMenu.js',
   './js/components/teamMemberStudyLink.js',
   './js/components/teamRivalLink.js',
@@ -51,6 +54,7 @@ const CORE_ASSETS = [
   './js/data/starredMoveRepository.js',
   './js/data/pokemonRepository.js',
   './js/data/teamRepository.js',
+  './js/data/ownedPokemonRepository.js',
   './js/engine/pokemonAdvantage.js',
   './js/quiz/battleScenarioQuestions.js',
   './js/quiz/generators.js',
@@ -61,6 +65,7 @@ const CORE_ASSETS = [
   './js/views/quiz.js',
   './js/views/study.js',
   './js/views/teams.js',
+  './js/views/ownedPokemon.js',
   './js/views/teamDetail.js',
   './js/views/progress.js',
   './js/views/settings.js',
