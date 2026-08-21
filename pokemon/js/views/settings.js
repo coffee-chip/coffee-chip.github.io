@@ -1,8 +1,9 @@
 import { state, resetProgress } from '../state.js';
 import { loadPersistentData, saveProgress, saveSettings } from '../storage.js';
+import { setGameVersionGroup } from '../data/gameSelection.js';
 import { applyTheme, APPEARANCE_PREFERENCES, PALETTE_THEMES } from '../theme.js';
 import { renderDeveloperOverlay } from '../developerOverlay.js';
-import { clearPokemonCache, getPokemonCacheEntryCount } from '../data/pokemonRepository.js';
+import { clearGameDataCache, getPokemonCacheEntryCount } from '../data/pokemonRepository.js';
 import { GAME_VERSION_GROUPS } from '../data/gameVersions.js';
 import { getMoveCacheEntryCount } from '../data/moveRepository.js';
 import { serviceWorkerState, subscribeServiceWorker, checkForLatestVersion, applyWaitingUpdate, clearAppCaches } from '../serviceWorker.js';
@@ -56,8 +57,7 @@ function appendGameDataControl(panel, render) {
     group.append(option);
   }
   gameSelect.addEventListener('change', () => {
-    state.settings.gameVersionGroup = gameSelect.value;
-    saveSettings(state.settings);
+    setGameVersionGroup(gameSelect.value);
     render();
   });
   gameLabel.append(gameSelect);
@@ -160,7 +160,7 @@ export function renderSettings(container, render) {
   developerPanel.append(el('p', { className: 'muted', text: `Cached Pokémon: ${getPokemonCacheEntryCount()} · Cached moves: ${getMoveCacheEntryCount()} · Name index: ${state.cache.pokemonNameIndex ? 'cached' : 'not cached'}` }));
   const clearPokemonButton = el('button', { className: 'secondary-button', text: 'Clear Pokémon cache' });
   clearPokemonButton.type = 'button';
-  clearPokemonButton.addEventListener('click', () => { const cleared = clearPokemonCache(); pokemonCacheMessage = cleared ? 'Pokémon records, move data, and autocomplete names were cleared.' : 'Pokémon cache was cleared for this session, but could not be saved.'; render(); });
+  clearPokemonButton.addEventListener('click', () => { const cleared = clearGameDataCache(); pokemonCacheMessage = cleared ? 'Pokémon records, move data, and autocomplete names were cleared.' : 'Pokémon cache was cleared for this session, but could not be saved.'; render(); });
   developerPanel.append(clearPokemonButton);
 
   if (serviceMessage || serviceWorkerState.message) { const status = el('p', { className: 'settings-status', text: serviceMessage || serviceWorkerState.message }); status.setAttribute('role', 'status'); developerPanel.append(status); }
