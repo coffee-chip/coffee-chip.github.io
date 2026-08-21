@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { parseRelationshipKey } from '../relationships.js';
+import { parseDirectionalRelationshipKey } from '../relationships.js';
 import { createTypeBadge } from './typeBadge.js';
 import { createPokemonDefensiveMatchups, createPokemonOffensiveMatchups } from './pokemonMatchups.js';
 
@@ -39,7 +39,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
 
   for (const mnemonic of mnemonics) {
-    const { attackingType, defendingType } = parseRelationshipKey(mnemonic.relationshipKey);
+    const { attackingType, defendingType } = parseDirectionalRelationshipKey(mnemonic.relationshipKey);
     const line = el('span', { className: 'mnemonic-banner-line' });
     line.append(createTypeBadge(attackingType));
     line.append(el('span', { className: 'relationship-arrow', text: '→' }));
