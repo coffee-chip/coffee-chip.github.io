@@ -1,16 +1,15 @@
 import { state } from '../state.js';
-import { TYPES } from '../data/types.js';
+import { getActiveTypes } from '../engine/effectiveness.js';
+import { getNationalDexLimitForVersionGroup } from '../data/gameVersions.js';
 import { PRACTICE_PRESETS } from '../quiz/modes.js';
 import { createTypeBadge } from '../components/typeBadge.js';
 import {
   createRelationship,
   getRelationshipMastery,
-  getRelationshipMultiplier,
-  parseRelationshipKey
+  parseDirectionalRelationshipKey
 } from '../relationships.js';
 
 const EXPANDED_LIMIT = 30;
-const RECOGNITION_POOL_SIZE = 386;
 const expandedSections = new Set();
 const RECOGNITION_MODES = new Set(['pokemon-type-recognition']);
 
@@ -75,7 +74,7 @@ function quizStatsPanel() {
 }
 
 function matchupRow(record, rank) {
-  const relationship = parseRelationshipKey(record.key);
+  const relationship = parseDirectionalRelationshipKey(record.key);
   const row = el('div', { className: 'relationship-row' });
   row.append(el('span', { className: 'relationship-rank', text: `${rank}.` }));
   const content = el('div', { className: 'relationship-row-content' });
@@ -142,9 +141,9 @@ function rankingPanel({ id, title, records, emptyText, itemLabel, rowRenderer, r
 
 function getAllNonNeutralMatchupRecords() {
   const records = [];
-  for (const attackingType of TYPES) for (const defendingType of TYPES) {
+  for (const attackingType of getActiveTypes()) for (const defendingType of getActiveTypes()) {
     const relationship = createRelationship(attackingType, defendingType);
-    if (getRelationshipMultiplier(relationship) === 1) continue;
+    if (!relationship.key) continue;
     const saved = state.progress.relationshipStats?.[relationship.key];
     records.push(saved ? { ...saved, key: relationship.key } : {
       key: relationship.key, attackingType, defendingType, attempts: 0, earnedScore: 0,
@@ -159,8 +158,12 @@ function cachedPokemonName(id) {
   return record?.name ?? null;
 }
 
+function getRecognitionPoolSize() {
+  return getNationalDexLimitForVersionGroup(state.settings.gameVersionGroup);
+}
+
 function getAllRecognitionRecords() {
-  return Array.from({ length: RECOGNITION_POOL_SIZE }, (_, index) => {
+  return Array.from({ length: getRecognitionPoolSize() }, (_, index) => {
     const pokemonId = index + 1;
     const saved = state.progress.pokemonRecognitionStats?.[String(pokemonId)];
     return saved ? { ...saved } : {
@@ -184,7 +187,7 @@ export function renderProgress(container) {
   const metrics = el('div', { className: 'progress-metrics' });
   for (const [label, value] of [
     ['Non-neutral matchups practiced', `${practicedNonNeutral.length} of ${nonNeutralRecords.length}`],
-    ['Pokémon practiced', `${practicedPokemon.length} of ${RECOGNITION_POOL_SIZE}`]
+    ['Pokémon practiced', `${practicedPokemon.length} of ${getRecognitionPoolSize()}`]
   ]) {
     const metric = el('div', { className: 'progress-metric' });
     metric.append(el('strong', { text: String(value) }), el('span', { text: label }));
