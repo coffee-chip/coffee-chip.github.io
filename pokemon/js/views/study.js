@@ -1,6 +1,6 @@
-import { TYPES, TYPE_META } from '../data/types.js';
+import { TYPE_META } from '../data/types.js';
 import { state } from '../state.js';
-import { getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiveness.js';
+import { getActiveTypes, getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiveness.js';
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { createRelationshipKey, parseRelationshipKey } from '../relationships.js';
@@ -31,7 +31,7 @@ function createTypeSelect(value, includeNone = false) {
     option.textContent = 'None';
     select.append(option);
   }
-  for (const type of TYPES) {
+  for (const type of getActiveTypes()) {
     const option = document.createElement('option');
     option.value = type;
     option.textContent = TYPE_META[type].label;
