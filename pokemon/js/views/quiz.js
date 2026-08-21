@@ -15,7 +15,7 @@ import { scoreQuestion } from '../quiz/scoring.js';
 import { renderAnswerDisplay } from '../quiz/displays.js';
 import { createTypeBadge } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
-import { parseRelationshipKey } from '../relationships.js';
+import { parseDirectionalRelationshipKey } from '../relationships.js';
 
 let questionLoadError = '';
 let questionLoadToken = 0;
@@ -187,7 +187,7 @@ function showFeedbackMnemonic({ mnemonics, button }) {
   banner.setAttribute('aria-label', 'Dismiss mnemonic');
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
   for (const mnemonic of mnemonics) {
-    const relationship = parseRelationshipKey(mnemonic.relationshipKey);
+    const relationship = parseDirectionalRelationshipKey(mnemonic.relationshipKey);
     const line = el('span', { className: 'mnemonic-banner-line' });
     line.append(createTypeBadge(relationship.attackingType));
     line.append(el('span', { className: 'relationship-arrow', text: '→' }));
