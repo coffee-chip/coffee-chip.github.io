@@ -53,3 +53,5 @@
 - Changing the global game now centrally clears game-dependent Pokémon, move, recent-lookup, and autocomplete caches while preserving teams, starred moves, and progress. Pokémon records store compact PokéAPI type history and resolve their displayed/calculated types for the selected game generation (for example, Clefairy is Normal in FireRed / LeafGreen).
 
 - The active game controls the existing type tools end-to-end: available type choices, the effectiveness engine, Study type lookup, Pokémon incoming/outgoing matchups, team matrices, and type-answer quizzes. The compact chart data is bundled with the PWA and selected synchronously by game generation, so type tools and quizzes remain fully offline. Changing games clears other game-dependent lookup data and immediately switches the active ruleset.
+
+- Pokémon availability now follows the selected game generation across existing lookup surfaces. Study autocomplete and direct lookups are limited to the corresponding National Pokédex range, unavailable recent entries are discarded, evolution controls hide forms introduced later, and Pokémon quiz pools offer only generations available in the selected game.
