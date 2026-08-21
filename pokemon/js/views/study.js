@@ -3,7 +3,7 @@ import { state } from '../state.js';
 import { getActiveTypes, getOffensiveMatchups, getDefensiveMatchups } from '../engine/effectiveness.js';
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
-import { createRelationshipKey, parseRelationshipKey } from '../relationships.js';
+import { createRelationship, parseDirectionalRelationshipKey } from '../relationships.js';
 import { getCachedPokemonNameIndex, getPokemon, getRecentPokemonLookups, rememberPokemonLookup } from '../data/pokemonRepository.js';
 
 const MULTIPLIER_LABELS = {
@@ -59,7 +59,7 @@ function showMnemonicBanner({ relationshipKeys, mnemonics, button }) {
   banner.setAttribute('aria-label', 'Dismiss mnemonic');
   banner.append(el('strong', { text: mnemonics.length === 1 ? 'Mnemonic' : 'Mnemonics' }));
   for (const mnemonic of mnemonics) {
-    const { attackingType, defendingType } = parseRelationshipKey(mnemonic.relationshipKey);
+    const { attackingType, defendingType } = parseDirectionalRelationshipKey(mnemonic.relationshipKey);
     const line = el('span', { className: 'mnemonic-banner-line' });
     line.append(createTypeBadge(attackingType), el('span', { className: 'relationship-arrow', text: '→' }), createTypeBadge(defendingType), el('span', { className: 'mnemonic-text', text: mnemonic.text }));
     banner.append(line);
@@ -92,7 +92,7 @@ function renderTypeResults(page) {
     heading.append(createTypeBadge(attackingType), el('span', { text: 'attacks against each defending type' }));
     results.append(heading);
     for (const multiplier of [2, 1, 0.5, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier], defendingType => [createRelationshipKey(attackingType, defendingType)]);
+      const group = renderGroup(multiplier, groups[multiplier], defendingType => [createRelationship(attackingType, defendingType).key].filter(Boolean));
       if (group) results.append(group);
     }
   } else {
@@ -103,7 +103,7 @@ function renderTypeResults(page) {
     heading.append(el('span', { text: 'Damage taken by' }), createTypeList(defendingTypes));
     results.append(heading);
     for (const multiplier of [4, 2, 1, 0.5, 0.25, 0]) {
-      const group = renderGroup(multiplier, groups[multiplier], attackingType => defendingTypes.map(defendingType => createRelationshipKey(attackingType, defendingType)));
+      const group = renderGroup(multiplier, groups[multiplier], attackingType => defendingTypes.map(defendingType => createRelationship(attackingType, defendingType).key).filter(Boolean));
       if (group) results.append(group);
     }
   }
