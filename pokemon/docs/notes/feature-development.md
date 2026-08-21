@@ -62,3 +62,5 @@
 - Pokémon recognition progress is keyed by Pokémon ID and the resolved type set, such as `35:normal` or `35:fairy`. Each record also carries its applicable generation range, allowing adaptive sampling and Progress rankings to select the fact that applies to the current game while sharing unchanged type knowledge across games. Storage v11 clears the older ID-only recognition records.
 
 - Move details already resolve type, power, accuracy, and flavor text through the selected PokéAPI version group. They now additionally resolve historical effect text and the pre-Generation-IV type-based Physical/Special split; move details show Power, Class, and Accuracy.
+
+- Shared Pokémon autocomplete accepts a suggestion on `click`, rather than removing it during `pointerdown`; this prevents a touch tap from falling through to the button beneath the popup. It closes on outside pointer presses or when focus leaves the autocomplete field.
