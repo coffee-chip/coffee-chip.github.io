@@ -1,5 +1,5 @@
 import { TYPES } from './types.js';
-import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './gameVersions.js';
+import { DEFAULT_GAME_VERSION_GROUP, getGameVersionGroup, isGameVersionGroup } from './gameVersions.js';
 import { state } from '../state.js';
 import { saveCache } from '../storage.js';
 import { fetchEvolutionChain, fetchPokemon, fetchPokemonNameIndex, fetchPokemonSpecies, normalizePokemonIdentifier, PokeApiError } from '../api/pokeApi.js';
@@ -9,6 +9,30 @@ const NAME_INDEX_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const RECENT_POKEMON_LIMIT = 10;
 
 function titleCase(value) { return value.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' '); }
+function normalizeTypes(entries) {
+  return [...(entries ?? [])]
+    .sort((first, second) => first.slot - second.slot)
+    .map(entry => entry.type?.name)
+    .filter(type => TYPES.includes(type));
+}
+function generationNumber(name) {
+  const match = typeof name === 'string' && name.match(/^generation-(i|ii|iii|iv|v|vi|vii|viii|ix)$/);
+  return match ? ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix'].indexOf(match[1]) + 1 : null;
+}
+function normalizeTypeHistory(raw) {
+  return (raw.past_types ?? [])
+    .map(entry => ({ throughGeneration: generationNumber(entry.generation?.name), types: normalizeTypes(entry.types) }))
+    .filter(entry => Number.isInteger(entry.throughGeneration) && entry.types.length)
+    .sort((first, second) => first.throughGeneration - second.throughGeneration);
+}
+function resolveTypesForGeneration(pokemon, versionGroup) {
+  const targetGeneration = getGameVersionGroup(versionGroup).generationNumber;
+  const historical = pokemon.typeHistory.find(entry => entry.throughGeneration >= targetGeneration);
+  return [...(historical?.types ?? pokemon.currentTypes)];
+}
+function materializePokemonForGame(pokemon, versionGroup) {
+  return { ...pokemon, types: resolveTypesForGeneration(pokemon, versionGroup) };
+}
 function normalizeLevelUpMoves(raw, versionGroup) {
   const movesByName = new Map();
   for (const entry of raw.moves ?? []) {
@@ -24,13 +48,19 @@ function normalizeLevelUpMoves(raw, versionGroup) {
   return [...movesByName.values()].sort((a, b) => a.level - b.level || a.displayName.localeCompare(b.displayName));
 }
 function normalizeApiPokemon(raw, versionGroup) {
-  const types = [...(raw.types ?? [])].sort((a,b) => a.slot-b.slot).map(entry => entry.type?.name).filter(type => TYPES.includes(type));
-  if (!Number.isInteger(raw.id) || raw.id < 1 || !raw.name || !types.length) throw new PokeApiError('PokéAPI returned an incomplete Pokémon record.', { code: 'invalid-response' });
+  const currentTypes = normalizeTypes(raw.types);
+  const typeHistory = normalizeTypeHistory(raw);
+  const types = typeHistory.find(entry => entry.throughGeneration >= getGameVersionGroup(versionGroup).generationNumber)?.types ?? currentTypes;
+  if (!Number.isInteger(raw.id) || raw.id < 1 || !raw.name || !currentTypes.length || !types.length) {
+    throw new PokeApiError('PokéAPI returned an incomplete Pokémon record.', { code: 'invalid-response' });
+  }
   return {
     id: raw.id,
     name: raw.name,
     displayName: titleCase(raw.name),
     types,
+    currentTypes,
+    typeHistory,
     spriteUrl: raw.sprites?.other?.['official-artwork']?.front_default ?? raw.sprites?.front_default ?? null,
     speciesName: raw.species?.name ?? raw.name,
     evolution: null,
@@ -46,7 +76,19 @@ function isValidEvolution(value) {
     && value.previous.every(isValidEvolutionTarget)
     && value.next.every(isValidEvolutionTarget);
 }
-function isValidCachedPokemon(value) { return value && Number.isInteger(value.id) && typeof value.name === 'string' && typeof value.displayName === 'string' && Array.isArray(value.types) && value.types.length >= 1 && value.types.every(type => TYPES.includes(type)) && typeof value.fetchedAt === 'string'; }
+function isValidTypeList(value) {
+  return Array.isArray(value) && value.length >= 1 && value.every(type => TYPES.includes(type));
+}
+function isValidTypeHistory(value) {
+  return Array.isArray(value) && value.every(entry =>
+    Number.isInteger(entry?.throughGeneration) && entry.throughGeneration >= 1 && isValidTypeList(entry.types)
+  );
+}
+function isValidCachedPokemon(value) {
+  return value && Number.isInteger(value.id) && typeof value.name === 'string' && typeof value.displayName === 'string'
+    && isValidTypeList(value.types) && isValidTypeList(value.currentTypes) && isValidTypeHistory(value.typeHistory)
+    && typeof value.fetchedAt === 'string';
+}
 function isValidNameIndex(value) { return value && Array.isArray(value.names) && value.names.length > 0 && value.names[0] === 'bulbasaur' && value.names.every(name => typeof name === 'string' && name.length > 0) && typeof value.fetchedAt === 'string'; }
 function isFresh(record, maxAgeMs) { const fetchedAt = Date.parse(record.fetchedAt); return Number.isFinite(fetchedAt) && Date.now()-fetchedAt < maxAgeMs; }
 function getCached(identifier) {
@@ -130,17 +172,21 @@ export async function getPokemon(identifier, { forceRefresh = false, versionGrou
   const selectedVersionGroup = isGameVersionGroup(versionGroup) ? versionGroup : DEFAULT_GAME_VERSION_GROUP;
   const cached = getCached(normalized);
   if (cached && !forceRefresh && isFresh(cached, CACHE_MAX_AGE_MS) && hasLevelUpMoves(cached, selectedVersionGroup)) {
-    if (isValidEvolution(cached.evolution)) return { pokemon: cached, source: 'cache', stale: false };
-    const enriched = await enrichWithEvolution(cached); if (enriched !== cached) cachePokemon(enriched); return { pokemon: enriched, source: 'cache', stale: false };
+    if (isValidEvolution(cached.evolution)) {
+      return { pokemon: materializePokemonForGame(cached, selectedVersionGroup), source: 'cache', stale: false };
+    }
+    const enriched = await enrichWithEvolution(cached);
+    if (enriched !== cached) cachePokemon(enriched);
+    return { pokemon: materializePokemonForGame(enriched, selectedVersionGroup), source: 'cache', stale: false };
   }
   try {
     const raw = await fetchPokemon(normalized);
     const refreshed = normalizeApiPokemon(raw, selectedVersionGroup);
     const pokemon = await enrichWithEvolution(mergePokemon(cached, refreshed));
     cachePokemon(pokemon);
-    return { pokemon, source: 'network', stale: false };
+    return { pokemon: materializePokemonForGame(pokemon, selectedVersionGroup), source: 'network', stale: false };
   } catch (error) {
-    if (cached) return { pokemon: cached, source: 'stale-cache', stale: true, error };
+    if (cached) return { pokemon: materializePokemonForGame(cached, selectedVersionGroup), source: 'stale-cache', stale: true, error };
     throw error;
   }
 }
@@ -166,4 +212,4 @@ export async function getPokemonNameIndex({ forceRefresh = false } = {}) {
   catch (error) { if (cached) return { names: cached.names, source: 'stale-cache', stale: true, error }; throw error; }
 }
 export function getPokemonCacheEntryCount() { return new Set(Object.values(state.cache.pokemon ?? {}).filter(isValidCachedPokemon).map(record => record.id)).size; }
-export function clearPokemonCache() { state.cache.pokemon = {}; state.cache.moves = {}; state.cache.pokemonNameIndex = null; state.cache.recentPokemonIds = []; return saveCache(state.cache); }
+export function clearGameDataCache() { state.cache.pokemon = {}; state.cache.moves = {}; state.cache.pokemonNameIndex = null; state.cache.recentPokemonIds = []; return saveCache(state.cache); }
