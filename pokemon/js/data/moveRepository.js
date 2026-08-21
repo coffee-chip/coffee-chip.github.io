@@ -2,9 +2,11 @@ import { TYPES } from './types.js';
 import { state } from '../state.js';
 import { saveCache } from '../storage.js';
 import { fetchMove, PokeApiError } from '../api/pokeApi.js';
-import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './gameVersions.js';
+import { DEFAULT_GAME_VERSION_GROUP, getGameVersionGroup, isGameVersionGroup } from './gameVersions.js';
 
 const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const DAMAGE_CLASSES = new Set(['physical', 'special', 'status']);
+const PRE_SPLIT_PHYSICAL_TYPES = new Set(['normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug', 'ghost', 'steel']);
 
 function titleCase(value) {
   return value.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ');
@@ -23,12 +25,31 @@ function normalizeDescription(value) {
   return typeof value === 'string' ? value.replace(/[\n\f\r]+/g, ' ').replace(/\s+/g, ' ').trim() : '';
 }
 
-function englishDescription(raw, versionGroup) {
+function englishShortEffect(entries) {
+  return (entries ?? []).find(entry => entry?.language?.name === 'en')?.short_effect ?? '';
+}
+
+function englishDescription(raw, pastValue, versionGroup) {
   const entries = Array.isArray(raw.flavor_text_entries) ? raw.flavor_text_entries : [];
   const inSelectedGame = entries.find(entry => entry?.language?.name === 'en' && entry.version_group?.name === versionGroup);
   const anyEnglish = entries.find(entry => entry?.language?.name === 'en');
-  const effect = (raw.effect_entries ?? []).find(entry => entry?.language?.name === 'en')?.short_effect;
-  return normalizeDescription(inSelectedGame?.flavor_text ?? anyEnglish?.flavor_text ?? effect);
+  return normalizeDescription(
+    inSelectedGame?.flavor_text
+    ?? englishShortEffect(pastValue?.effect_entries)
+    ?? englishShortEffect(raw.effect_entries)
+    ?? anyEnglish?.flavor_text
+  );
+}
+
+function damageClassForVersionGroup(raw, type, versionGroup) {
+  const currentDamageClass = raw.damage_class?.name;
+  if (!DAMAGE_CLASSES.has(currentDamageClass)) {
+    throw new PokeApiError('PokéAPI returned a move with an unknown damage class.', { code: 'invalid-response' });
+  }
+  if (currentDamageClass === 'status' || getGameVersionGroup(versionGroup).generationNumber >= 4) {
+    return currentDamageClass;
+  }
+  return PRE_SPLIT_PHYSICAL_TYPES.has(type) ? 'physical' : 'special';
 }
 
 function normalizeApiMove(raw, versionGroup) {
@@ -47,7 +68,8 @@ function normalizeApiMove(raw, versionGroup) {
         type,
         power: validStat(pastValue.power ?? raw.power),
         accuracy: validStat(pastValue.accuracy ?? raw.accuracy),
-        description: englishDescription(raw, versionGroup)
+        damageClass: damageClassForVersionGroup(raw, type, versionGroup),
+        description: englishDescription(raw, pastValue, versionGroup)
       }
     },
     fetchedAt: new Date().toISOString()
@@ -58,6 +80,7 @@ function isValidVersionData(value) {
   return value && TYPES.includes(value.type)
     && (value.power === null || validStat(value.power) !== null)
     && (value.accuracy === null || validStat(value.accuracy) !== null)
+    && DAMAGE_CLASSES.has(value.damageClass)
     && typeof value.description === 'string';
 }
 
