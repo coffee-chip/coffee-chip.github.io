@@ -16,6 +16,17 @@ function closeSuggestions() {
   activeInput?.setAttribute('aria-expanded', 'false');
 }
 
+function getActiveSearchField() {
+  return activeInput?.closest('.search-field') ?? null;
+}
+
+function selectSuggestion(input, name) {
+  input.value = name;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  closeSuggestions();
+  input.focus();
+}
+
 function findMatches(query) {
   const normalized = query.trim().toLowerCase();
   if (!normalized || /^\d+$/.test(normalized)) return [];
@@ -42,12 +53,10 @@ function renderSuggestions(input) {
     option.className = 'secondary-button pokemon-autocomplete-option';
     option.setAttribute('role', 'option');
     option.textContent = displayName(name);
-    option.addEventListener('pointerdown', event => {
+    option.addEventListener('click', event => {
       event.preventDefault();
-      input.value = name;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      closeSuggestions();
-      input.focus();
+      event.stopPropagation();
+      selectSuggestion(input, name);
     });
     list.append(option);
   }
@@ -66,8 +75,14 @@ export function initializePokemonAutocomplete() {
     const input = event.target.closest?.(INPUT_SELECTOR);
     if (input) renderSuggestions(input);
   });
+  document.addEventListener('pointerdown', event => {
+    if (!getActiveSearchField()?.contains(event.target)) closeSuggestions();
+  }, true);
   document.addEventListener('focusout', event => {
-    if (event.target === activeInput) window.setTimeout(closeSuggestions, 0);
+    if (event.target !== activeInput) return;
+    window.setTimeout(() => {
+      if (!getActiveSearchField()?.contains(document.activeElement)) closeSuggestions();
+    }, 0);
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && event.target === activeInput) closeSuggestions();
