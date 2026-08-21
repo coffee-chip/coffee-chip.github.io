@@ -51,3 +51,5 @@
 - Study level-up move rows can be starred. Starred state is persisted by normalized move name independently of Pokémon and level, so it is shared anywhere that move appears. The move table can optionally compare one direct previous/next evolution: rows are merged by level and the compared evolution is visually muted.
 
 - Changing the global game now centrally clears game-dependent Pokémon, move, recent-lookup, and autocomplete caches while preserving teams, starred moves, and progress. Pokémon records store compact PokéAPI type history and resolve their displayed/calculated types for the selected game generation (for example, Clefairy is Normal in FireRed / LeafGreen).
+
+- The active game generation now controls the existing type tools end-to-end: available type choices, the effectiveness engine, Study type lookup, Pokémon incoming/outgoing matchups, team matrices, and type-answer quizzes. The ruleset uses the Gen I, Gen II–V, and Gen VI+ chart eras; changing games also abandons an in-progress quiz so a question cannot survive under a different chart.
