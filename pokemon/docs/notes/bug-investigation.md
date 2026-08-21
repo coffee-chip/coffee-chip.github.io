@@ -10,3 +10,5 @@
 
 - 2026.08.20.4 restores immediately responsive navigation and page rendering around the selected-game chart startup load.
 - 2026.08.20.5 removes the runtime type-chart fetch entirely. Bundled chart data is available synchronously, so startup and game changes no longer have a chart-loading state.
+
+- 2026.08.21.4 closes the autocomplete popup after restoring input focus on suggestion selection. This prevents the focus handler from recreating a one-item popup after a selection.
