@@ -1,6 +1,5 @@
-import { TYPES } from '../data/types.js';
 import { getPokemon } from '../data/pokemonRepository.js';
-import { getPokemonTypeAdvantageScore } from '../engine/effectiveness.js';
+import { getActiveTypes, getPokemonTypeAdvantageScore } from '../engine/effectiveness.js';
 import { getPokemonAdvantageScore } from '../engine/pokemonAdvantage.js';
 import { POKEMON_POOLS } from './generators.js';
 
@@ -31,7 +30,7 @@ export async function createBattleTypeQuestion({ poolId = 'gen-1' } = {}) {
   const ids = idsForPool(poolId);
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const pokemon = await loadPokemon(randomItem(ids));
-    const correctAnswers = TYPES.filter(type => getPokemonTypeAdvantageScore([type], pokemon.types) > 0);
+    const correctAnswers = getActiveTypes().filter(type => getPokemonTypeAdvantageScore([type], pokemon.types) > 0);
     if (!correctAnswers.length) continue;
     return {
       id: `battle-types:${pokemon.id}:${Date.now()}`,
@@ -40,7 +39,7 @@ export async function createBattleTypeQuestion({ poolId = 'gen-1' } = {}) {
       formatId: 'type-multi-select',
       prompt: `Which Pokémon types would have an advantage against ${pokemon.displayName}?`,
       answerType: 'type-multi-select',
-      choices: [...TYPES],
+      choices: [...getActiveTypes()],
       correctAnswers,
       relationships: [],
       display: { kind: 'pokemon', pokemon },
