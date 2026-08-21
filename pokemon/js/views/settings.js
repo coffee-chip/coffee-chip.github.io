@@ -65,15 +65,21 @@ function appendGameDataControl(panel, render) {
     gameChangeInFlight = true;
     gameDataMessage = 'Loading type relationships for ' + selectedGame + '…';
     render();
-    setGameVersionGroup(gameSelect.value).then(result => {
-      gameChangeInFlight = false;
-      if (result.error) {
-        gameDataMessage = result.changed
-          ? 'The game changed, but the new data could not be saved: ' + result.error.message
-          : 'Could not change games: ' + result.error.message;
-      } else gameDataMessage = '';
-      render();
-    });
+    setGameVersionGroup(gameSelect.value)
+      .then(result => {
+        gameChangeInFlight = false;
+        if (result.error) {
+          gameDataMessage = result.changed
+            ? 'The game changed, but the new data could not be saved: ' + result.error.message
+            : 'Could not change games: ' + result.error.message;
+        } else gameDataMessage = '';
+        render();
+      })
+      .catch(error => {
+        gameChangeInFlight = false;
+        gameDataMessage = 'Could not change games: ' + (error?.message ?? 'Unexpected error.');
+        render();
+      });
   });
   gameLabel.append(gameSelect);
   panel.append(gameLabel);
