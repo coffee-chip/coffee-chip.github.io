@@ -14,7 +14,9 @@ function snapshotPokemon(pokemon) {
     name: pokemon.name,
     displayName: pokemon.displayName,
     nickname: null,
-    spriteUrl: pokemon.spriteUrl ?? null
+    spriteUrl: pokemon.spriteUrl ?? null,
+    level: null,
+    currentMoves: []
   };
 }
 
@@ -64,5 +66,37 @@ export function setOwnedPokemonSpecies(entryId, pokemon) {
   entry.spriteUrl = pokemon.spriteUrl ?? null;
   if (saveOwnedPokemon(state.ownedPokemon)) return entry;
   Object.assign(entry, previous);
+  return null;
+}
+
+export function setOwnedPokemonLevel(entryId, level) {
+  const entry = getOwnedPokemonById(entryId);
+  if (!entry) return null;
+  const normalized = level === null || level === '' ? null : Number(level);
+  if (normalized !== null && (!Number.isInteger(normalized) || normalized < 1 || normalized > 100)) return null;
+  const previous = entry.level ?? null;
+  entry.level = normalized;
+  if (saveOwnedPokemon(state.ownedPokemon)) return entry;
+  entry.level = previous;
+  return null;
+}
+
+export function setOwnedPokemonCurrentMove(entryId, moveName, selected) {
+  const entry = getOwnedPokemonById(entryId);
+  if (!entry) return null;
+  const normalized = String(moveName ?? '').trim().toLowerCase();
+  if (!normalized) return null;
+  const previous = [...(entry.currentMoves ?? [])];
+  const currentMoves = [...previous];
+  const index = currentMoves.indexOf(normalized);
+  if (selected && index < 0) {
+    if (currentMoves.length >= 4) return null;
+    currentMoves.push(normalized);
+  } else if (!selected && index >= 0) {
+    currentMoves.splice(index, 1);
+  }
+  entry.currentMoves = currentMoves;
+  if (saveOwnedPokemon(state.ownedPokemon)) return entry;
+  entry.currentMoves = previous;
   return null;
 }
