@@ -181,7 +181,7 @@ function createStarButton(moveName, displayName, render) {
   return button;
 }
 
-function createCurrentMovesSummary(context, render) {
+function createCurrentMovesSummary(context, versionGroup) {
   if (!context.supportsCurrentMoves) return null;
   const currentMoves = context.getCurrentMoves();
   const summary = el('div', { className: 'pokemon-current-moves' });
@@ -197,13 +197,15 @@ function createCurrentMovesSummary(context, render) {
   }
   const list = el('div', { className: 'pokemon-current-moves-list' });
   for (const moveName of currentMoves) {
-    const remove = el('button', { className: 'secondary-button pokemon-current-move-chip', text: `${titleCase(moveName)} ×` });
-    remove.type = 'button';
-    remove.setAttribute('aria-label', `Remove ${titleCase(moveName)} from current moves`);
-    remove.addEventListener('click', () => {
-      if (context.setCurrentMove(moveName, false)) render();
+    const button = el('button', {
+      className: 'secondary-button pokemon-level-up-move-button pokemon-current-move-chip',
+      text: titleCase(moveName)
     });
-    list.append(remove);
+    button.type = 'button';
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('aria-label', `Show details for ${titleCase(moveName)}`);
+    button.addEventListener('click', () => showMoveDetails(moveName, versionGroup, button));
+    list.append(button);
   }
   summary.append(list);
   return summary;
@@ -289,7 +291,7 @@ function createMovesSection(pokemon, versionGroup, currentDetails, comparison, c
   const section = el('section', { className: 'panel pokemon-level-up-moves' });
   section.append(el('h3', { text: 'Moves learned by level' }));
   section.append(el('p', { className: 'muted pokemon-level-up-moves-intro', text: game.label }));
-  const currentMovesSummary = createCurrentMovesSummary(context, render);
+  const currentMovesSummary = createCurrentMovesSummary(context, versionGroup);
   if (currentMovesSummary) section.append(currentMovesSummary);
   const comparisonControl = createComparisonControl(pokemon, render, context);
   if (comparisonControl) section.append(comparisonControl);
