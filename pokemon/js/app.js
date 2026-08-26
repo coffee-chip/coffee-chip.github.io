@@ -9,6 +9,7 @@ import { validateTypeIcons } from './components/typeBadge.js';
 import { initializePokemonAutocomplete } from './components/pokemonAutocomplete.js';
 import { enhancePokemonLookupResult } from './components/pokemonMatchupEnhancer.js';
 import { enhancePokemonLevelUpMoves } from './components/pokemonLevelUpMoves.js';
+import { enhancePokemonEncounterLocations } from './components/pokemonEncounterLocations.js';
 import { enhancePokemonEvolutionControls } from './components/pokemonEvolutionControls.js';
 import { enhancePokemonTeamMenu } from './components/pokemonTeamMenu.js';
 import { enhanceTeamMemberStudyLinks } from './components/teamMemberStudyLink.js';
@@ -118,6 +119,7 @@ function render() {
   enhancePokemonEvolutionControls(viewRoot);
   enhancePokemonLookupResult(viewRoot);
   enhancePokemonLevelUpMoves(viewRoot, render);
+  enhancePokemonEncounterLocations(viewRoot, render);
   enhancePokemonTeamMenu(viewRoot);
   enhanceTeamMemberStudyLinks(viewRoot);
   enhanceTeamRivalLink(viewRoot);
