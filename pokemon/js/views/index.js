@@ -2,6 +2,7 @@ import { renderQuiz } from './quiz.js';
 import { renderStudy } from './study.js';
 import { renderTeams } from './teams.js';
 import { renderOwnedPokemon } from './ownedPokemon.js';
+import { renderOwnedPokemonDetail } from './ownedPokemonDetail.js';
 import { renderTeamDetail } from './teamDetail.js';
 import { renderProgress } from './progress.js';
 import { renderSettings } from './settings.js';
@@ -12,6 +13,7 @@ export const VIEWS = Object.freeze({
   study: renderStudy,
   teams: renderTeams,
   'my-pokemon': renderOwnedPokemon,
+  'owned-pokemon': renderOwnedPokemonDetail,
   team: renderTeamDetail,
   progress: renderProgress,
   settings: renderSettings,
