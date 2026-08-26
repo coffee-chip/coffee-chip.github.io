@@ -115,8 +115,10 @@ function createOwnedPokemonCard(entry, render) {
   });
   const header = el('div', { className: 'owned-pokemon-header' });
   const names = el('div', { className: 'owned-pokemon-names' });
-  names.append(el('strong', { className: 'owned-pokemon-name', text: name }));
-  if (entry.nickname) names.append(el('span', { className: 'muted owned-pokemon-species', text: pokemon?.displayName ?? entry.displayName }));
+  names.append(
+    el('strong', { className: 'owned-pokemon-name', text: name }),
+    el('span', { className: 'muted owned-pokemon-level-summary', text: `Lv. ${entry.level ?? 1}` })
+  );
 
   const actions = el('div', { className: 'owned-pokemon-actions' });
   const edit = el('button', { className: 'secondary-button owned-pokemon-action-button', text: '✎' });
