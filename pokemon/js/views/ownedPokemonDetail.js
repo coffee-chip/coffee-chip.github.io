@@ -142,7 +142,7 @@ function createInfoCard(entry, pokemon, root, render) {
   const displayName = entry.nickname || pokemon?.displayName || entry.displayName;
   const card = el('section', { className: 'panel pokemon-result-card owned-pokemon-detail-card' });
   const details = el('div', { className: 'pokemon-result-details owned-pokemon-detail-content' });
-  details.append(el('h2', { className: 'owned-pokemon-detail-name', text: displayName }));
+  details.append(el('h3', { className: 'owned-pokemon-detail-name', text: displayName }));
   if (entry.nickname) details.append(el('span', { className: 'muted owned-pokemon-species', text: pokemon?.displayName ?? entry.displayName }));
   if (pokemon?.types?.length) details.append(createTypeList(pokemon.types));
 
