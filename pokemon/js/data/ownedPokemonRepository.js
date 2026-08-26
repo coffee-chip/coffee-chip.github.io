@@ -15,7 +15,7 @@ function snapshotPokemon(pokemon) {
     displayName: pokemon.displayName,
     nickname: null,
     spriteUrl: pokemon.spriteUrl ?? null,
-    level: null,
+    level: 1,
     currentMoves: []
   };
 }
@@ -72,8 +72,8 @@ export function setOwnedPokemonSpecies(entryId, pokemon) {
 export function setOwnedPokemonLevel(entryId, level) {
   const entry = getOwnedPokemonById(entryId);
   if (!entry) return null;
-  const normalized = level === null || level === '' ? null : Number(level);
-  if (normalized !== null && (!Number.isInteger(normalized) || normalized < 1 || normalized > 100)) return null;
+  const normalized = Number(level);
+  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 100) return null;
   const previous = entry.level ?? null;
   entry.level = normalized;
   if (saveOwnedPokemon(state.ownedPokemon)) return entry;
