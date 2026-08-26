@@ -165,7 +165,7 @@ function normalizeOwnedPokemon(value) {
   const numericLevel = Number(rawLevel);
   const level = rawLevel !== null && rawLevel !== '' && Number.isInteger(numericLevel) && numericLevel >= 1 && numericLevel <= 100
     ? numericLevel
-    : null;
+    : 1;
   const currentMoves = [];
   for (const moveName of Array.isArray(value.currentMoves) ? value.currentMoves : []) {
     const normalized = typeof moveName === 'string' ? moveName.trim().toLowerCase() : '';
