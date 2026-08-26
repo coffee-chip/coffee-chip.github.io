@@ -102,42 +102,39 @@ async function changeSpecies(entry, target, render) {
 }
 
 function createLevelSection(entry, render) {
-  const section = el('section', { className: 'panel owned-pokemon-level-section' });
-  section.append(el('h3', { text: 'Level' }));
-  const form = el('form', { className: 'owned-pokemon-level-form' });
-  const label = el('label');
-  label.append(el('span', { text: 'Current level' }));
-  const input = document.createElement('input');
-  input.type = 'number';
-  input.min = '1';
-  input.max = '100';
-  input.step = '1';
-  input.inputMode = 'numeric';
-  input.value = entry.level ?? '';
-  input.placeholder = '1–100';
-  label.append(input);
-  const save = el('button', { className: 'primary-button', text: 'Save level' });
-  save.type = 'submit';
-  form.append(label, save);
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    const value = input.value.trim();
-    if (value && !input.checkValidity()) {
-      levelError = 'Level must be a whole number from 1 to 100.';
-      render();
-      return;
-    }
-    if (!setOwnedPokemonLevel(entry.id, value || null)) {
+  const level = entry.level ?? 1;
+  const section = el('div', { className: 'owned-pokemon-level' });
+  section.append(el('span', { className: 'owned-pokemon-level-label', text: 'Level' }));
+
+  const controls = el('div', { className: 'owned-pokemon-level-stepper' });
+  const decrease = el('button', { className: 'secondary-button icon-button', text: '−' });
+  decrease.type = 'button';
+  decrease.disabled = level <= 1;
+  decrease.setAttribute('aria-label', `Decrease level from ${level} to ${Math.max(1, level - 1)}`);
+
+  const value = el('output', { className: 'owned-pokemon-level-value', text: String(level) });
+  value.setAttribute('aria-live', 'polite');
+  value.setAttribute('aria-label', `Current level ${level}`);
+
+  const increase = el('button', { className: 'secondary-button icon-button', text: '+' });
+  increase.type = 'button';
+  increase.disabled = level >= 100;
+  increase.setAttribute('aria-label', `Increase level from ${level} to ${Math.min(100, level + 1)}`);
+
+  const updateLevel = nextLevel => {
+    if (!setOwnedPokemonLevel(entry.id, nextLevel)) {
       levelError = 'Could not save this Pokémon’s level.';
       render();
       return;
     }
     levelError = '';
     render();
-  });
-  section.append(form);
-  if (levelError) section.append(el('p', { className: 'pokemon-lookup-error owned-pokemon-level-error', text: levelError }));
-  else section.append(el('p', { className: 'muted owned-pokemon-level-help', text: 'Leave this empty to clear the saved level.' }));
+  };
+  decrease.addEventListener('click', () => updateLevel(level - 1));
+  increase.addEventListener('click', () => updateLevel(level + 1));
+  controls.append(decrease, value, increase);
+  section.append(controls);
+  if (levelError) section.append(el('span', { className: 'pokemon-lookup-error owned-pokemon-level-error', text: levelError }));
   return section;
 }
 
