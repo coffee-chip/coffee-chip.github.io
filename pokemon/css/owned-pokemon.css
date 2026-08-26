@@ -17,6 +17,7 @@
 .owned-pokemon-header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .5rem; }
 .owned-pokemon-names { display: flex; min-width: 0; align-items: baseline; flex-wrap: wrap; gap: .35rem; }
 .owned-pokemon-name { min-width: 0; color: var(--heading-color); overflow-wrap: anywhere; }
+.owned-pokemon-level-summary { font-size: .88rem; white-space: nowrap; }
 .owned-pokemon-species { font-size: .88rem; }
 .owned-pokemon-actions { display: flex; flex: 0 0 auto; gap: .3rem; }
 .owned-pokemon-action-button { display: grid; place-items: center; width: 2rem; min-width: 2rem; height: 2rem; min-height: 2rem; padding: 0; font-size: 1.05rem; line-height: 1; }
@@ -45,7 +46,7 @@
 .owned-pokemon-detail-link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .owned-pokemon-detail-page { display: grid; gap: 1rem; }
 .owned-pokemon-detail-back { justify-self: start; }
-.owned-pokemon-detail-name { margin: .15rem 0 .35rem; font-size: 1.35rem; overflow-wrap: anywhere; }
+.owned-pokemon-detail-name { margin: .15rem 0 .35rem; font-size: 1.35rem; text-align: center; overflow-wrap: anywhere; }
 .owned-pokemon-detail-content > .owned-pokemon-species { display: block; margin-bottom: .55rem; }
 .owned-pokemon-detail-page > .pokemon-lookup-error { margin: 0; }
 
