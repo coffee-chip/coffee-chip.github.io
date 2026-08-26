@@ -1,5 +1,5 @@
 import { TYPES } from './types.js';
-import { DEFAULT_GAME_VERSION_GROUP, getGameVersionGroup, getNationalDexLimitForVersionGroup, isGameVersionGroup, isPokemonAvailableInVersionGroup } from './gameVersions.js';
+import { DEFAULT_GAME_VERSION_GROUP, getGameVersionGroup, getGameVersionGroupOrder, getNationalDexLimitForVersionGroup, isGameVersionGroup, isPokemonAvailableInVersionGroup } from './gameVersions.js';
 import { state } from '../state.js';
 import { saveCache } from '../storage.js';
 import { fetchEvolutionChain, fetchPokemon, fetchPokemonNameIndex, fetchPokemonSpecies, normalizePokemonIdentifier, PokeApiError } from '../api/pokeApi.js';
@@ -34,7 +34,7 @@ function materializePokemonForGame(pokemon, versionGroup) {
   return {
     ...pokemon,
     types: resolveTypesForGeneration(pokemon, versionGroup),
-    evolution: filterEvolutionForVersionGroup(pokemon.evolution, versionGroup)
+    evolution: materializeEvolutionForVersionGroup(pokemon.evolution, versionGroup)
   };
 }
 function normalizeLevelUpMoves(raw, versionGroup) {
@@ -72,9 +72,13 @@ function normalizeApiPokemon(raw, versionGroup) {
     fetchedAt: new Date().toISOString()
   };
 }
+function isValidEvolutionCondition(value) {
+  return value && typeof value.trigger === 'string' && isGameVersionGroup(value.versionGroup);
+}
 function isValidEvolutionTarget(value) {
   return value && Number.isInteger(value.id) && value.id > 0
-    && typeof value.name === 'string' && value.name.length > 0 && Array.isArray(value.conditions);
+    && typeof value.name === 'string' && value.name.length > 0
+    && Array.isArray(value.conditions) && value.conditions.every(isValidEvolutionCondition);
 }
 function isValidEvolution(value) {
   return value && Array.isArray(value.previous) && Array.isArray(value.next)
@@ -120,6 +124,7 @@ function cachePokemonNameIndex(names, versionGroup) {
 function normalizeEvolutionCondition(detail = {}) {
   return {
     trigger: detail.trigger?.name ?? 'unknown',
+    versionGroup: detail.version_group?.name ?? null,
     minLevel: Number.isInteger(detail.min_level) ? detail.min_level : null,
     item: detail.item?.name ?? null,
     heldItem: detail.held_item?.name ?? null,
@@ -166,12 +171,23 @@ function findEvolutionContext(link, targetName, parent = null) {
   }
   return null;
 }
-function filterEvolutionForVersionGroup(evolution, versionGroup) {
+function conditionsForVersionGroup(conditions, versionGroup) {
+  const selectedOrder = getGameVersionGroupOrder(versionGroup);
+  const eligible = conditions.filter(condition => getGameVersionGroupOrder(condition.versionGroup) <= selectedOrder);
+  if (!eligible.length) return [];
+  const newestApplicableOrder = Math.max(...eligible.map(condition => getGameVersionGroupOrder(condition.versionGroup)));
+  return eligible.filter(condition => getGameVersionGroupOrder(condition.versionGroup) === newestApplicableOrder);
+}
+function materializeEvolutionForVersionGroup(evolution, versionGroup) {
   if (!isValidEvolution(evolution)) return evolution;
-  const available = target => isPokemonAvailableInVersionGroup(target.id, versionGroup);
+  const materializeTarget = target => {
+    if (!isPokemonAvailableInVersionGroup(target.id, versionGroup)) return null;
+    const conditions = conditionsForVersionGroup(target.conditions, versionGroup);
+    return conditions.length ? { ...target, conditions } : null;
+  };
   return {
-    previous: evolution.previous.filter(available),
-    next: evolution.next.filter(available)
+    previous: evolution.previous.map(materializeTarget).filter(Boolean),
+    next: evolution.next.map(materializeTarget).filter(Boolean)
   };
 }
 async function enrichWithEvolution(pokemon) {
