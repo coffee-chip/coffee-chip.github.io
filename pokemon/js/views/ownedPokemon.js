@@ -1,6 +1,6 @@
 import { getGameVersionGroup, isPokemonAvailableInVersionGroup } from '../data/gameVersions.js';
 import { getPokemon } from '../data/pokemonRepository.js';
-import { getOwnedPokemon, addOwnedPokemon, removeOwnedPokemon, setOwnedPokemonNickname } from '../data/ownedPokemonRepository.js';
+import { getOwnedPokemon, addOwnedPokemon, removeOwnedPokemon, reorderOwnedPokemon, setOwnedPokemonNickname } from '../data/ownedPokemonRepository.js';
 import { createTypeList } from '../components/typeBadge.js';
 import { createTeamOverviewNavigation } from '../components/teamOverviewNavigation.js';
 import { openPokemonInStudy } from '../components/pokemonStudyNavigation.js';
@@ -68,7 +68,7 @@ function createRemoveConfirmation(entry, name, card, render) {
   card.append(confirmation);
 }
 
-function createOwnedPokemonCard(entry, render) {
+function createOwnedPokemonCard(entry, index, render) {
   const cachedPokemon = resolvedPokemon.get(entry.id);
   const pokemon = cachedPokemon?.id === entry.pokemonId ? cachedPokemon : null;
   const resolutionFailure = resolutionFailures.get(entry.id);
@@ -76,6 +76,7 @@ function createOwnedPokemonCard(entry, render) {
   const available = isPokemonAvailableInVersionGroup(entry.pokemonId, state.settings.gameVersionGroup);
   const name = entryDisplayName(entry, pokemon);
   const card = el('article', { className: 'panel owned-pokemon-card' });
+  card.dataset.entryIndex = String(index);
   card.dataset.search = [entry.nickname, entry.displayName, pokemon?.displayName].filter(Boolean).join(' ').toLowerCase();
 
   const visual = el('div', { className: 'owned-pokemon-visual' });
@@ -104,7 +105,7 @@ function createOwnedPokemonCard(entry, render) {
   content.setAttribute('role', 'link');
   content.setAttribute('aria-label', `Open details for ${name}`);
   const openDetails = event => {
-    if (event.target.closest('button, input, form, select, a')) return;
+    if (event.target.closest('button, input, form, select, a, .owned-pokemon-drag-handle')) return;
     location.hash = `my-pokemon/${encodeURIComponent(entry.id)}`;
   };
   content.addEventListener('click', openDetails);
@@ -123,6 +124,7 @@ function createOwnedPokemonCard(entry, render) {
   const actions = el('div', { className: 'owned-pokemon-actions' });
   const edit = el('button', { className: 'secondary-button owned-pokemon-action-button', text: '✎' });
   const remove = el('button', { className: 'danger-button owned-pokemon-action-button', text: '×' });
+  const handle = el('span', { className: 'team-drag-handle owned-pokemon-drag-handle', text: '↕' });
   edit.type = remove.type = 'button';
   edit.title = 'Edit nickname';
   edit.setAttribute('aria-label', `Edit nickname for ${name}`);
@@ -130,7 +132,10 @@ function createOwnedPokemonCard(entry, render) {
   remove.setAttribute('aria-label', `Remove ${name} from My Pokémon`);
   edit.addEventListener('click', () => createNicknameForm(entry, card, render));
   remove.addEventListener('click', () => createRemoveConfirmation(entry, name, card, render));
-  actions.append(edit, remove);
+  handle.setAttribute('aria-label', `Drag to reorder ${name}`);
+  handle.title = 'Drag to reorder';
+  handle.addEventListener('click', event => event.stopPropagation());
+  actions.append(edit, remove, handle);
   header.append(names, actions);
 
   content.append(header);
@@ -140,6 +145,71 @@ function createOwnedPokemonCard(entry, render) {
   else content.append(el('span', { className: 'muted owned-pokemon-game-note', text: 'Loading types…' }));
 
   card.append(visual, content);
+
+  let holdTimer = null;
+  let dragging = false;
+  let pointerId = null;
+  let proposedIndex = index;
+  let insertionMarker = null;
+
+  function removeInsertionMarker() {
+    insertionMarker?.remove();
+    insertionMarker = null;
+  }
+
+  function updateInsertionMarker(clientY) {
+    const list = card.closest('.owned-pokemon-list');
+    if (!list) return;
+    const otherCards = [...list.querySelectorAll('.owned-pokemon-card')].filter(candidate => candidate !== card && !candidate.hidden);
+    let insertionIndex = otherCards.length;
+    let insertBefore = null;
+    for (let candidateIndex = 0; candidateIndex < otherCards.length; candidateIndex += 1) {
+      const candidate = otherCards[candidateIndex];
+      const bounds = candidate.getBoundingClientRect();
+      if (clientY < bounds.top + bounds.height / 2) {
+        insertionIndex = candidateIndex;
+        insertBefore = candidate;
+        break;
+      }
+    }
+    proposedIndex = insertionIndex;
+    insertionMarker ??= el('div', { className: 'team-insertion-marker owned-pokemon-insertion-marker' });
+    if (insertBefore) list.insertBefore(insertionMarker, insertBefore);
+    else list.append(insertionMarker);
+  }
+
+  function stopDrag() {
+    window.clearTimeout(holdTimer);
+    holdTimer = null;
+    if (pointerId !== null && handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+    pointerId = null;
+    if (!dragging) return;
+    dragging = false;
+    card.classList.remove('team-card-dragging');
+    removeInsertionMarker();
+    if (proposedIndex !== index) reorderOwnedPokemon(index, proposedIndex);
+    render();
+  }
+
+  handle.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || filterQuery.trim()) return;
+    pointerId = event.pointerId;
+    proposedIndex = index;
+    handle.setPointerCapture(pointerId);
+    holdTimer = window.setTimeout(() => {
+      dragging = true;
+      card.classList.add('team-card-dragging');
+      updateInsertionMarker(event.clientY);
+    }, event.pointerType === 'touch' ? 300 : 0);
+  });
+  handle.addEventListener('pointermove', event => {
+    if (!dragging) return;
+    event.preventDefault();
+    updateInsertionMarker(event.clientY);
+  });
+  handle.addEventListener('pointerup', stopDrag);
+  handle.addEventListener('pointercancel', stopDrag);
+  handle.addEventListener('lostpointercapture', stopDrag);
   return card;
 }
 
@@ -150,6 +220,10 @@ function applyFilter(list, count) {
     const matches = !normalized || card.dataset.search.includes(normalized);
     card.hidden = !matches;
     if (matches) visible += 1;
+  }
+  for (const handle of list.querySelectorAll('.owned-pokemon-drag-handle')) {
+    handle.setAttribute('aria-disabled', String(Boolean(normalized)));
+    handle.title = normalized ? 'Clear the search to reorder' : 'Drag to reorder';
   }
   count.textContent = normalized
     ? `${visible} matching Pokémon`
@@ -230,7 +304,7 @@ export function renderOwnedPokemon(container, render) {
   if (!entries.length) {
     list.append(el('p', { className: 'panel muted', text: 'No Pokémon added yet.' }));
   } else {
-    for (const entry of entries) list.append(createOwnedPokemonCard(entry, render));
+    entries.forEach((entry, index) => list.append(createOwnedPokemonCard(entry, index, render)));
   }
 
   filter.input.addEventListener('input', () => {
