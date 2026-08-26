@@ -71,6 +71,11 @@ export async function fetchPokemonSpecies(identifier, options = {}) {
   return fetchJson(`${API_BASE}/pokemon-species/${encodeURIComponent(normalized)}/`, options);
 }
 
+export async function fetchPokemonEncounters(identifier, options = {}) {
+  const normalized = normalizePokemonIdentifier(identifier);
+  return fetchJson(`${API_BASE}/pokemon/${encodeURIComponent(normalized)}/encounters`, options);
+}
+
 export async function fetchEvolutionChain(url, options = {}) {
   if (typeof url !== 'string' || !url.startsWith(`${API_BASE}/evolution-chain/`)) {
     throw new PokeApiError('PokéAPI returned an invalid evolution-chain URL.', { code: 'invalid-response' });
