@@ -64,3 +64,15 @@
   .pokemon-evolution-button, .pokemon-evolution-spacer { width: 2.4rem; }
   .pokemon-evolution-condition { font-size: .62rem; padding-inline: .2rem; }
 }
+
+
+.pokemon-encounters h3 { margin-top: 0; margin-bottom: .25rem; }
+.pokemon-encounters-intro { margin-top: 0; }
+.pokemon-encounter-locations { display: grid; gap: .85rem; }
+.pokemon-encounter-location { padding-top: .85rem; border-top: 1px solid var(--border-default); }
+.pokemon-encounter-location:first-child { padding-top: 0; border-top: 0; }
+.pokemon-encounter-location h4 { margin: 0 0 .4rem; font-size: .95rem; }
+.pokemon-encounter-location ul { display: grid; gap: .3rem; margin: 0; padding: 0; list-style: none; }
+.pokemon-encounter-detail { display: grid; gap: .1rem; line-height: 1.35; }
+.pokemon-encounter-detail strong { font-size: .82rem; }
+.pokemon-encounters-note { margin-top: .9rem; font-size: .78rem; line-height: 1.35; }
