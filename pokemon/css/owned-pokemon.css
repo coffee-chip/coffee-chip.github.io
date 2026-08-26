@@ -52,3 +52,47 @@
 @media (hover: hover) {
   .owned-pokemon-detail-link:hover { background: var(--subtle-background); }
 }
+
+.owned-pokemon-level-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.owned-pokemon-level-section h3,
+.owned-pokemon-level-section p {
+  margin: 0;
+}
+
+.owned-pokemon-level-form {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.owned-pokemon-level-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.owned-pokemon-level-form input {
+  width: 8rem;
+}
+
+.owned-pokemon-level-help,
+.owned-pokemon-level-error {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 480px) {
+  .owned-pokemon-level-form {
+    align-items: stretch;
+  }
+
+  .owned-pokemon-level-form label,
+  .owned-pokemon-level-form input,
+  .owned-pokemon-level-form button {
+    width: 100%;
+  }
+}
