@@ -39,3 +39,16 @@
   .owned-pokemon-edit-form, .owned-pokemon-remove-confirmation { grid-template-columns: 1fr; }
   .owned-pokemon-edit-actions, .owned-pokemon-remove-actions { justify-content: flex-end; }
 }
+
+
+.owned-pokemon-detail-link { cursor: pointer; border-radius: .45rem; }
+.owned-pokemon-detail-link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.owned-pokemon-detail-page { display: grid; gap: 1rem; }
+.owned-pokemon-detail-back { justify-self: start; }
+.owned-pokemon-detail-name { margin: .15rem 0 .35rem; font-size: 1.35rem; overflow-wrap: anywhere; }
+.owned-pokemon-detail-content > .owned-pokemon-species { display: block; margin-bottom: .55rem; }
+.owned-pokemon-detail-page > .pokemon-lookup-error { margin: 0; }
+
+@media (hover: hover) {
+  .owned-pokemon-detail-link:hover { background: var(--subtle-background); }
+}
