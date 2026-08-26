@@ -74,3 +74,6 @@
 
 - Owned Pokémon level and current moves belong to the individual roster entry, not the shared Pokémon cache. Level defaults to 1 and is constrained to 1–100; current moves are normalized move names capped at four.
 - Current moves are selected from the active game version's existing level-up move table. They persist when the owned Pokémon is evolved up or down so retained pre-evolution moves are not discarded; comparison-evolution rows are informational and cannot be selected.
+
+- Current-move summary buttons open the same version-aware move detail banner as move names in the level-up table. Current moves are removed only by toggling the checked control in the table.
+- My Pokémon roster ordering is user-controlled and persisted. Its drag handle uses the same pointer-capture, touch hold delay, insertion marker, and immediate-save behavior as the Team detail Members list; reordering is disabled while the roster search filter is active so hidden entries cannot make the target order ambiguous.
