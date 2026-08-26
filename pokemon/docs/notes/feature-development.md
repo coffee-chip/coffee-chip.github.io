@@ -65,3 +65,6 @@
 - Move details already resolve type, power, accuracy, and flavor text through the selected PokéAPI version group. They now additionally resolve historical effect text and the pre-Generation-IV type-based Physical/Special split; move details show Power, Class, and Accuracy.
 
 - Shared Pokémon autocomplete accepts a suggestion on `click`, rather than removing it during `pointerdown`; this prevents a touch tap from falling through to the button beneath the popup. It closes on outside pointer presses or when focus leaves the autocomplete field.
+
+
+- Study Pokémon results now end with a selected-game “Where to find” section backed by PokéAPI’s version-specific location-area encounter endpoint. Locations, encounter method, level range, chance, version differences, and conditions are cached with the Pokémon for the active version group. The UI states that gifts, trades, fossils, and evolution-only acquisition sources may not be represented.
