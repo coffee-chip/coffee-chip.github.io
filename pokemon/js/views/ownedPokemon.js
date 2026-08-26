@@ -69,7 +69,9 @@ function createRemoveConfirmation(entry, name, card, render) {
 }
 
 function createOwnedPokemonCard(entry, render) {
-  const pokemon = resolvedPokemon.get(entry.id);
+  const cachedPokemon = resolvedPokemon.get(entry.id);
+  const pokemon = cachedPokemon?.id === entry.pokemonId ? cachedPokemon : null;
+  const resolutionFailure = resolutionFailures.get(entry.id);
   const game = getGameVersionGroup(state.settings.gameVersionGroup);
   const available = isPokemonAvailableInVersionGroup(entry.pokemonId, state.settings.gameVersionGroup);
   const name = entryDisplayName(entry, pokemon);
@@ -97,7 +99,20 @@ function createOwnedPokemonCard(entry, render) {
     openPokemonInStudy(entry.pokemonId);
   });
 
-  const content = el('div', { className: 'owned-pokemon-content' });
+  const content = el('div', { className: 'owned-pokemon-content owned-pokemon-detail-link' });
+  content.tabIndex = 0;
+  content.setAttribute('role', 'link');
+  content.setAttribute('aria-label', `Open details for ${name}`);
+  const openDetails = event => {
+    if (event.target.closest('button, input, form, select, a')) return;
+    location.hash = `my-pokemon/${encodeURIComponent(entry.id)}`;
+  };
+  content.addEventListener('click', openDetails);
+  content.addEventListener('keydown', event => {
+    if (event.target !== content || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    location.hash = `my-pokemon/${encodeURIComponent(entry.id)}`;
+  });
   const header = el('div', { className: 'owned-pokemon-header' });
   const names = el('div', { className: 'owned-pokemon-names' });
   names.append(el('strong', { className: 'owned-pokemon-name', text: name }));
@@ -119,7 +134,7 @@ function createOwnedPokemonCard(entry, render) {
   content.append(header);
   if (pokemon?.types?.length) content.append(createTypeList(pokemon.types));
   else if (!available) content.append(el('span', { className: 'muted owned-pokemon-game-note', text: `Not available in ${game.label}` }));
-  else if (resolutionFailures.has(entry.id)) content.append(el('span', { className: 'muted owned-pokemon-game-note', text: 'Types could not be loaded' }));
+  else if (resolutionFailure?.pokemonId === entry.pokemonId) content.append(el('span', { className: 'muted owned-pokemon-game-note', text: 'Types could not be loaded' }));
   else content.append(el('span', { className: 'muted owned-pokemon-game-note', text: 'Loading types…' }));
 
   card.append(visual, content);
@@ -186,11 +201,13 @@ function createAddForm(render) {
 
 function loadOwnedPokemon(entries, render) {
   for (const entry of entries) {
+    if (resolvedPokemon.get(entry.id)?.id !== entry.pokemonId) resolvedPokemon.delete(entry.id);
+    if (resolutionFailures.get(entry.id)?.pokemonId !== entry.pokemonId) resolutionFailures.delete(entry.id);
     if (resolvedPokemon.has(entry.id) || resolutionFailures.has(entry.id) || loadingEntries.has(entry.id)) continue;
     loadingEntries.add(entry.id);
     getPokemon(entry.pokemonId)
       .then(result => resolvedPokemon.set(entry.id, result.pokemon))
-      .catch(error => resolutionFailures.set(entry.id, error))
+      .catch(error => resolutionFailures.set(entry.id, { pokemonId: entry.pokemonId, error }))
       .finally(() => {
         loadingEntries.delete(entry.id);
         if (state.route === 'my-pokemon') render();
