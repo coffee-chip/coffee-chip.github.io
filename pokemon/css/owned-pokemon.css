@@ -49,7 +49,7 @@
 .owned-pokemon-detail-link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .owned-pokemon-detail-page { display: grid; gap: 1rem; }
 .owned-pokemon-detail-back { justify-self: start; }
-.owned-pokemon-detail-page .owned-pokemon-detail-name { margin: .15rem 0 .35rem; padding-right: 0; justify-content: center; font-size: 1.35rem; text-align: center; overflow-wrap: anywhere; }
+.owned-pokemon-detail-name { overflow-wrap: anywhere; }
 .owned-pokemon-detail-content > .owned-pokemon-species { display: block; margin-bottom: .55rem; }
 .owned-pokemon-detail-page > .pokemon-lookup-error { margin: 0; }
 
