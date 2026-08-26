@@ -22,6 +22,10 @@ export function getOwnedPokemon() {
   return state.ownedPokemon;
 }
 
+export function getOwnedPokemonById(entryId) {
+  return state.ownedPokemon.find(entry => entry.id === entryId) ?? null;
+}
+
 export function addOwnedPokemon(pokemon) {
   if (!Number.isInteger(pokemon?.id) || pokemon.id < 1) return null;
   const entry = snapshotPokemon(pokemon);
@@ -42,4 +46,23 @@ export function setOwnedPokemonNickname(entryId, nickname) {
   const normalized = String(nickname ?? '').trim().slice(0, 60);
   entry.nickname = normalized || null;
   return saveOwnedPokemon(state.ownedPokemon);
+}
+
+
+export function setOwnedPokemonSpecies(entryId, pokemon) {
+  const entry = state.ownedPokemon.find(candidate => candidate.id === entryId);
+  if (!entry || !Number.isInteger(pokemon?.id) || pokemon.id < 1 || pokemon.id === entry.pokemonId) return null;
+  const previous = {
+    pokemonId: entry.pokemonId,
+    name: entry.name,
+    displayName: entry.displayName,
+    spriteUrl: entry.spriteUrl
+  };
+  entry.pokemonId = pokemon.id;
+  entry.name = pokemon.name;
+  entry.displayName = pokemon.displayName;
+  entry.spriteUrl = pokemon.spriteUrl ?? null;
+  if (saveOwnedPokemon(state.ownedPokemon)) return entry;
+  Object.assign(entry, previous);
+  return null;
 }
