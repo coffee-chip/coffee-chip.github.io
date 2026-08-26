@@ -68,3 +68,6 @@
 
 
 - Study Pokémon results now end with a selected-game “Where to find” section backed by PokéAPI’s version-specific location-area encounter endpoint. Locations, encounter method, level range, chance, version differences, and conditions are cached with the Pokémon for the active version group. The UI states that gifts, trades, fossils, and evolution-only acquisition sources may not be represented.
+
+
+- My Pokémon cards now open an individual owned-entry page from the card body while the image continues to open that species in Study. The detail route is keyed by the entry's stable ID, shows its nickname/species/type information, and reuses the complete level-up move component. The Study evolution arrow/chooser controls are also reused: either arrow changes only that owned entry to the adjacent form while preserving its stable ID and nickname.
