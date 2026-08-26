@@ -2,6 +2,7 @@ import { state } from '../state.js';
 import { getGameVersionGroup } from '../data/gameVersions.js';
 import { getMove, getMoves, getMoveVersionData } from '../data/moveRepository.js';
 import { getLevelUpMoves, getPokemon } from '../data/pokemonRepository.js';
+import { getOwnedPokemonById, setOwnedPokemonCurrentMove } from '../data/ownedPokemonRepository.js';
 import { isMoveStarred, setMoveStarred } from '../data/starredMoveRepository.js';
 import { createTypeIcon } from './typeBadge.js';
 
@@ -100,6 +101,7 @@ function getActiveContext(root) {
         && state.study.pokemonResult?.id === pokemonId
         && state.settings.gameVersionGroup === versionGroup,
       updatePokemon: pokemon => { state.study.pokemonResult = pokemon; },
+      supportsCurrentMoves: false,
       insertSection: (section, card) => {
         const anchor = root.querySelector('.pokemon-offensive-matchups') ?? root.querySelector('.pokemon-defensive-matchups') ?? card;
         anchor?.after(section);
@@ -117,6 +119,9 @@ function getActiveContext(root) {
         && state.ownedPokemonDetail.pokemon?.id === pokemonId
         && state.settings.gameVersionGroup === versionGroup,
       updatePokemon: pokemon => { state.ownedPokemonDetail.pokemon = pokemon; },
+      supportsCurrentMoves: true,
+      getCurrentMoves: () => getOwnedPokemonById(entryId)?.currentMoves ?? [],
+      setCurrentMove: (moveName, selected) => Boolean(setOwnedPokemonCurrentMove(entryId, moveName, selected)),
       insertSection: section => { root.querySelector('.owned-pokemon-detail-page')?.append(section); }
     };
   }
@@ -176,16 +181,66 @@ function createStarButton(moveName, displayName, render) {
   return button;
 }
 
-function createMovesTable(rows, versionGroup, moveDetailsByPokemonId, render) {
+function createCurrentMovesSummary(context, render) {
+  if (!context.supportsCurrentMoves) return null;
+  const currentMoves = context.getCurrentMoves();
+  const summary = el('div', { className: 'pokemon-current-moves' });
+  const heading = el('div', { className: 'pokemon-current-moves-heading' });
+  heading.append(
+    el('strong', { text: 'Current moves' }),
+    el('span', { className: 'muted', text: `${currentMoves.length}/4` })
+  );
+  summary.append(heading);
+  if (!currentMoves.length) {
+    summary.append(el('p', { className: 'muted pokemon-current-moves-empty', text: 'Select moves from the table below.' }));
+    return summary;
+  }
+  const list = el('div', { className: 'pokemon-current-moves-list' });
+  for (const moveName of currentMoves) {
+    const remove = el('button', { className: 'secondary-button pokemon-current-move-chip', text: `${titleCase(moveName)} ×` });
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `Remove ${titleCase(moveName)} from current moves`);
+    remove.addEventListener('click', () => {
+      if (context.setCurrentMove(moveName, false)) render();
+    });
+    list.append(remove);
+  }
+  summary.append(list);
+  return summary;
+}
+
+function createCurrentMoveButton(move, context, render) {
+  if (move.isComparison) return el('span', { className: 'muted', text: '—' });
+  const currentMoves = context.getCurrentMoves();
+  const selected = currentMoves.includes(move.name);
+  const button = el('button', {
+    className: 'transparent-button icon-button pokemon-level-up-move-current',
+    text: selected ? '✓' : '+'
+  });
+  button.type = 'button';
+  button.setAttribute('aria-pressed', String(selected));
+  button.setAttribute('aria-label', `${selected ? 'Remove' : 'Add'} ${move.displayName} ${selected ? 'from' : 'to'} current moves`);
+  button.title = button.getAttribute('aria-label');
+  button.disabled = !selected && currentMoves.length >= 4;
+  button.addEventListener('click', () => {
+    if (context.setCurrentMove(move.name, !selected)) render();
+  });
+  return button;
+}
+
+function createMovesTable(rows, versionGroup, moveDetailsByPokemonId, render, context) {
   const table = el('table', { className: 'pokemon-level-up-moves-table' });
   const head = document.createElement('thead');
   const headRow = document.createElement('tr');
-  for (const label of ['Level', 'Move', 'Type', 'Star']) {
+  const labels = context.supportsCurrentMoves ? ['Level', 'Move', 'Type', 'Current', 'Star'] : ['Level', 'Move', 'Type', 'Star'];
+  for (const label of labels) {
     const heading = el('th', { text: label === 'Star' ? '★' : label });
     if (label === 'Star') {
       heading.className = 'pokemon-level-up-move-star-column';
       heading.setAttribute('aria-label', 'Starred');
       heading.title = 'Starred';
+    } else if (label === 'Current') {
+      heading.className = 'pokemon-level-up-move-current-column';
     }
     headRow.append(heading);
   }
@@ -213,6 +268,12 @@ function createMovesTable(rows, versionGroup, moveDetailsByPokemonId, render) {
     if (moveData) type.append(createTypeIcon(moveData.type));
     else type.append(el('span', { className: 'muted', text: '…' }));
     row.append(type);
+    if (context.supportsCurrentMoves) {
+      const current = document.createElement('td');
+      current.className = 'pokemon-level-up-move-current-cell';
+      current.append(createCurrentMoveButton(move, context, render));
+      row.append(current);
+    }
     const star = document.createElement('td');
     star.className = 'pokemon-level-up-move-star-cell';
     star.append(createStarButton(move.name, move.displayName, render));
@@ -228,6 +289,8 @@ function createMovesSection(pokemon, versionGroup, currentDetails, comparison, c
   const section = el('section', { className: 'panel pokemon-level-up-moves' });
   section.append(el('h3', { text: 'Moves learned by level' }));
   section.append(el('p', { className: 'muted pokemon-level-up-moves-intro', text: game.label }));
+  const currentMovesSummary = createCurrentMovesSummary(context, render);
+  if (currentMovesSummary) section.append(currentMovesSummary);
   const comparisonControl = createComparisonControl(pokemon, render, context);
   if (comparisonControl) section.append(comparisonControl);
 
@@ -247,7 +310,7 @@ function createMovesSection(pokemon, versionGroup, currentDetails, comparison, c
     moveDetailsByLearnset.get(`${comparison.pokemon.id}:${versionGroup}`)
   );
   const rows = combineMoves(pokemon, moves, comparison);
-  section.append(createMovesTable(rows, versionGroup, detailsByPokemonId, render));
+  section.append(createMovesTable(rows, versionGroup, detailsByPokemonId, render, context));
   if (comparisonStatus === 'loading') {
     section.append(el('p', { className: 'muted pokemon-level-up-moves-comparison-status', text: 'Loading evolution moves…' }));
   } else if (comparisonStatus === 'error') {
