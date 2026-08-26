@@ -97,7 +97,7 @@ function showEvolutionDetails(entries, direction, root, card) {
   card.after(panel);
 }
 
-function createChooser(direction, entries, root, card) {
+function createChooser(direction, entries, root, card, onSelect) {
   root.querySelector('.pokemon-evolution-chooser')?.remove();
   const chooser = document.createElement('section');
   chooser.className = 'panel pokemon-evolution-chooser';
@@ -111,7 +111,7 @@ function createChooser(direction, entries, root, card) {
     button.type = 'button';
     button.className = 'secondary-button';
     button.textContent = displayName(entry.name);
-    button.addEventListener('click', () => submitLookup(entry.name, root));
+    button.addEventListener('click', () => onSelect(entry));
     actions.append(button);
   }
 
@@ -119,23 +119,23 @@ function createChooser(direction, entries, root, card) {
   card.after(chooser);
 }
 
-function createDirectionButton(direction, entries, root, card) {
+function createDirectionButton(direction, entries, root, card, onSelect) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `secondary-button pokemon-evolution-button pokemon-evolution-${direction}`;
   button.setAttribute('aria-label', direction === 'previous' ? 'Go to previous evolution' : 'Go to next evolution');
   button.textContent = direction === 'previous' ? '‹' : '›';
   button.addEventListener('click', () => {
-    if (entries.length === 1) submitLookup(entries[0].name, root);
-    else createChooser(direction, entries, root, card);
+    if (entries.length === 1) onSelect(entries[0]);
+    else createChooser(direction, entries, root, card, onSelect);
   });
   return button;
 }
 
-function createEvolutionControls(direction, entries, root, card) {
+export function createPokemonEvolutionControls(direction, entries, { root, card, onSelect }) {
   const controls = document.createElement('div');
   controls.className = 'pokemon-evolution-controls';
-  controls.append(createDirectionButton(direction, entries, root, card));
+  controls.append(createDirectionButton(direction, entries, root, card, onSelect));
 
   const condition = document.createElement('button');
   condition.type = 'button';
@@ -149,7 +149,7 @@ function createEvolutionControls(direction, entries, root, card) {
   return controls;
 }
 
-function createSpacer() {
+export function createPokemonEvolutionSpacer() {
   const spacer = document.createElement('span');
   spacer.className = 'pokemon-evolution-spacer';
   spacer.setAttribute('aria-hidden', 'true');
@@ -176,9 +176,9 @@ export function enhancePokemonEvolutionControls(root) {
   identityRow.className = 'pokemon-result-identity-row';
 
   identityRow.append(
-    previous.length ? createEvolutionControls('previous', previous, root, card) : createSpacer(),
+    previous.length ? createPokemonEvolutionControls('previous', previous, { root, card, onSelect: entry => submitLookup(entry.name, root) }) : createPokemonEvolutionSpacer(),
     details,
-    next.length ? createEvolutionControls('next', next, root, card) : createSpacer()
+    next.length ? createPokemonEvolutionControls('next', next, { root, card, onSelect: entry => submitLookup(entry.name, root) }) : createPokemonEvolutionSpacer()
   );
 
   card.replaceChildren(visual, identityRow);
