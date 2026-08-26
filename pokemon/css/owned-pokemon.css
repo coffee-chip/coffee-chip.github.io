@@ -15,7 +15,7 @@
 .owned-pokemon-study-link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .owned-pokemon-content { display: grid; min-width: 0; gap: .3rem; }
 .owned-pokemon-header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .5rem; }
-.owned-pokemon-names { display: grid; min-width: 0; gap: .08rem; }
+.owned-pokemon-names { display: flex; min-width: 0; align-items: baseline; flex-wrap: wrap; gap: .35rem; }
 .owned-pokemon-name { min-width: 0; color: var(--heading-color); overflow-wrap: anywhere; }
 .owned-pokemon-species { font-size: .88rem; }
 .owned-pokemon-actions { display: flex; flex: 0 0 auto; gap: .3rem; }
