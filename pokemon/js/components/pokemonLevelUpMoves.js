@@ -89,11 +89,44 @@ function getEvolutionOptions(pokemon) {
   return options.filter(entry => entry.name !== pokemon.name && !seen.has(entry.name) && seen.add(entry.name));
 }
 
-function createComparisonControl(pokemon, render) {
+function getActiveContext(root) {
+  const versionGroup = state.settings.gameVersionGroup;
+  if (state.route === 'study' && state.study.mode === 'pokemon' && state.study.pokemonResult) {
+    return {
+      pokemon: state.study.pokemonResult,
+      getComparisonName: () => state.study.moveComparisonPokemonName,
+      setComparisonName: value => { state.study.moveComparisonPokemonName = value; },
+      isCurrent: pokemonId => state.route === 'study'
+        && state.study.pokemonResult?.id === pokemonId
+        && state.settings.gameVersionGroup === versionGroup,
+      updatePokemon: pokemon => { state.study.pokemonResult = pokemon; },
+      insertSection: (section, card) => {
+        const anchor = root.querySelector('.pokemon-offensive-matchups') ?? root.querySelector('.pokemon-defensive-matchups') ?? card;
+        anchor?.after(section);
+      }
+    };
+  }
+  if (state.route === 'owned-pokemon' && state.ownedPokemonDetail?.pokemon) {
+    const entryId = state.ownedPokemonDetail.entryId;
+    return {
+      pokemon: state.ownedPokemonDetail.pokemon,
+      getComparisonName: () => state.ownedPokemonDetail.moveComparisonPokemonName,
+      setComparisonName: value => { state.ownedPokemonDetail.moveComparisonPokemonName = value; },
+      isCurrent: pokemonId => state.route === 'owned-pokemon'
+        && state.ownedPokemonDetail.entryId === entryId
+        && state.ownedPokemonDetail.pokemon?.id === pokemonId
+        && state.settings.gameVersionGroup === versionGroup,
+      updatePokemon: pokemon => { state.ownedPokemonDetail.pokemon = pokemon; },
+      insertSection: section => { root.querySelector('.owned-pokemon-detail-page')?.append(section); }
+    };
+  }
+  return null;
+}
+function createComparisonControl(pokemon, render, context) {
   const options = getEvolutionOptions(pokemon);
   if (!options.length) return null;
-  if (!options.some(option => option.name === state.study.moveComparisonPokemonName)) {
-    state.study.moveComparisonPokemonName = null;
+  if (!options.some(option => option.name === context.getComparisonName())) {
+    context.setComparisonName(null);
   }
 
   const label = el('label', { className: 'pokemon-level-up-moves-comparison' });
@@ -107,11 +140,11 @@ function createComparisonControl(pokemon, render) {
     const entry = document.createElement('option');
     entry.value = option.name;
     entry.textContent = `${option.direction === 'previous' ? 'Previous' : 'Next'}: ${titleCase(option.name)}`;
-    entry.selected = option.name === state.study.moveComparisonPokemonName;
+    entry.selected = option.name === context.getComparisonName();
     select.append(entry);
   }
   select.addEventListener('change', () => {
-    state.study.moveComparisonPokemonName = select.value || null;
+    context.setComparisonName(select.value || null);
     render();
   });
   label.append(select);
@@ -190,12 +223,12 @@ function createMovesTable(rows, versionGroup, moveDetailsByPokemonId, render) {
   return table;
 }
 
-function createMovesSection(pokemon, versionGroup, currentDetails, comparison, comparisonStatus, render) {
+function createMovesSection(pokemon, versionGroup, currentDetails, comparison, comparisonStatus, render, context) {
   const game = getGameVersionGroup(versionGroup);
   const section = el('section', { className: 'panel pokemon-level-up-moves' });
   section.append(el('h3', { text: 'Moves learned by level' }));
   section.append(el('p', { className: 'muted pokemon-level-up-moves-intro', text: game.label }));
-  const comparisonControl = createComparisonControl(pokemon, render);
+  const comparisonControl = createComparisonControl(pokemon, render, context);
   if (comparisonControl) section.append(comparisonControl);
 
   const moves = getLevelUpMoves(pokemon, versionGroup);
@@ -238,13 +271,13 @@ function loadMoveDetails(pokemon, moves, versionGroup, render, shouldRender) {
   pendingMoveDetailLoads.set(key, request);
 }
 
-function loadLearnset(pokemon, versionGroup, render) {
+function loadLearnset(pokemon, versionGroup, render, context) {
   const key = `${pokemon.id}:${versionGroup}`;
   if (pendingLearnsetLoads.has(key)) return;
   const request = getPokemon(pokemon.id, { versionGroup })
     .then(result => {
-      if (state.study.pokemonResult?.id === pokemon.id && state.settings.gameVersionGroup === versionGroup) {
-        state.study.pokemonResult = result.pokemon;
+      if (context.isCurrent(pokemon.id) && state.settings.gameVersionGroup === versionGroup) {
+        context.updatePokemon(result.pokemon);
         render();
       }
     })
@@ -260,20 +293,20 @@ function getComparisonKey(pokemon, comparisonName, versionGroup) {
   return `${pokemon.id}:${comparisonName}:${versionGroup}`;
 }
 
-function loadComparisonPokemon(pokemon, comparisonName, versionGroup, render) {
+function loadComparisonPokemon(pokemon, comparisonName, versionGroup, render, context) {
   const key = getComparisonKey(pokemon, comparisonName, versionGroup);
   if (comparisonPokemonByKey.has(key) || pendingLearnsetLoads.has(key)) return;
   const request = getPokemon(comparisonName, { versionGroup })
     .then(result => {
       comparisonPokemonByKey.set(key, { pokemon: result.pokemon, error: null });
-      if (state.study.pokemonResult?.id === pokemon.id
-        && state.study.moveComparisonPokemonName === comparisonName
+      if (context.isCurrent(pokemon.id)
+        && context.getComparisonName() === comparisonName
         && state.settings.gameVersionGroup === versionGroup) render();
     })
     .catch(error => {
       comparisonPokemonByKey.set(key, { pokemon: null, error });
-      if (state.study.pokemonResult?.id === pokemon.id
-        && state.study.moveComparisonPokemonName === comparisonName
+      if (context.isCurrent(pokemon.id)
+        && context.getComparisonName() === comparisonName
         && state.settings.gameVersionGroup === versionGroup) render();
     })
     .finally(() => pendingLearnsetLoads.delete(key));
@@ -283,19 +316,19 @@ function loadComparisonPokemon(pokemon, comparisonName, versionGroup, render) {
 export function enhancePokemonLevelUpMoves(root, render) {
   dismissMoveDetails();
   root.querySelector('.pokemon-level-up-moves')?.remove();
-  if (state.route !== 'study' || state.study.mode !== 'pokemon') return;
-  const pokemon = state.study.pokemonResult;
+  const context = getActiveContext(root);
+  if (!context) return;
+  const pokemon = context.pokemon;
   const card = root.querySelector('.pokemon-result-card');
-  if (!pokemon || !card) return;
   const versionGroup = state.settings.gameVersionGroup;
   const moves = getLevelUpMoves(pokemon, versionGroup);
   const currentDetails = moves === null ? null : moveDetailsByLearnset.get(`${pokemon.id}:${versionGroup}`);
 
   const options = getEvolutionOptions(pokemon);
-  if (!options.some(option => option.name === state.study.moveComparisonPokemonName)) {
-    state.study.moveComparisonPokemonName = null;
+  if (!options.some(option => option.name === context.getComparisonName())) {
+    context.setComparisonName(null);
   }
-  const comparisonName = state.study.moveComparisonPokemonName;
+  const comparisonName = context.getComparisonName();
   const comparisonEntry = comparisonName
     ? comparisonPokemonByKey.get(getComparisonKey(pokemon, comparisonName, versionGroup))
     : null;
@@ -307,21 +340,20 @@ export function enhancePokemonLevelUpMoves(root, render) {
       : comparison ? null
         : 'loading';
 
-  const section = createMovesSection(pokemon, versionGroup, currentDetails, comparison, comparisonStatus, render);
-  const anchor = root.querySelector('.pokemon-offensive-matchups') ?? root.querySelector('.pokemon-defensive-matchups') ?? card;
-  anchor.after(section);
+  const section = createMovesSection(pokemon, versionGroup, currentDetails, comparison, comparisonStatus, render, context);
+  context.insertSection(section, card);
 
-  if (moves === null) loadLearnset(pokemon, versionGroup, render);
+  if (moves === null) loadLearnset(pokemon, versionGroup, render, context);
   else if (moves.length) {
     loadMoveDetails(pokemon, moves, versionGroup, render, () =>
-      state.study.pokemonResult?.id === pokemon.id && state.settings.gameVersionGroup === versionGroup
+      context.isCurrent(pokemon.id) && state.settings.gameVersionGroup === versionGroup
     );
   }
-  if (comparisonName && !comparisonEntry) loadComparisonPokemon(pokemon, comparisonName, versionGroup, render);
+  if (comparisonName && !comparisonEntry) loadComparisonPokemon(pokemon, comparisonName, versionGroup, render, context);
   else if (comparison?.moves.length) {
     loadMoveDetails(comparison.pokemon, comparison.moves, versionGroup, render, () =>
-      state.study.pokemonResult?.id === pokemon.id
-      && state.study.moveComparisonPokemonName === comparisonName
+      context.isCurrent(pokemon.id)
+      && context.getComparisonName() === comparisonName
       && state.settings.gameVersionGroup === versionGroup
     );
   }
