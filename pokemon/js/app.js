@@ -28,6 +28,7 @@ const ROUTE_TITLES = Object.freeze({
   study: 'Study',
   teams: 'Teams',
   'my-pokemon': 'My Pokémon',
+  'owned-pokemon': 'My Pokémon',
   progress: 'Progress',
   settings: 'Settings',
   debug: 'Developer diagnostics'
@@ -123,7 +124,7 @@ function render() {
   enhancePokemonTeamMenu(viewRoot);
   enhanceTeamMemberStudyLinks(viewRoot);
   enhanceTeamRivalLink(viewRoot);
-  const activeNavRoute = ['team', 'my-pokemon'].includes(state.route) ? 'teams' : state.route;
+  const activeNavRoute = ['team', 'my-pokemon', 'owned-pokemon'].includes(state.route) ? 'teams' : state.route;
   for (const link of navLinks) {
     if (link.dataset.route === activeNavRoute) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
