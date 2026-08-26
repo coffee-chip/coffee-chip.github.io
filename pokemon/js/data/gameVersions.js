@@ -50,6 +50,11 @@ export function getGameVersionGroup(versionGroup = DEFAULT_GAME_VERSION_GROUP) {
   return GAME_VERSION_GROUP_BY_ID.get(versionGroup) ?? GAME_VERSION_GROUP_BY_ID.get(DEFAULT_GAME_VERSION_GROUP);
 }
 
+export function getGameVersionGroupOrder(versionGroup = DEFAULT_GAME_VERSION_GROUP) {
+  const order = GAME_VERSION_GROUPS.findIndex(game => game.id === versionGroup);
+  return order >= 0 ? order : GAME_VERSION_GROUPS.findIndex(game => game.id === DEFAULT_GAME_VERSION_GROUP);
+}
+
 export function getNationalDexLimitForGeneration(generationNumber) {
   return NATIONAL_DEX_LIMIT_BY_GENERATION[generationNumber] ?? NATIONAL_DEX_LIMIT_BY_GENERATION[9];
 }
