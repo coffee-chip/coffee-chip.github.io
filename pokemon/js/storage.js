@@ -161,7 +161,19 @@ function normalizeOwnedPokemon(value) {
   const displayName = typeof value.displayName === 'string' && value.displayName ? value.displayName : `Pokémon #${pokemonId}`;
   const nickname = typeof value.nickname === 'string' && value.nickname.trim() ? value.nickname.trim().slice(0, 60) : null;
   const spriteUrl = typeof value.spriteUrl === 'string' && value.spriteUrl ? value.spriteUrl : null;
-  return { id, pokemonId, name, displayName, nickname, spriteUrl };
+  const rawLevel = value.level;
+  const numericLevel = Number(rawLevel);
+  const level = rawLevel !== null && rawLevel !== '' && Number.isInteger(numericLevel) && numericLevel >= 1 && numericLevel <= 100
+    ? numericLevel
+    : null;
+  const currentMoves = [];
+  for (const moveName of Array.isArray(value.currentMoves) ? value.currentMoves : []) {
+    const normalized = typeof moveName === 'string' ? moveName.trim().toLowerCase() : '';
+    if (!normalized || currentMoves.includes(normalized)) continue;
+    currentMoves.push(normalized);
+    if (currentMoves.length === 4) break;
+  }
+  return { id, pokemonId, name, displayName, nickname, spriteUrl, level, currentMoves };
 }
 
 function normalizeOwnedPokemonList(value) {
