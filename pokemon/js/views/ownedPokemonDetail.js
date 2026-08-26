@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { getPokemon } from '../data/pokemonRepository.js';
-import { getOwnedPokemonById, setOwnedPokemonSpecies } from '../data/ownedPokemonRepository.js';
+import { getOwnedPokemonById, setOwnedPokemonLevel, setOwnedPokemonSpecies } from '../data/ownedPokemonRepository.js';
 import { createTypeList } from '../components/typeBadge.js';
 import { createPokemonEvolutionControls, createPokemonEvolutionSpacer } from '../components/pokemonEvolutionControls.js';
 import { openPokemonInStudy } from '../components/pokemonStudyNavigation.js';
@@ -8,6 +8,7 @@ import { openPokemonInStudy } from '../components/pokemonStudyNavigation.js';
 const pendingLoads = new Map();
 let pendingSpeciesChange = false;
 let actionError = '';
+let levelError = '';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -100,6 +101,46 @@ async function changeSpecies(entry, target, render) {
   }
 }
 
+function createLevelSection(entry, render) {
+  const section = el('section', { className: 'panel owned-pokemon-level-section' });
+  section.append(el('h3', { text: 'Level' }));
+  const form = el('form', { className: 'owned-pokemon-level-form' });
+  const label = el('label');
+  label.append(el('span', { text: 'Current level' }));
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '1';
+  input.max = '100';
+  input.step = '1';
+  input.inputMode = 'numeric';
+  input.value = entry.level ?? '';
+  input.placeholder = '1–100';
+  label.append(input);
+  const save = el('button', { className: 'primary-button', text: 'Save level' });
+  save.type = 'submit';
+  form.append(label, save);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const value = input.value.trim();
+    if (value && !input.checkValidity()) {
+      levelError = 'Level must be a whole number from 1 to 100.';
+      render();
+      return;
+    }
+    if (!setOwnedPokemonLevel(entry.id, value || null)) {
+      levelError = 'Could not save this Pokémon’s level.';
+      render();
+      return;
+    }
+    levelError = '';
+    render();
+  });
+  section.append(form);
+  if (levelError) section.append(el('p', { className: 'pokemon-lookup-error owned-pokemon-level-error', text: levelError }));
+  else section.append(el('p', { className: 'muted owned-pokemon-level-help', text: 'Leave this empty to clear the saved level.' }));
+  return section;
+}
+
 function createInfoCard(entry, pokemon, root, render) {
   const displayName = entry.nickname || pokemon?.displayName || entry.displayName;
   const card = el('section', { className: 'panel pokemon-result-card owned-pokemon-detail-card' });
@@ -148,11 +189,13 @@ export function renderOwnedPokemonDetail(container, render) {
   const detail = state.ownedPokemonDetail;
   if (detail.entryId !== entry.id || detail.pokemonId !== entry.pokemonId) {
     actionError = '';
+    levelError = '';
     resetDetailState(entry);
   }
   const pokemon = state.ownedPokemonDetail.pokemon;
   if (pokemon) page.append(createInfoCard(entry, pokemon, container, render));
   else page.append(createInfoCard(entry, null, container, render));
+  page.append(createLevelSection(entry, render));
 
   if (pendingSpeciesChange) {
     page.append(el('p', { className: 'panel muted', text: 'Changing evolution…' }));
