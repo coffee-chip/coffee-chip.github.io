@@ -100,3 +100,14 @@ export function setOwnedPokemonCurrentMove(entryId, moveName, selected) {
   entry.currentMoves = previous;
   return null;
 }
+
+export function reorderOwnedPokemon(fromIndex, toIndex) {
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return false;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= state.ownedPokemon.length || toIndex >= state.ownedPokemon.length || fromIndex === toIndex) return false;
+  const previous = [...state.ownedPokemon];
+  const [entry] = state.ownedPokemon.splice(fromIndex, 1);
+  state.ownedPokemon.splice(toIndex, 0, entry);
+  if (saveOwnedPokemon(state.ownedPokemon)) return true;
+  state.ownedPokemon.splice(0, state.ownedPokemon.length, ...previous);
+  return false;
+}
