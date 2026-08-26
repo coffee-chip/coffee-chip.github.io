@@ -1,6 +1,10 @@
 import { state } from '../state.js';
 import { getPokemon } from '../data/pokemonRepository.js';
-import { getOwnedPokemonById, setOwnedPokemonLevel, setOwnedPokemonSpecies } from '../data/ownedPokemonRepository.js';
+import {
+  getMyPokemonById,
+  setPokemonInstanceLevel,
+  setPokemonInstanceSpecies
+} from '../data/pokemonInstanceRepository.js';
 import { createTypeList } from '../components/typeBadge.js';
 import { createPokemonEvolutionControls, createPokemonEvolutionSpacer } from '../components/pokemonEvolutionControls.js';
 import { openPokemonInStudy } from '../components/pokemonStudyNavigation.js';
@@ -17,10 +21,10 @@ function el(tag, options = {}) {
   return node;
 }
 
-function resetDetailState(entry) {
+function resetDetailState(instance) {
   state.ownedPokemonDetail = {
-    entryId: entry.id,
-    pokemonId: entry.pokemonId,
+    instanceId: instance.id,
+    speciesId: instance.speciesId,
     status: 'loading',
     pokemon: null,
     error: null,
@@ -28,23 +32,23 @@ function resetDetailState(entry) {
   };
 }
 
-function loadEntryPokemon(entry, render) {
+function loadEntryPokemon(instance, render) {
   const versionGroup = state.settings.gameVersionGroup;
-  const key = `${entry.id}:${entry.pokemonId}:${versionGroup}`;
+  const key = `${instance.id}:${instance.speciesId}:${versionGroup}`;
   if (pendingLoads.has(key)) return;
-  const request = getPokemon(entry.pokemonId, { versionGroup })
+  const request = getPokemon(instance.speciesId, { versionGroup })
     .then(result => {
       if (state.route !== 'owned-pokemon'
-        || state.routeParams.entryId !== entry.id
+        || state.routeParams.instanceId !== instance.id
         || state.settings.gameVersionGroup !== versionGroup
-        || getOwnedPokemonById(entry.id)?.pokemonId !== entry.pokemonId) return;
+        || getMyPokemonById(instance.id)?.speciesId !== instance.speciesId) return;
       state.ownedPokemonDetail.pokemon = result.pokemon;
       state.ownedPokemonDetail.status = 'success';
       state.ownedPokemonDetail.error = result.stale ? 'The live lookup failed, so this result may be out of date.' : null;
       render();
     })
     .catch(error => {
-      if (state.route !== 'owned-pokemon' || state.routeParams.entryId !== entry.id) return;
+      if (state.route !== 'owned-pokemon' || state.routeParams.instanceId !== instance.id) return;
       state.ownedPokemonDetail.status = 'error';
       state.ownedPokemonDetail.error = error?.message ?? 'Could not load this Pokémon.';
       render();
@@ -53,20 +57,20 @@ function loadEntryPokemon(entry, render) {
   pendingLoads.set(key, request);
 }
 
-function createStudyLinkVisual(entry, pokemon, displayName) {
+function createStudyLinkVisual(instance, pokemon, displayName) {
   const visual = el('div', { className: 'pokemon-result-visual owned-pokemon-study-link' });
-  if (pokemon?.spriteUrl ?? entry.spriteUrl) {
+  if (pokemon?.spriteUrl) {
     const image = document.createElement('img');
-    image.src = pokemon?.spriteUrl ?? entry.spriteUrl;
+    image.src = pokemon.spriteUrl;
     image.alt = '';
     visual.append(image);
   } else {
-    visual.append(el('span', { className: 'owned-pokemon-placeholder', text: `#${entry.pokemonId}` }));
+    visual.append(el('span', { className: 'owned-pokemon-placeholder', text: `#${instance.speciesId}` }));
   }
   visual.tabIndex = 0;
   visual.setAttribute('role', 'button');
   visual.setAttribute('aria-label', `Open ${displayName} in Study`);
-  const openStudy = () => openPokemonInStudy(entry.pokemonId);
+  const openStudy = () => openPokemonInStudy(instance.speciesId);
   visual.addEventListener('click', openStudy);
   visual.addEventListener('keydown', event => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -76,18 +80,18 @@ function createStudyLinkVisual(entry, pokemon, displayName) {
   return visual;
 }
 
-async function changeSpecies(entry, target, render) {
+async function changeSpecies(instance, target, render) {
   if (!target?.name || pendingSpeciesChange) return;
   pendingSpeciesChange = true;
   actionError = '';
   render();
   try {
     const result = await getPokemon(target.name);
-    const updated = setOwnedPokemonSpecies(entry.id, result.pokemon);
+    const updated = setPokemonInstanceSpecies(instance.id, result.pokemon);
     if (!updated) throw new Error('Could not save the evolution change.');
     state.ownedPokemonDetail = {
-      entryId: updated.id,
-      pokemonId: updated.pokemonId,
+      instanceId: updated.id,
+      speciesId: updated.speciesId,
       status: 'success',
       pokemon: result.pokemon,
       error: null,
@@ -101,8 +105,8 @@ async function changeSpecies(entry, target, render) {
   }
 }
 
-function createLevelSection(entry, render) {
-  const level = entry.level ?? 1;
+function createLevelSection(instance, render) {
+  const level = instance.level;
   const section = el('div', { className: 'owned-pokemon-level' });
   section.append(el('span', { className: 'owned-pokemon-level-label', text: 'Level' }));
 
@@ -122,7 +126,7 @@ function createLevelSection(entry, render) {
   increase.setAttribute('aria-label', `Increase level from ${level} to ${Math.min(100, level + 1)}`);
 
   const updateLevel = nextLevel => {
-    if (!setOwnedPokemonLevel(entry.id, nextLevel)) {
+    if (!setPokemonInstanceLevel(instance.id, nextLevel)) {
       levelError = 'Could not save this Pokémon’s level.';
       render();
       return;
@@ -138,12 +142,12 @@ function createLevelSection(entry, render) {
   return section;
 }
 
-function createInfoCard(entry, pokemon, root, render) {
-  const displayName = entry.nickname || pokemon?.displayName || entry.displayName;
+function createInfoCard(instance, pokemon, root, render) {
+  const displayName = instance.nickname || pokemon?.displayName || `Pokémon #${instance.speciesId}`;
   const card = el('section', { className: 'panel pokemon-result-card owned-pokemon-detail-card' });
   const details = el('div', { className: 'pokemon-result-details owned-pokemon-detail-content' });
   details.append(el('h3', { className: 'owned-pokemon-detail-name', text: displayName }));
-  if (entry.nickname) details.append(el('span', { className: 'muted owned-pokemon-species', text: pokemon?.displayName ?? entry.displayName }));
+  if (instance.nickname) details.append(el('span', { className: 'muted owned-pokemon-species', text: pokemon?.displayName ?? `Pokémon #${instance.speciesId}` }));
   if (pokemon?.types?.length) details.append(createTypeList(pokemon.types));
 
   const previous = pokemon?.evolution?.previous ?? [];
@@ -154,7 +158,7 @@ function createInfoCard(entry, pokemon, root, render) {
       ? createPokemonEvolutionControls('previous', previous, {
           root,
           card,
-          onSelect: target => changeSpecies(entry, target, render)
+          onSelect: target => changeSpecies(instance, target, render)
         })
       : createPokemonEvolutionSpacer(),
     details,
@@ -162,37 +166,37 @@ function createInfoCard(entry, pokemon, root, render) {
       ? createPokemonEvolutionControls('next', next, {
           root,
           card,
-          onSelect: target => changeSpecies(entry, target, render)
+          onSelect: target => changeSpecies(instance, target, render)
         })
       : createPokemonEvolutionSpacer()
   );
-  card.append(createStudyLinkVisual(entry, pokemon, displayName), identityRow);
+  card.append(createStudyLinkVisual(instance, pokemon, displayName), identityRow);
   return card;
 }
 
 export function renderOwnedPokemonDetail(container, render) {
-  const entry = getOwnedPokemonById(state.routeParams.entryId);
+  const instance = getMyPokemonById(state.routeParams.instanceId);
   const page = el('section', { className: 'page owned-pokemon-detail-page' });
   const back = el('a', { className: 'owned-pokemon-detail-back', text: '← My Pokémon' });
   back.href = '#my-pokemon';
   page.append(back);
 
-  if (!entry) {
+  if (!instance) {
     page.append(el('section', { className: 'panel muted', text: 'This Pokémon is no longer in My Pokémon.' }));
     container.replaceChildren(page);
     return;
   }
 
   const detail = state.ownedPokemonDetail;
-  if (detail.entryId !== entry.id || detail.pokemonId !== entry.pokemonId) {
+  if (detail.instanceId !== instance.id || detail.speciesId !== instance.speciesId) {
     actionError = '';
     levelError = '';
-    resetDetailState(entry);
+    resetDetailState(instance);
   }
   const pokemon = state.ownedPokemonDetail.pokemon;
-  if (pokemon) page.append(createInfoCard(entry, pokemon, container, render));
-  else page.append(createInfoCard(entry, null, container, render));
-  page.append(createLevelSection(entry, render));
+  if (pokemon) page.append(createInfoCard(instance, pokemon, container, render));
+  else page.append(createInfoCard(instance, null, container, render));
+  page.append(createLevelSection(instance, render));
 
   if (pendingSpeciesChange) {
     page.append(el('p', { className: 'panel muted', text: 'Changing evolution…' }));
@@ -205,14 +209,14 @@ export function renderOwnedPokemonDetail(container, render) {
   }
 
   container.replaceChildren(page);
-  if (state.ownedPokemonDetail.status === 'loading') loadEntryPokemon(entry, render);
+  if (state.ownedPokemonDetail.status === 'loading') loadEntryPokemon(instance, render);
 }
 
 document.addEventListener('pokemon-game-data-cleared', () => {
   pendingLoads.clear();
   if (state.route !== 'owned-pokemon') return;
-  const entry = getOwnedPokemonById(state.routeParams.entryId);
-  if (!entry) return;
+  const instance = getMyPokemonById(state.routeParams.instanceId);
+  if (!instance) return;
   actionError = '';
-  resetDetailState(entry);
+  resetDetailState(instance);
 });

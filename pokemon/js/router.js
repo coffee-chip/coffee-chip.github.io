@@ -10,9 +10,9 @@ export function getRoute() {
     return { name, params: { teamId } };
   }
   if (name === 'my-pokemon' && segments.length) {
-    const entryId = decodeURIComponent(segments.join('/'));
-    if (!entryId) return { name: 'my-pokemon', params: {} };
-    return { name: 'owned-pokemon', params: { entryId } };
+    const instanceId = decodeURIComponent(segments.join('/'));
+    if (!instanceId) return { name: 'my-pokemon', params: {} };
+    return { name: 'owned-pokemon', params: { instanceId } };
   }
   return { name, params: {} };
 }

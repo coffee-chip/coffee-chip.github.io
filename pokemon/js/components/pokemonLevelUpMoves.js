@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { getGameVersionGroup } from '../data/gameVersions.js';
 import { getMove, getMoves, getMoveVersionData } from '../data/moveRepository.js';
 import { getLevelUpMoves, getPokemon } from '../data/pokemonRepository.js';
-import { getOwnedPokemonById, setOwnedPokemonCurrentMove } from '../data/ownedPokemonRepository.js';
+import { getPokemonInstance, setPokemonInstanceCurrentMove } from '../data/pokemonInstanceRepository.js';
 import { isMoveStarred, setMoveStarred } from '../data/starredMoveRepository.js';
 import { createTypeIcon } from './typeBadge.js';
 
@@ -109,19 +109,19 @@ function getActiveContext(root) {
     };
   }
   if (state.route === 'owned-pokemon' && state.ownedPokemonDetail?.pokemon) {
-    const entryId = state.ownedPokemonDetail.entryId;
+    const instanceId = state.ownedPokemonDetail.instanceId;
     return {
       pokemon: state.ownedPokemonDetail.pokemon,
       getComparisonName: () => state.ownedPokemonDetail.moveComparisonPokemonName,
       setComparisonName: value => { state.ownedPokemonDetail.moveComparisonPokemonName = value; },
       isCurrent: pokemonId => state.route === 'owned-pokemon'
-        && state.ownedPokemonDetail.entryId === entryId
+        && state.ownedPokemonDetail.instanceId === instanceId
         && state.ownedPokemonDetail.pokemon?.id === pokemonId
         && state.settings.gameVersionGroup === versionGroup,
       updatePokemon: pokemon => { state.ownedPokemonDetail.pokemon = pokemon; },
       supportsCurrentMoves: true,
-      getCurrentMoves: () => getOwnedPokemonById(entryId)?.currentMoves ?? [],
-      setCurrentMove: (moveName, selected) => Boolean(setOwnedPokemonCurrentMove(entryId, moveName, selected)),
+      getCurrentMoves: () => getPokemonInstance(instanceId)?.currentMoves ?? [],
+      setCurrentMove: (moveName, selected) => Boolean(setPokemonInstanceCurrentMove(instanceId, moveName, selected)),
       insertSection: section => { root.querySelector('.owned-pokemon-detail-page')?.append(section); }
     };
   }

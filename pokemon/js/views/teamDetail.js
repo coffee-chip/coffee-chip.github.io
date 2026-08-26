@@ -1,13 +1,15 @@
-import { getPokemon } from '../data/pokemonRepository.js';
-import { getTeam, removePokemonFromTeam, reorderPokemonInTeam, setTeamPokemonAlias } from '../data/teamRepository.js';
+import { getTeam, removePokemonFromTeam, reorderPokemonInTeam } from '../data/teamRepository.js';
+import {
+  getPokemonInstanceView,
+  resolvePokemonInstance,
+  setPokemonInstanceNickname
+} from '../data/pokemonInstanceRepository.js';
 import { getActiveTypes, getMultiplier, getTypeAdvantageScore } from '../engine/effectiveness.js';
 import { state } from '../state.js';
 import { createTypeList, createTypeIcon } from '../components/typeBadge.js';
 import { createTeamActionsButton } from '../components/teamActionsMenu.js';
 
-const resolvedPokemon = new Map();
 const expandedMembers = new Set();
-let loadingTeamId = null;
 let activeTeamDetailMode = 'members';
 let activeAnalysisMode = 'defense';
 const activeAnalysisRelationships = { defense: new Set(['weak']), offense: new Set(['strong']) };
@@ -19,11 +21,20 @@ function el(tag, options = {}) {
   return node;
 }
 
-function memberExpansionKey(teamId, pokemonId) { return `${teamId}:${pokemonId}`; }
-function getTeamMemberPokemon(member) {
-  const resolved = resolvedPokemon.get(member.id);
-  if (!resolved) return member;
-  return { ...resolved, displayName: member.displayName || resolved.displayName };
+function memberExpansionKey(teamId, instanceId) { return `${teamId}:${instanceId}`; }
+function getTeamMemberPokemon(instanceId) {
+  const instanceView = getPokemonInstanceView(instanceId);
+  if (!instanceView) return null;
+  if (!instanceView.pokemon) {
+    return {
+      id: instanceView.instance.speciesId,
+      instanceId,
+      displayName: instanceView.displayName,
+      spriteUrl: null,
+      types: []
+    };
+  }
+  return { ...instanceView.pokemon, instanceId, displayName: instanceView.displayName };
 }
 function createBackLink() {
   const link = el('a', { className: 'secondary-button team-detail-back', text: '← Teams' });
@@ -44,7 +55,7 @@ function createTeamDetailTabs(render) {
   }
   return tabs;
 }
-function createMemberRemoveConfirmation(team, member, pokemon, card, render) {
+function createMemberRemoveConfirmation(team, instanceId, pokemon, card, render) {
   card.querySelector('.team-delete-confirmation')?.remove();
   const confirmation = el('div', { className: 'team-delete-confirmation' });
   const message = el('span', { text: `Remove ${pokemon.displayName} from “${team.title}”?` });
@@ -54,24 +65,25 @@ function createMemberRemoveConfirmation(team, member, pokemon, card, render) {
   cancel.type = confirm.type = 'button';
   cancel.addEventListener('click', () => confirmation.remove());
   confirm.addEventListener('click', () => {
-    if (removePokemonFromTeam(team.id, member.id)) { expandedMembers.delete(memberExpansionKey(team.id, member.id)); render(); }
+    if (removePokemonFromTeam(team.id, instanceId)) { expandedMembers.delete(memberExpansionKey(team.id, instanceId)); render(); }
   });
   actions.append(cancel, confirm);
   confirmation.append(message, actions);
   card.append(confirmation);
 }
-function createMemberEditForm(team, member, pokemon, canonicalDisplayName, card, render) {
+function createMemberEditForm(instanceId, pokemon, canonicalDisplayName, card, render) {
+  const instanceView = getPokemonInstanceView(instanceId);
   card.querySelector('.team-member-edit-form')?.remove();
   const form = el('form', { className: 'team-member-edit-form' });
   const input = document.createElement('input');
-  input.type = 'text'; input.maxLength = 60; input.value = member.displayName || pokemon.displayName; input.placeholder = canonicalDisplayName;
-  input.setAttribute('aria-label', `Name for ${canonicalDisplayName} on ${team.title}`);
+  input.type = 'text'; input.maxLength = 60; input.value = instanceView?.instance.nickname ?? ''; input.placeholder = canonicalDisplayName;
+  input.setAttribute('aria-label', `Nickname for ${canonicalDisplayName}`);
   const actions = el('div', { className: 'team-member-edit-actions' });
   const cancel = el('button', { className: 'secondary-button', text: 'Cancel' });
   const save = el('button', { className: 'primary-button', text: 'Save' });
   cancel.type = 'button'; save.type = 'submit';
   cancel.addEventListener('click', () => form.remove());
-  form.addEventListener('submit', event => { event.preventDefault(); if (setTeamPokemonAlias(team.id, member.id, input.value, canonicalDisplayName)) render(); });
+  form.addEventListener('submit', event => { event.preventDefault(); if (setPokemonInstanceNickname(instanceId, input.value)) render(); });
   actions.append(cancel, save); form.append(input, actions); card.append(form); input.focus(); input.select();
 }
 function createAdvantageIconList(types) {
@@ -94,10 +106,11 @@ function createMemberAdvantagePanel(pokemon) {
   negativeRow.append(el('strong', { text: 'Disadvantage' }), createAdvantageIconList(negative));
   panel.append(positiveRow, negativeRow); return panel;
 }
-function createMemberCard(team, member, index, render) {
-  const pokemon = getTeamMemberPokemon(member);
-  const canonicalDisplayName = resolvedPokemon.get(member.id)?.displayName ?? member.displayName;
-  const expansionKey = memberExpansionKey(team.id, member.id), expanded = expandedMembers.has(expansionKey);
+function createMemberCard(team, instanceId, index, render) {
+  const pokemon = getTeamMemberPokemon(instanceId);
+  const instanceView = getPokemonInstanceView(instanceId);
+  const canonicalDisplayName = instanceView?.pokemon?.displayName ?? `Pokémon #${instanceView?.instance.speciesId ?? '?'}`;
+  const expansionKey = memberExpansionKey(team.id, instanceId), expanded = expandedMembers.has(expansionKey);
   const hasTypes = Array.isArray(pokemon.types) && pokemon.types.length;
   const card = el('article', { className: `panel team-detail-member${expanded ? ' team-detail-member-expanded' : ''}` }); card.dataset.memberIndex = String(index);
   const visual = el('div', { className: 'team-detail-member-visual' });
@@ -109,15 +122,16 @@ function createMemberCard(team, member, index, render) {
   const edit = el('button', { className: 'secondary-button team-member-action-button team-detail-edit', text: '✎' });
   const remove = el('button', { className: 'danger-button team-delete-button team-detail-remove', text: '×' });
   const handle = el('span', { className: 'team-drag-handle team-member-drag-handle', text: '↕' });
-  edit.type = remove.type = 'button'; edit.setAttribute('aria-label', `Edit name for ${pokemon.displayName}`); edit.title = 'Edit team name';
-  edit.addEventListener('click', () => createMemberEditForm(team, member, pokemon, canonicalDisplayName, card, render));
+  edit.type = remove.type = 'button'; edit.setAttribute('aria-label', `Edit nickname for ${pokemon.displayName}`); edit.title = 'Edit nickname';
+  edit.addEventListener('click', () => createMemberEditForm(instanceId, pokemon, canonicalDisplayName, card, render));
   remove.setAttribute('aria-label', `Remove ${pokemon.displayName} from ${team.title}`); remove.title = 'Remove from team';
-  remove.addEventListener('click', () => createMemberRemoveConfirmation(team, member, pokemon, card, render));
+  remove.addEventListener('click', () => createMemberRemoveConfirmation(team, instanceId, pokemon, card, render));
   handle.setAttribute('aria-label', `Drag to reorder ${pokemon.displayName}`); handle.title = 'Drag to reorder';
   actions.append(edit, remove, handle); header.append(name, actions);
   const details = el('button', { className: 'transparent-button team-detail-member-details' });
   details.type = 'button'; details.disabled = !hasTypes; details.setAttribute('aria-expanded', String(expanded)); details.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} type advantage summary for ${pokemon.displayName}`);
-  if (hasTypes) details.append(createTypeList(pokemon.types)); else details.append(el('span', { className: 'muted', text: 'Loading types…' }));
+  if (hasTypes) details.append(createTypeList(pokemon.types));
+  else details.append(el('span', { className: 'muted', text: instanceView?.status === 'error' ? 'Types could not be loaded' : 'Loading types…' }));
   details.addEventListener('click', () => { expanded ? expandedMembers.delete(expansionKey) : expandedMembers.add(expansionKey); render(); });
   content.append(header, details); card.append(visual, content); if (expanded && hasTypes) card.append(createMemberAdvantagePanel(pokemon));
   let holdTimer = null, dragging = false, pointerId = null, proposedIndex = index, insertionMarker = null;
@@ -140,8 +154,8 @@ function createMemberCard(team, member, index, render) {
 }
 function createRoster(team, render) {
   const roster = el('section', { className: 'team-detail-roster' });
-  if (!team.pokemon.length) roster.append(el('p', { className: 'panel muted', text: 'This team has no Pokémon yet.' }));
-  else team.pokemon.forEach((member, index) => roster.append(createMemberCard(team, member, index, render)));
+  if (!team.memberIds.length) roster.append(el('p', { className: 'panel muted', text: 'This team has no Pokémon yet.' }));
+  else team.memberIds.forEach((instanceId, index) => roster.append(createMemberCard(team, instanceId, index, render)));
   return roster;
 }
 function createPokemonColumnHeader(pokemon) {
@@ -170,7 +184,18 @@ function getMatchupResult(member, type, mode, relationship) {
   return { marked: multipliers.every(entry => entry.multiplier < 1), label: `${member.displayName}: all own-type moves are resisted or ineffective against ${type}` };
 }
 function getResolvedTeamPokemon(team) {
-  return team.pokemon.map(member => { const resolved = resolvedPokemon.get(member.id); return resolved ? { ...resolved, displayName: member.displayName || resolved.displayName } : null; }).filter(member => Array.isArray(member?.types) && member.types.length);
+  return team.memberIds.map(instanceId => {
+    const instanceView = getPokemonInstanceView(instanceId);
+    return instanceView?.pokemon
+      ? { ...instanceView.pokemon, instanceId, displayName: instanceView.displayName }
+      : null;
+  }).filter(member => Array.isArray(member?.types) && member.types.length);
+}
+function getTeamResolutionMessage(team) {
+  const views = team.memberIds.map(instanceId => getPokemonInstanceView(instanceId));
+  return views.some(instanceView => instanceView?.status === 'error')
+    ? 'Some matchup data could not be loaded.'
+    : 'Loading matchup data…';
 }
 function createAnalysisTable(pokemon, mode, relationships, team) {
   const wrapper = el('div', { className: 'team-matchup-table-scroll' }), table = el('table', { className: 'team-matchup-table' }), caption = document.createElement('caption'); caption.textContent = getAnalysisCaption(mode, relationships); table.append(caption);
@@ -193,12 +218,12 @@ function createRelationshipToggles(mode, team, render) {
 function createAnalysis(team, render) {
   const section = el('section', { className: 'team-analysis' }); section.append(createAnalysisSelector('team-analysis-tabs', 'Team matchup direction', [{ value: 'defense', label: 'Defense' }, { value: 'offense', label: 'Offense' }], activeAnalysisMode, mode => { activeAnalysisMode = mode; render(); })); section.append(createRelationshipToggles(activeAnalysisMode, team, render));
   const relationships = activeAnalysisRelationships[activeAnalysisMode], pokemon = getResolvedTeamPokemon(team);
-  if (pokemon.length !== team.pokemon.length) section.append(el('p', { className: 'muted', text: 'Loading matchup data…' })); else if (!pokemon.length) section.append(el('p', { className: 'muted', text: 'Add Pokémon to this team to analyze its matchups.' })); else section.append(createAnalysisTable(pokemon, activeAnalysisMode, relationships, team)); return section;
+  if (pokemon.length !== team.memberIds.length) section.append(el('p', { className: 'muted', text: getTeamResolutionMessage(team) })); else if (!pokemon.length) section.append(el('p', { className: 'muted', text: 'Add Pokémon to this team to analyze its matchups.' })); else section.append(createAnalysisTable(pokemon, activeAnalysisMode, relationships, team)); return section;
 }
 function getAdvantageIntensity(score) { const magnitude = Math.abs(score); return magnitude >= 3 ? 3 : magnitude >= 2 ? 2 : 1; }
 function createOverallMatchupMatrix(team) {
   const section = el('section', { className: 'team-overall-matchups' }), pokemon = getResolvedTeamPokemon(team); section.append(el('h3', { className: 'team-overall-matchups-title', text: 'Overall type matchups' }));
-  if (pokemon.length !== team.pokemon.length) { section.append(el('p', { className: 'muted', text: 'Loading matchup data…' })); return section; }
+  if (pokemon.length !== team.memberIds.length) { section.append(el('p', { className: 'muted', text: getTeamResolutionMessage(team) })); return section; }
   if (!pokemon.length) { section.append(el('p', { className: 'muted', text: 'Add Pokémon to this team to analyze its matchups.' })); return section; }
   const isOpponent = team.isOpponent === true, role = isOpponent ? 'danger' : 'success', wrapper = el('div', { className: 'team-matchup-table-scroll' }), table = el('table', { className: 'team-matchup-table team-overall-matchup-table' }), caption = document.createElement('caption'); caption.textContent = isOpponent ? 'Types that have an overall advantage against each opponent Pokémon.' : 'Types that each Pokémon has an overall advantage against.'; table.append(caption);
   const head = document.createElement('thead'), headRow = document.createElement('tr'), corner = document.createElement('th'); corner.scope = 'col'; corner.setAttribute('aria-label', 'Type'); headRow.append(corner); for (const member of pokemon) headRow.append(createPokemonColumnHeader(member)); head.append(headRow); table.append(head);
@@ -207,9 +232,9 @@ function createOverallMatchupMatrix(team) {
   table.append(body); wrapper.append(table); section.append(wrapper); return section;
 }
 async function loadTeamPokemon(team, render) {
-  if (!team.pokemon.length || loadingTeamId === team.id) return;
-  const unresolved = team.pokemon.filter(member => !resolvedPokemon.has(member.id)); if (!unresolved.length) return; loadingTeamId = team.id;
-  await Promise.all(unresolved.map(async member => { try { const result = await getPokemon(member.id); resolvedPokemon.set(member.id, result.pokemon); } catch (error) { console.warn(`Could not load ${member.displayName} for team analysis.`, error); } })); loadingTeamId = null;
+  const unresolved = team.memberIds.filter(instanceId => getPokemonInstanceView(instanceId)?.status === 'idle');
+  if (!unresolved.length) return;
+  await Promise.allSettled(unresolved.map(resolvePokemonInstance));
   if (state.route === 'team' && state.routeParams.teamId === team.id) render();
 }
 export function renderTeamDetail(container, render) {

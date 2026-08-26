@@ -3,7 +3,7 @@ import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './data/gameVersi
 import { parsePokemonRecognitionKey } from './data/pokemonRecognition.js';
 
 const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 11;
+export const STORAGE_VERSION = 12;
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -15,10 +15,11 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
   cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] },
   starredMoves: [],
-  ownedPokemon: [],
+  pokemonInstances: {},
+  myPokemonIds: [],
   teams: [
-    { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, pokemon: [] },
-    { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, pokemon: [] }
+    { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, memberIds: [] },
+    { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, memberIds: [] }
   ]
 });
 
@@ -152,20 +153,17 @@ function normalizeStarredMoves(value) {
     .filter(Boolean))];
 }
 
-function normalizeOwnedPokemon(value) {
+function normalizePokemonInstance(value, storedId) {
   if (!isObject(value)) return null;
-  const id = typeof value.id === 'string' && value.id.trim() ? value.id.trim() : null;
-  const pokemonId = Number(value.pokemonId);
-  if (!id || !Number.isInteger(pokemonId) || pokemonId < 1) return null;
-  const name = typeof value.name === 'string' && value.name ? value.name : `pokemon-${pokemonId}`;
-  const displayName = typeof value.displayName === 'string' && value.displayName ? value.displayName : `Pokémon #${pokemonId}`;
+  const id = typeof storedId === 'string' && storedId.trim() ? storedId.trim() : null;
+  const speciesId = Number(value.speciesId);
+  if (!id || value.id !== id || !Number.isInteger(speciesId) || speciesId < 1) return null;
   const nickname = typeof value.nickname === 'string' && value.nickname.trim() ? value.nickname.trim().slice(0, 60) : null;
-  const spriteUrl = typeof value.spriteUrl === 'string' && value.spriteUrl ? value.spriteUrl : null;
   const rawLevel = value.level;
   const numericLevel = Number(rawLevel);
   const level = rawLevel !== null && rawLevel !== '' && Number.isInteger(numericLevel) && numericLevel >= 1 && numericLevel <= 100
     ? numericLevel
-    : 1;
+    : null;
   const currentMoves = [];
   for (const moveName of Array.isArray(value.currentMoves) ? value.currentMoves : []) {
     const normalized = typeof moveName === 'string' ? moveName.trim().toLowerCase() : '';
@@ -173,35 +171,32 @@ function normalizeOwnedPokemon(value) {
     currentMoves.push(normalized);
     if (currentMoves.length === 4) break;
   }
-  return { id, pokemonId, name, displayName, nickname, spriteUrl, level, currentMoves };
+  return { id, speciesId, nickname, level, currentMoves };
 }
 
-function normalizeOwnedPokemonList(value) {
-  if (!Array.isArray(value)) return [];
-  const seenIds = new Set();
-  const normalized = [];
-  for (const entry of value) {
-    const ownedPokemon = normalizeOwnedPokemon(entry);
-    if (!ownedPokemon || seenIds.has(ownedPokemon.id)) continue;
-    seenIds.add(ownedPokemon.id);
-    normalized.push(ownedPokemon);
+function normalizePokemonInstances(value) {
+  const normalized = {};
+  if (!isObject(value)) return normalized;
+  for (const [storedId, entry] of Object.entries(value)) {
+    const instance = normalizePokemonInstance(entry, storedId);
+    if (instance) normalized[instance.id] = instance;
   }
   return normalized;
 }
 
-function normalizeTeamPokemon(value) {
-  if (!isObject(value)) return null;
-  const id = Number(value.id);
-  if (!Number.isInteger(id) || id < 1) return null;
-  return {
-    id,
-    name: typeof value.name === 'string' && value.name ? value.name : `pokemon-${id}`,
-    displayName: typeof value.displayName === 'string' && value.displayName ? value.displayName : `Pokémon #${id}`,
-    spriteUrl: typeof value.spriteUrl === 'string' && value.spriteUrl ? value.spriteUrl : null
-  };
+function normalizeInstanceIds(value, pokemonInstances, limit = Infinity) {
+  if (!Array.isArray(value)) return [];
+  const normalized = [];
+  for (const candidate of value) {
+    const id = typeof candidate === 'string' ? candidate.trim() : '';
+    if (!id || !pokemonInstances[id] || normalized.includes(id)) continue;
+    normalized.push(id);
+    if (normalized.length === limit) break;
+  }
+  return normalized;
 }
 
-function normalizeTeams(value) {
+function normalizeTeams(value, pokemonInstances) {
   if (!Array.isArray(value)) return cloneDefaults().teams;
   const seenIds = new Set();
   const normalized = [];
@@ -211,18 +206,10 @@ function normalizeTeams(value) {
     const title = typeof team.title === 'string' && team.title.trim() ? team.title.trim().slice(0, 60) : null;
     if (!id || !title || seenIds.has(id)) continue;
     seenIds.add(id);
-    const pokemon = [];
-    const seenPokemon = new Set();
-    for (const entry of Array.isArray(team.pokemon) ? team.pokemon : []) {
-      const normalizedPokemon = normalizeTeamPokemon(entry);
-      if (!normalizedPokemon || seenPokemon.has(normalizedPokemon.id)) continue;
-      seenPokemon.add(normalizedPokemon.id);
-      pokemon.push(normalizedPokemon);
-      if (pokemon.length === 6) break;
-    }
+    const memberIds = normalizeInstanceIds(team.memberIds, pokemonInstances, 6);
     const isOpponent = typeof team.isOpponent === 'boolean' ? team.isOpponent : id === 'opponents';
     const rivalTeamId = typeof team.rivalTeamId === 'string' && team.rivalTeamId.trim() ? team.rivalTeamId.trim() : null;
-    normalized.push({ id, title, isOpponent, rivalTeamId, pokemon });
+    normalized.push({ id, title, isOpponent, rivalTeamId, memberIds });
   }
   const validIds = new Set(normalized.map(team => team.id));
   for (const team of normalized) {
@@ -236,21 +223,29 @@ function normalizeTeams(value) {
   return normalized;
 }
 
+function normalizePokemonCollections(pokemonInstancesValue, myPokemonIdsValue, teamsValue) {
+  const pokemonInstances = normalizePokemonInstances(pokemonInstancesValue);
+  const myPokemonIds = normalizeInstanceIds(myPokemonIdsValue, pokemonInstances);
+  for (const instanceId of myPokemonIds) pokemonInstances[instanceId].level ??= 1;
+  const teams = normalizeTeams(teamsValue, pokemonInstances);
+  const referencedIds = new Set(myPokemonIds);
+  for (const team of teams) for (const instanceId of team.memberIds) referencedIds.add(instanceId);
+  for (const instanceId of Object.keys(pokemonInstances)) {
+    if (!referencedIds.has(instanceId)) delete pokemonInstances[instanceId];
+  }
+  return { pokemonInstances, myPokemonIds, teams };
+}
+
 function normalizeCurrentData(raw) {
-  if (!isObject(raw) || ![9, 10, STORAGE_VERSION].includes(raw.version)) return cloneDefaults();
-  const progress = {
-    ...raw.progress,
-    relationshipStats: raw.version === 9 ? {} : raw.progress?.relationshipStats,
-    pokemonRecognitionStats: raw.version === STORAGE_VERSION ? raw.progress?.pokemonRecognitionStats : {}
-  };
+  if (!isObject(raw) || raw.version !== STORAGE_VERSION) return cloneDefaults();
+  const collections = normalizePokemonCollections(raw.pokemonInstances, raw.myPokemonIds, raw.teams);
   return {
     version: STORAGE_VERSION,
     settings: normalizeSettings(raw.settings),
-    progress: normalizeProgress(progress),
+    progress: normalizeProgress(raw.progress),
     cache: normalizeCache(raw.cache),
     starredMoves: normalizeStarredMoves(raw.starredMoves),
-    ownedPokemon: normalizeOwnedPokemonList(raw.ownedPokemon),
-    teams: normalizeTeams(raw.teams)
+    ...collections
   };
 }
 
@@ -278,15 +273,15 @@ export function loadPersistentData() {
   }
 }
 
-export function savePersistentData({ settings, progress, cache, starredMoves, ownedPokemon, teams }) {
+export function savePersistentData({ settings, progress, cache, starredMoves, pokemonInstances, myPokemonIds, teams }) {
+  const collections = normalizePokemonCollections(pokemonInstances, myPokemonIds, teams);
   return write({
     version: STORAGE_VERSION,
     settings: normalizeSettings(settings),
     progress: normalizeProgress(progress),
     cache: normalizeCache(cache),
     starredMoves: normalizeStarredMoves(starredMoves),
-    ownedPokemon: normalizeOwnedPokemonList(ownedPokemon),
-    teams: normalizeTeams(teams)
+    ...collections
   });
 }
 
@@ -294,8 +289,11 @@ export function saveSettings(settings) { return updateSection('settings', settin
 export function saveProgress(progress) { return updateSection('progress', progress, normalizeProgress); }
 export function saveCache(cache) { return updateSection('cache', cache, normalizeCache); }
 export function saveStarredMoves(starredMoves) { return updateSection('starredMoves', starredMoves, normalizeStarredMoves); }
-export function saveOwnedPokemon(ownedPokemon) { return updateSection('ownedPokemon', ownedPokemon, normalizeOwnedPokemonList); }
-export function saveTeams(teams) { return updateSection('teams', teams, normalizeTeams); }
+export function savePokemonCollections(pokemonInstances, myPokemonIds, teams) {
+  const data = loadPersistentData();
+  Object.assign(data, normalizePokemonCollections(pokemonInstances, myPokemonIds, teams));
+  return write(data);
+}
 export function clearPersistentData() {
   try { localStorage.removeItem(STORAGE_KEY); return true; }
   catch (error) { console.warn('Could not clear saved data.', error); return false; }

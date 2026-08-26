@@ -4,10 +4,12 @@
 
 - Team detail view launched from team cards at `#team/<team-id>`.
 - Team detail roster shows each Pokémon and its types.
-- My Pokémon is a Teams-adjacent personal roster: it stores a stable individual entry ID, a species snapshot, an optional nickname, a level from 1–100, and up to four normalized current move names. It does not store per-entry game context, stats, PP, or other derived catalog details. Entries survive game changes while their displayed types resolve through the active game when available.
+- Pokémon individuals are normalized in one persistent `pokemonInstances` map. Each instance stores a stable ID, `speciesId`, optional nickname, optional level (1–100 when set), and up to four normalized current move names; species names, sprites, types, evolutions, and learnsets remain owned by the game-aware Pokémon repository.
+- My Pokémon is an ordered `myPokemonIds` collection over those instances. Teams likewise store ordered `memberIds`, so adding an existing My Pokémon to a team shares the same individual record rather than copying it.
+- Directly adding a Study species to a team creates a team-only instance whose level may remain unspecified. Team-only and rival Pokémon remain in the central instance repository without appearing in My Pokémon; adding one to My Pokémon initializes a missing level to 1, and removing the final My Pokémon/team reference prunes the orphaned instance.
 - Removing a Pokémon from a team reuses the team-delete interaction pattern: an × trigger followed by an inline confirmation with Cancel/Remove actions.
 - Team members can be drag-reordered using the same pointer/hold/insertion-marker interaction pattern as team cards; reorder persists only within that team.
-- Team members have an edit control for a team-local display-name alias. The alias is stored on the team Pokémon snapshot and does not modify the shared Pokémon cache/repository. Clearing the edit field resets to the canonical fetched display name.
+- Team member nickname editing updates the shared instance, so the same individual has one nickname everywhere it appears. Clearing it restores the active-game species display name.
 - Team-level Rename, Rival, Opponent, and Delete actions are centralized in a shared overflow-menu component used by both team cards and the single-team view. Team cards keep the separate drag handle.
 - Rivalries are persisted as reciprocal one-to-one team links using `rivalTeamId`. Setting a rivalry automatically clears any previous rival on either side; clearing or deleting a team also clears the reciprocal link.
 - Rival assignment/change/removal is available from the shared team actions menu in both the Teams list and single-team page. The single-team page additionally shows a direct `Rival: {team} →` navigation link below its Members / Matchups / Advantage selector when a rival exists; Teams list cards intentionally do not show rival goto links yet.
@@ -23,7 +25,7 @@
 - Team detail has top-level Members / Matchups / Advantage tabs so the roster, raw matchup matrix, and overall advantage matrix are shown separately.
 - Overall advantage matrix uses the combined advantage score. Ordinary teams show positive-score green dots; opponent teams show negative-score red dots. Dot intensity buckets are magnitude 1, 2, and 3+.
 - Offensive analysis intentionally assumes same-type attack coverage but does not apply STAB.
-- Team analysis resolves full Pokémon records through the existing Pokémon repository so type logic is not duplicated in team storage.
+- Team and My Pokémon views resolve their shared instances through the existing Pokémon repository, so game-aware species data and type logic are not duplicated in instance storage.
 - Matchup matrices are intentionally compact: the type column is icon-only, Pokémon names are vertical, images shrink to fit, and horizontal scrolling remains available only as overflow fallback.
 - Battle scenario quiz mode uses combined advantage scoring against a displayed Pokémon. Its Answers setting supports Types, Pokémon, or Both.
 - Battle scenario type questions ask which hypothetical single-type Pokémon would have positive combined advantage against the displayed Pokémon.
@@ -46,7 +48,7 @@
 ## Follow-up work
 
 - Use rivalry as the default pairing primitive for future full-team-vs-full-team creation and evaluation.
-- Consider whether team snapshots should eventually persist Pokémon types for fully offline team analysis; current implementation resolves them through the Pokémon repository/cache.
+- Instance storage intentionally omits derived species fields. Team and My Pokémon presentation resolves those fields through the shared Pokémon repository/cache.
 
 - Study Pokémon lookup now shows a game-specific “Moves learned by level” table beneath Incoming damage and Outgoing attacks. The selected game is stored in Settings using PokéAPI version groups, initially FireRed / LeafGreen. Pokémon cache level-up learnsets per selected game, while move type, damage, accuracy, and English description data are cached separately. Tapping a move opens a dismissible bottom details banner.
 
@@ -77,3 +79,6 @@
 
 - Current-move summary buttons open the same version-aware move detail banner as move names in the level-up table. Current moves are removed only by toggling the checked control in the table.
 - My Pokémon roster ordering is user-controlled and persisted. Its drag handle uses the same pointer-capture, touch hold delay, insertion marker, and immediate-save behavior as the Team detail Members list; reordering is disabled while the roster search filter is active so hidden entries cannot make the target order ambiguous.
+
+- Storage v12 replaces owned-entry arrays and team species snapshots with the normalized instance model. Older storage is intentionally reset rather than migrated during active development.
+- The owned Pokémon detail overflow menu can add that exact instance to a team. Study additions still create new individuals: adding to My Pokémon creates an owned instance, while adding directly to a team creates a team-only instance. Distinct instances of the same species are allowed on one team; the same instance cannot be added twice.

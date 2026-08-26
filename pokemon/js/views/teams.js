@@ -1,6 +1,8 @@
 import { createTeam, getTeams, reorderTeams } from '../data/teamRepository.js';
+import { getPokemonInstanceView, resolvePokemonInstance } from '../data/pokemonInstanceRepository.js';
 import { createTeamActionsButton } from '../components/teamActionsMenu.js';
 import { createTeamOverviewNavigation } from '../components/teamOverviewNavigation.js';
+import { state } from '../state.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -9,25 +11,27 @@ function el(tag, options = {}) {
   return node;
 }
 
-function pokemonSlot(pokemon) {
+function pokemonSlot(instanceId) {
+  const instanceView = getPokemonInstanceView(instanceId);
+  const pokemon = instanceView?.pokemon;
   const slot = el('div', { className: 'team-pokemon-slot' });
-  slot.title = pokemon.displayName;
-  slot.setAttribute('aria-label', pokemon.displayName);
-  if (pokemon.spriteUrl) {
+  slot.title = instanceView?.displayName ?? 'Unknown Pokémon';
+  slot.setAttribute('aria-label', slot.title);
+  if (pokemon?.spriteUrl) {
     const image = document.createElement('img');
     image.src = pokemon.spriteUrl;
-    image.alt = pokemon.displayName;
+    image.alt = instanceView.displayName;
     image.loading = 'lazy';
     slot.append(image);
   } else {
-    slot.append(el('span', { text: `#${pokemon.id}` }));
+    slot.append(el('span', { text: instanceView ? `#${instanceView.instance.speciesId}` : '?' }));
   }
   return slot;
 }
 
 function createTeamCard(team, index, render) {
   const classes = ['panel', 'team-card'];
-  if (!team.pokemon.length) classes.push('team-card-empty');
+  if (!team.memberIds.length) classes.push('team-card-empty');
   if (team.isOpponent) classes.push('team-card-opponent');
   const card = el('article', { className: classes.join(' ') });
   card.dataset.teamIndex = String(index);
@@ -124,9 +128,9 @@ function createTeamCard(team, index, render) {
   handle.addEventListener('lostpointercapture', stopDrag);
 
   card.append(header);
-  if (team.pokemon.length) {
+  if (team.memberIds.length) {
     const row = el('div', { className: 'team-pokemon-row' });
-    for (const pokemon of team.pokemon) row.append(pokemonSlot(pokemon));
+    for (const instanceId of team.memberIds) row.append(pokemonSlot(instanceId));
     card.append(row);
   }
   return card;
@@ -160,4 +164,11 @@ export function renderTeams(container, render) {
   list.append(createNewTeamCard(render));
   page.append(createTeamOverviewNavigation('teams'), list);
   container.replaceChildren(page);
+  const unresolved = [...new Set(getTeams().flatMap(team => team.memberIds))]
+    .filter(instanceId => getPokemonInstanceView(instanceId)?.status === 'idle');
+  if (unresolved.length) {
+    Promise.allSettled(unresolved.map(resolvePokemonInstance)).then(() => {
+      if (state.route === 'teams') render();
+    });
+  }
 }

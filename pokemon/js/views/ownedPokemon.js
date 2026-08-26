@@ -1,14 +1,19 @@
 import { getGameVersionGroup, isPokemonAvailableInVersionGroup } from '../data/gameVersions.js';
 import { getPokemon } from '../data/pokemonRepository.js';
-import { getOwnedPokemon, addOwnedPokemon, removeOwnedPokemon, reorderOwnedPokemon, setOwnedPokemonNickname } from '../data/ownedPokemonRepository.js';
+import {
+  addPokemonToMyPokemon,
+  getMyPokemon,
+  getPokemonInstanceView,
+  removePokemonFromMyPokemon,
+  reorderMyPokemon,
+  resolvePokemonInstance,
+  setPokemonInstanceNickname
+} from '../data/pokemonInstanceRepository.js';
 import { createTypeList } from '../components/typeBadge.js';
 import { createTeamOverviewNavigation } from '../components/teamOverviewNavigation.js';
 import { openPokemonInStudy } from '../components/pokemonStudyNavigation.js';
 import { state } from '../state.js';
 
-const resolvedPokemon = new Map();
-const resolutionFailures = new Map();
-const loadingEntries = new Set();
 let currentRender = null;
 let filterQuery = '';
 let addError = '';
@@ -20,19 +25,15 @@ function el(tag, options = {}) {
   return node;
 }
 
-function entryDisplayName(entry, pokemon) {
-  return entry.nickname || pokemon?.displayName || entry.displayName;
-}
-
-function createNicknameForm(entry, card, render) {
+function createNicknameForm(instance, pokemon, card, render) {
   card.querySelector('.owned-pokemon-edit-form')?.remove();
   const form = el('form', { className: 'owned-pokemon-edit-form' });
   const input = document.createElement('input');
   input.type = 'text';
   input.maxLength = 60;
-  input.value = entry.nickname ?? '';
-  input.placeholder = entry.displayName;
-  input.setAttribute('aria-label', `Nickname for ${entry.displayName}`);
+  input.value = instance.nickname ?? '';
+  input.placeholder = pokemon?.displayName ?? `Pokémon #${instance.speciesId}`;
+  input.setAttribute('aria-label', `Nickname for ${input.placeholder}`);
 
   const actions = el('div', { className: 'owned-pokemon-edit-actions' });
   const cancel = el('button', { className: 'secondary-button', text: 'Cancel' });
@@ -42,7 +43,7 @@ function createNicknameForm(entry, card, render) {
   cancel.addEventListener('click', () => form.remove());
   form.addEventListener('submit', event => {
     event.preventDefault();
-    if (setOwnedPokemonNickname(entry.id, input.value)) render();
+    if (setPokemonInstanceNickname(instance.id, input.value)) render();
   });
   actions.append(cancel, save);
   form.append(input, actions);
@@ -51,7 +52,7 @@ function createNicknameForm(entry, card, render) {
   input.select();
 }
 
-function createRemoveConfirmation(entry, name, card, render) {
+function createRemoveConfirmation(instance, name, card, render) {
   card.querySelector('.owned-pokemon-remove-confirmation')?.remove();
   const confirmation = el('div', { className: 'owned-pokemon-remove-confirmation' });
   confirmation.append(el('span', { text: `Remove ${name} from My Pokémon?` }));
@@ -61,43 +62,42 @@ function createRemoveConfirmation(entry, name, card, render) {
   cancel.type = remove.type = 'button';
   cancel.addEventListener('click', () => confirmation.remove());
   remove.addEventListener('click', () => {
-    if (removeOwnedPokemon(entry.id)) render();
+    if (removePokemonFromMyPokemon(instance.id)) render();
   });
   actions.append(cancel, remove);
   confirmation.append(actions);
   card.append(confirmation);
 }
 
-function createOwnedPokemonCard(entry, index, render) {
-  const cachedPokemon = resolvedPokemon.get(entry.id);
-  const pokemon = cachedPokemon?.id === entry.pokemonId ? cachedPokemon : null;
-  const resolutionFailure = resolutionFailures.get(entry.id);
+function createOwnedPokemonCard(instance, index, render) {
+  const instanceView = getPokemonInstanceView(instance.id);
+  const pokemon = instanceView?.pokemon;
   const game = getGameVersionGroup(state.settings.gameVersionGroup);
-  const available = isPokemonAvailableInVersionGroup(entry.pokemonId, state.settings.gameVersionGroup);
-  const name = entryDisplayName(entry, pokemon);
+  const available = isPokemonAvailableInVersionGroup(instance.speciesId, state.settings.gameVersionGroup);
+  const name = instanceView.displayName;
   const card = el('article', { className: 'panel owned-pokemon-card' });
   card.dataset.entryIndex = String(index);
-  card.dataset.search = [entry.nickname, entry.displayName, pokemon?.displayName].filter(Boolean).join(' ').toLowerCase();
+  card.dataset.search = [instance.nickname, pokemon?.displayName, String(instance.speciesId)].filter(Boolean).join(' ').toLowerCase();
 
   const visual = el('div', { className: 'owned-pokemon-visual' });
-  if (pokemon?.spriteUrl ?? entry.spriteUrl) {
+  if (pokemon?.spriteUrl) {
     const image = document.createElement('img');
-    image.src = pokemon?.spriteUrl ?? entry.spriteUrl;
+    image.src = pokemon.spriteUrl;
     image.alt = '';
     image.loading = 'lazy';
     visual.append(image);
   } else {
-    visual.append(el('span', { className: 'owned-pokemon-placeholder', text: `#${entry.pokemonId}` }));
+    visual.append(el('span', { className: 'owned-pokemon-placeholder', text: `#${instance.speciesId}` }));
   }
   visual.classList.add('owned-pokemon-study-link');
   visual.tabIndex = 0;
   visual.setAttribute('role', 'button');
   visual.setAttribute('aria-label', `Open ${name} in Study`);
-  visual.addEventListener('click', () => openPokemonInStudy(entry.pokemonId));
+  visual.addEventListener('click', () => openPokemonInStudy(instance.speciesId));
   visual.addEventListener('keydown', event => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    openPokemonInStudy(entry.pokemonId);
+    openPokemonInStudy(instance.speciesId);
   });
 
   const content = el('div', { className: 'owned-pokemon-content owned-pokemon-detail-link' });
@@ -106,19 +106,19 @@ function createOwnedPokemonCard(entry, index, render) {
   content.setAttribute('aria-label', `Open details for ${name}`);
   const openDetails = event => {
     if (event.target.closest('button, input, form, select, a, .owned-pokemon-drag-handle')) return;
-    location.hash = `my-pokemon/${encodeURIComponent(entry.id)}`;
+    location.hash = `my-pokemon/${encodeURIComponent(instance.id)}`;
   };
   content.addEventListener('click', openDetails);
   content.addEventListener('keydown', event => {
     if (event.target !== content || (event.key !== 'Enter' && event.key !== ' ')) return;
     event.preventDefault();
-    location.hash = `my-pokemon/${encodeURIComponent(entry.id)}`;
+    location.hash = `my-pokemon/${encodeURIComponent(instance.id)}`;
   });
   const header = el('div', { className: 'owned-pokemon-header' });
   const names = el('div', { className: 'owned-pokemon-names' });
   names.append(
     el('strong', { className: 'owned-pokemon-name', text: name }),
-    el('span', { className: 'muted owned-pokemon-level-summary', text: `Lv. ${entry.level ?? 1}` })
+    el('span', { className: 'muted owned-pokemon-level-summary', text: `Lv. ${instance.level}` })
   );
 
   const actions = el('div', { className: 'owned-pokemon-actions' });
@@ -130,8 +130,8 @@ function createOwnedPokemonCard(entry, index, render) {
   edit.setAttribute('aria-label', `Edit nickname for ${name}`);
   remove.title = 'Remove from My Pokémon';
   remove.setAttribute('aria-label', `Remove ${name} from My Pokémon`);
-  edit.addEventListener('click', () => createNicknameForm(entry, card, render));
-  remove.addEventListener('click', () => createRemoveConfirmation(entry, name, card, render));
+  edit.addEventListener('click', () => createNicknameForm(instance, pokemon, card, render));
+  remove.addEventListener('click', () => createRemoveConfirmation(instance, name, card, render));
   handle.setAttribute('aria-label', `Drag to reorder ${name}`);
   handle.title = 'Drag to reorder';
   handle.addEventListener('click', event => event.stopPropagation());
@@ -141,7 +141,7 @@ function createOwnedPokemonCard(entry, index, render) {
   content.append(header);
   if (pokemon?.types?.length) content.append(createTypeList(pokemon.types));
   else if (!available) content.append(el('span', { className: 'muted owned-pokemon-game-note', text: `Not available in ${game.label}` }));
-  else if (resolutionFailure?.pokemonId === entry.pokemonId) content.append(el('span', { className: 'muted owned-pokemon-game-note', text: 'Types could not be loaded' }));
+  else if (instanceView.status === 'error') content.append(el('span', { className: 'muted owned-pokemon-game-note', text: 'Types could not be loaded' }));
   else content.append(el('span', { className: 'muted owned-pokemon-game-note', text: 'Loading types…' }));
 
   card.append(visual, content);
@@ -187,7 +187,7 @@ function createOwnedPokemonCard(entry, index, render) {
     dragging = false;
     card.classList.remove('team-card-dragging');
     removeInsertionMarker();
-    if (proposedIndex !== index) reorderOwnedPokemon(index, proposedIndex);
+    if (proposedIndex !== index) reorderMyPokemon(index, proposedIndex);
     render();
   }
 
@@ -266,7 +266,7 @@ function createAddForm(render) {
     addError = '';
     try {
       const result = await getPokemon(name);
-      if (!addOwnedPokemon(result.pokemon)) addError = 'Could not add that Pokémon.';
+      if (!addPokemonToMyPokemon(result.pokemon)) addError = 'Could not add that Pokémon.';
     } catch (error) {
       addError = error?.message ?? 'Could not look up that Pokémon.';
     }
@@ -275,25 +275,17 @@ function createAddForm(render) {
   return form;
 }
 
-function loadOwnedPokemon(entries, render) {
-  for (const entry of entries) {
-    if (resolvedPokemon.get(entry.id)?.id !== entry.pokemonId) resolvedPokemon.delete(entry.id);
-    if (resolutionFailures.get(entry.id)?.pokemonId !== entry.pokemonId) resolutionFailures.delete(entry.id);
-    if (resolvedPokemon.has(entry.id) || resolutionFailures.has(entry.id) || loadingEntries.has(entry.id)) continue;
-    loadingEntries.add(entry.id);
-    getPokemon(entry.pokemonId)
-      .then(result => resolvedPokemon.set(entry.id, result.pokemon))
-      .catch(error => resolutionFailures.set(entry.id, { pokemonId: entry.pokemonId, error }))
-      .finally(() => {
-        loadingEntries.delete(entry.id);
-        if (state.route === 'my-pokemon') render();
-      });
-  }
+function loadOwnedPokemon(instances, render) {
+  const unresolved = instances.filter(instance => getPokemonInstanceView(instance.id)?.status === 'idle');
+  if (!unresolved.length) return;
+  Promise.allSettled(unresolved.map(instance => resolvePokemonInstance(instance.id))).then(() => {
+    if (state.route === 'my-pokemon') render();
+  });
 }
 
 export function renderOwnedPokemon(container, render) {
   currentRender = render;
-  const entries = getOwnedPokemon();
+  const entries = getMyPokemon();
   const page = el('section', { className: 'page owned-pokemon-page' });
   page.append(createTeamOverviewNavigation('my-pokemon'), createAddForm(render));
 
@@ -319,8 +311,5 @@ export function renderOwnedPokemon(container, render) {
 }
 
 document.addEventListener('pokemon-game-data-cleared', () => {
-  resolvedPokemon.clear();
-  resolutionFailures.clear();
-  loadingEntries.clear();
   if (state.route === 'my-pokemon' && currentRender) currentRender();
 });

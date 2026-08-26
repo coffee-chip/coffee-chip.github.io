@@ -8,8 +8,8 @@ function emptyProgress() {
 
 function defaultTeams() {
   return [
-    { id: 'my-team', title: 'My team', pokemon: [] },
-    { id: 'opponents', title: 'Opponents', pokemon: [] }
+    { id: 'my-team', title: 'My team', memberIds: [] },
+    { id: 'opponents', title: 'Opponents', memberIds: [] }
   ];
 }
 
@@ -33,11 +33,12 @@ export const state = {
     moveComparisonPokemonName: null
   },
   ownedPokemonDetail: {
-    entryId: null, pokemonId: null, status: 'idle', pokemon: null, error: null,
+    instanceId: null, speciesId: null, status: 'idle', pokemon: null, error: null,
     moveComparisonPokemonName: null
   },
   starredMoves: [],
-  ownedPokemon: [],
+  pokemonInstances: {},
+  myPokemonIds: [],
   teams: defaultTeams(),
   progress: emptyProgress(),
   cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] }
@@ -72,7 +73,8 @@ export function hydratePersistentState(persistentData) {
     recentPokemonIds: [...(persistentData.cache.recentPokemonIds ?? [])]
   };
   state.starredMoves = [...(persistentData.starredMoves ?? [])];
-  state.ownedPokemon = structuredClone(persistentData.ownedPokemon ?? []);
+  state.pokemonInstances = structuredClone(persistentData.pokemonInstances ?? {});
+  state.myPokemonIds = [...(persistentData.myPokemonIds ?? [])];
   state.teams = structuredClone(persistentData.teams ?? defaultTeams());
   state.quiz.mode = state.settings.quiz.defaultMode;
   getQuizModeSettings(state.quiz.mode);
@@ -104,7 +106,8 @@ export function getPersistentSnapshot() {
       recentPokemonIds: [...state.cache.recentPokemonIds]
     },
     starredMoves: [...state.starredMoves],
-    ownedPokemon: structuredClone(state.ownedPokemon),
+    pokemonInstances: structuredClone(state.pokemonInstances),
+    myPokemonIds: [...state.myPokemonIds],
     teams: structuredClone(state.teams)
   };
 }
