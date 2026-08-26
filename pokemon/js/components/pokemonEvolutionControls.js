@@ -5,13 +5,15 @@ function displayName(name) {
 }
 
 function submitLookup(name, root) {
-  const form = root.querySelector('.pokemon-lookup-form');
-  const input = form?.querySelector('input[type="search"]');
-  if (!form || !input) return;
+  const input = root.querySelector('.pokemon-lookup-form input[type="search"]');
+  if (!input) return;
   input.value = name;
   state.study.pokemonQuery = name;
   input.dispatchEvent(new Event('input', { bubbles: true }));
-  form.requestSubmit();
+  input.dispatchEvent(new CustomEvent('pokemon-autocomplete-select', {
+    bubbles: true,
+    detail: { name }
+  }));
 }
 
 function compactConditionLabel(target) {
