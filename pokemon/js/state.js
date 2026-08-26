@@ -32,6 +32,10 @@ export const state = {
     pokemonQuery: '', pokemonStatus: 'idle', pokemonResult: null, pokemonSource: null, pokemonError: null,
     moveComparisonPokemonName: null
   },
+  ownedPokemonDetail: {
+    entryId: null, pokemonId: null, status: 'idle', pokemon: null, error: null,
+    moveComparisonPokemonName: null
+  },
   starredMoves: [],
   ownedPokemon: [],
   teams: defaultTeams(),
