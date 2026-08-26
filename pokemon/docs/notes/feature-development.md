@@ -4,7 +4,7 @@
 
 - Team detail view launched from team cards at `#team/<team-id>`.
 - Team detail roster shows each Pokémon and its types.
-- My Pokémon is a Teams-adjacent personal roster: it stores a Pokémon record, optional nickname, and stable individual entry ID; it does not store per-entry game context, moves, levels, stats, or other catalog details. Entries survive game changes while their displayed types resolve through the active game when available.
+- My Pokémon is a Teams-adjacent personal roster: it stores a stable individual entry ID, a species snapshot, an optional nickname, an optional level, and up to four normalized current move names. It does not store per-entry game context, stats, PP, or other derived catalog details. Entries survive game changes while their displayed types resolve through the active game when available.
 - Removing a Pokémon from a team reuses the team-delete interaction pattern: an × trigger followed by an inline confirmation with Cancel/Remove actions.
 - Team members can be drag-reordered using the same pointer/hold/insertion-marker interaction pattern as team cards; reorder persists only within that team.
 - Team members have an edit control for a team-local display-name alias. The alias is stored on the team Pokémon snapshot and does not modify the shared Pokémon cache/repository. Clearing the edit field resets to the canonical fetched display name.
@@ -71,3 +71,6 @@
 
 
 - My Pokémon cards now open an individual owned-entry page from the card body while the image continues to open that species in Study. The detail route is keyed by the entry's stable ID, shows its nickname/species/type information, and reuses the complete level-up move component. The Study evolution arrow/chooser controls are also reused: either arrow changes only that owned entry to the adjacent form while preserving its stable ID and nickname.
+
+- Owned Pokémon level and current moves belong to the individual roster entry, not the shared Pokémon cache. Level is optional and constrained to 1–100; current moves are normalized move names capped at four.
+- Current moves are selected from the active game version's existing level-up move table. They persist when the owned Pokémon is evolved up or down so retained pre-evolution moves are not discarded; comparison-evolution rows are informational and cannot be selected.
