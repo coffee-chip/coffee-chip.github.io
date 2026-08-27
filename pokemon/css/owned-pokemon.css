@@ -12,6 +12,9 @@
 .owned-pokemon-filter input { width: 100%; min-height: 2.75rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }
 .owned-pokemon-sort { display: grid; gap: .35rem; }
 .owned-pokemon-sort select { width: 100%; min-width: 0; min-height: 2.75rem; margin: 0; }
+.owned-pokemon-advantage-selectors { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.owned-pokemon-advantage-type { display: grid; gap: .35rem; }
+.owned-pokemon-advantage-type select { width: 100%; min-width: 0; min-height: 2.75rem; margin: 0; }
 .owned-pokemon-count { margin: 0; }
 .owned-pokemon-list { display: grid; gap: .65rem; }
 .owned-pokemon-list > .panel { margin: 0; }
@@ -45,8 +48,9 @@
   .owned-pokemon-study-link:hover { background: var(--action-primary-soft); }
 }
 
-@media (max-width: 24rem) {
+@media (max-width: 30rem) {
   .owned-pokemon-controls { grid-template-columns: 1fr; }
+  .owned-pokemon-advantage-selectors { grid-template-columns: 1fr; }
   .owned-pokemon-card { grid-template-columns: 3.25rem minmax(0, 1fr); }
   .owned-pokemon-visual { width: 3.25rem; height: 3.25rem; }
   .owned-pokemon-edit-form, .owned-pokemon-remove-confirmation { grid-template-columns: 1fr; }

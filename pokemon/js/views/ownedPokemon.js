@@ -1,5 +1,6 @@
 import { getGameVersionGroup, isPokemonAvailableInVersionGroup } from '../data/gameVersions.js';
 import { getPokemon } from '../data/pokemonRepository.js';
+import { TYPE_META } from '../data/types.js';
 import {
   addPokemonToMyPokemon,
   getMyPokemon,
@@ -12,6 +13,7 @@ import {
 import { createTypeList } from '../components/typeBadge.js';
 import { createTeamOverviewNavigation } from '../components/teamOverviewNavigation.js';
 import { openPokemonInStudy } from '../components/pokemonStudyNavigation.js';
+import { getActiveTypes, getPokemonTypeAdvantageScore } from '../engine/effectiveness.js';
 import { state } from '../state.js';
 
 let currentRender = null;
@@ -20,6 +22,8 @@ let addError = '';
 let addRequestToken = 0;
 let addFormExpanded = false;
 let sortMode = 'manual';
+let advantagePrimaryType = '';
+let advantageSecondaryType = '';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -52,9 +56,37 @@ function cardMatchesFilter(card, query) {
   }
 }
 
+function getSelectedAdvantageTypes() {
+  const activeTypes = getActiveTypes();
+  if (!activeTypes.includes(advantagePrimaryType)) advantagePrimaryType = '';
+  if (!activeTypes.includes(advantageSecondaryType) || advantageSecondaryType === advantagePrimaryType) {
+    advantageSecondaryType = '';
+  }
+  return [advantagePrimaryType, advantageSecondaryType].filter(Boolean);
+}
+
+function getEntryAdvantageScore(entry, opponentTypes) {
+  if (!opponentTypes.length) return null;
+  const pokemonTypes = getPokemonInstanceView(entry.id)?.pokemon?.types;
+  if (!pokemonTypes?.length) return null;
+  return getPokemonTypeAdvantageScore(pokemonTypes, opponentTypes);
+}
+
 function entriesForDisplay(entries) {
   const indexed = entries.map((entry, index) => ({ entry, index }));
   if (sortMode === 'manual') return indexed;
+  if (sortMode === 'advantage') {
+    const opponentTypes = getSelectedAdvantageTypes();
+    if (!opponentTypes.length) return indexed;
+    return indexed
+      .map(item => ({ ...item, advantageScore: getEntryAdvantageScore(item.entry, opponentTypes) }))
+      .sort((first, second) => {
+        if (first.advantageScore === null && second.advantageScore !== null) return 1;
+        if (first.advantageScore !== null && second.advantageScore === null) return -1;
+        if (first.advantageScore !== second.advantageScore) return second.advantageScore - first.advantageScore;
+        return first.index - second.index;
+      });
+  }
   const direction = sortMode === 'level-ascending' ? 1 : -1;
   return indexed.sort((first, second) => {
     const firstLevel = Number.isInteger(first.entry.level) ? first.entry.level : null;
@@ -266,6 +298,10 @@ function hydrateOwnedPokemonCard(card, instanceId, render) {
     })
     .finally(() => {
       if (!card.isConnected || state.route !== 'my-pokemon') return;
+      if (sortMode === 'advantage') {
+        render();
+        return;
+      }
       const entries = getMyPokemon();
       const index = entries.findIndex(entry => entry.id === instanceId);
       if (index < 0) return;
@@ -316,7 +352,8 @@ function createSort(render) {
   const options = [
     ['manual', 'Manual order'],
     ['level-ascending', 'Level: low to high'],
-    ['level-descending', 'Level: high to low']
+    ['level-descending', 'Level: high to low'],
+    ['advantage', 'Type advantage']
   ];
   for (const [value, label] of options) {
     const option = el('option', { text: label });
@@ -330,6 +367,50 @@ function createSort(render) {
   });
   field.append(select);
   return field;
+}
+
+function createAdvantageTypeSelect(value, { optional = false, excludedType = '' } = {}) {
+  const select = document.createElement('select');
+  const empty = el('option', { text: optional ? 'None' : 'Select a type' });
+  empty.value = '';
+  select.append(empty);
+  for (const type of getActiveTypes()) {
+    if (type === excludedType) continue;
+    const option = el('option', { text: TYPE_META[type].label });
+    option.value = type;
+    select.append(option);
+  }
+  select.value = value;
+  return select;
+}
+
+function createAdvantageTypeSelectors(render) {
+  getSelectedAdvantageTypes();
+  const group = el('div', { className: 'owned-pokemon-advantage-selectors' });
+  const primaryField = el('label', { className: 'owned-pokemon-advantage-type' });
+  const secondaryField = el('label', { className: 'owned-pokemon-advantage-type' });
+  primaryField.append(el('span', { text: 'First type' }));
+  secondaryField.append(el('span', { text: 'Second type (optional)' }));
+
+  const primary = createAdvantageTypeSelect(advantagePrimaryType);
+  const secondary = createAdvantageTypeSelect(advantageSecondaryType, {
+    optional: true,
+    excludedType: advantagePrimaryType
+  });
+  secondary.disabled = !advantagePrimaryType;
+  primary.addEventListener('change', () => {
+    advantagePrimaryType = primary.value;
+    if (advantageSecondaryType === advantagePrimaryType) advantageSecondaryType = '';
+    render();
+  });
+  secondary.addEventListener('change', () => {
+    advantageSecondaryType = secondary.value;
+    render();
+  });
+  primaryField.append(primary);
+  secondaryField.append(secondary);
+  group.append(primaryField, secondaryField);
+  return group;
 }
 
 function createAddForm(render) {
@@ -409,6 +490,7 @@ export function renderOwnedPokemon(container, render) {
   const controls = el('div', { className: 'owned-pokemon-controls' });
   const filter = createFilter();
   controls.append(filter.field, createSort(render));
+  if (sortMode === 'advantage') controls.append(createAdvantageTypeSelectors(render));
   const count = el('p', { className: 'muted owned-pokemon-count' });
   const list = el('div', { className: 'owned-pokemon-list' });
   if (!entries.length) {

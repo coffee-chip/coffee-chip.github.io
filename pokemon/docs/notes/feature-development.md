@@ -94,3 +94,5 @@ The My Pokémon page keeps adding secondary to browsing: a compact `+ Add Pokém
 Roster search performs prefix matching independently against nickname, species name, Pokédex number, and each type resolved for the selected game. It does not match arbitrary substrings inside those fields.
 
 Roster level sorting is a display mode rather than a stored reorder. Low-to-high and high-to-low preserve manual order as the tie-breaker, keep missing levels last, and disable drag handles until manual order is restored.
+
+Roster type-advantage sorting treats the selected one- or two-type combination as an opponent Pokémon and ranks owned Pokémon by `getPokemonTypeAdvantageScore`. It is display-only, uses manual order to break ties, places unresolved Pokémon last, and excludes the first selected type from the optional second-type choices.
