@@ -27,6 +27,30 @@ function el(tag, options = {}) {
   return node;
 }
 
+function normalizeSearchValue(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function pokemonSearchTerms(instance, pokemon) {
+  return [...new Set([
+    instance.nickname,
+    pokemon?.name,
+    pokemon?.displayName,
+    String(instance.speciesId),
+    ...(pokemon?.types ?? [])
+  ].map(normalizeSearchValue).filter(Boolean))];
+}
+
+function cardMatchesFilter(card, query) {
+  if (!query) return true;
+  try {
+    const terms = JSON.parse(card.dataset.searchTerms ?? '[]');
+    return Array.isArray(terms) && terms.some(term => typeof term === 'string' && term.startsWith(query));
+  } catch {
+    return false;
+  }
+}
+
 function createNicknameForm(instance, pokemon, card, render) {
   card.querySelector('.owned-pokemon-edit-form')?.remove();
   const form = el('form', { className: 'owned-pokemon-edit-form' });
@@ -79,7 +103,7 @@ function createOwnedPokemonCard(instance, index, render) {
   const name = instanceView.displayName;
   const card = el('article', { className: 'panel owned-pokemon-card' });
   card.dataset.entryIndex = String(index);
-  card.dataset.search = [instance.nickname, pokemon?.displayName, String(instance.speciesId)].filter(Boolean).join(' ').toLowerCase();
+  card.dataset.searchTerms = JSON.stringify(pokemonSearchTerms(instance, pokemon));
 
   const visual = el('div', { className: 'owned-pokemon-visual' });
   if (pokemon?.spriteUrl) {
@@ -228,7 +252,7 @@ function hydrateOwnedPokemonCard(card, instanceId, render) {
       if (index < 0) return;
       const replacement = createOwnedPokemonCard(entries[index], index, render);
       const normalized = filterQuery.trim().toLowerCase();
-      replacement.hidden = Boolean(normalized) && !replacement.dataset.search.includes(normalized);
+      replacement.hidden = !cardMatchesFilter(replacement, normalized);
       card.replaceWith(replacement);
     });
 }
@@ -237,7 +261,7 @@ function applyFilter(list, count) {
   const normalized = filterQuery.trim().toLowerCase();
   let visible = 0;
   for (const card of list.querySelectorAll('.owned-pokemon-card')) {
-    const matches = !normalized || card.dataset.search.includes(normalized);
+    const matches = cardMatchesFilter(card, normalized);
     card.hidden = !matches;
     if (matches) visible += 1;
   }
@@ -255,7 +279,7 @@ function createFilter(entries) {
   field.append(el('span', { text: 'Search My Pokémon' }));
   const input = document.createElement('input');
   input.type = 'search';
-  input.placeholder = 'Name or nickname';
+  input.placeholder = 'Name, nickname, type, or number';
   input.value = filterQuery;
   field.append(input);
   return { field, input };

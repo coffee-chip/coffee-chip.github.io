@@ -118,7 +118,13 @@ test('a populated team remains navigable and hydrated across repeated route chan
   await filter.fill('missing');
   await expect(page.locator('.owned-pokemon-card')).toBeHidden();
   await expect(page.locator('.owned-pokemon-count')).toHaveText('0 matching Pokémon');
-  await filter.fill('sprout');
+  await filter.fill('prout');
+  await expect(page.locator('.owned-pokemon-card')).toBeHidden();
+  await filter.fill('spr');
+  await expect(page.locator('.owned-pokemon-card')).toBeVisible();
+  await filter.fill('rass');
+  await expect(page.locator('.owned-pokemon-card')).toBeHidden();
+  await filter.fill('gra');
   await expect(page.locator('.owned-pokemon-card')).toBeVisible();
   await filter.fill('');
 
