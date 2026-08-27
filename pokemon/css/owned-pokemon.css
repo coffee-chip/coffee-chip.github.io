@@ -7,8 +7,11 @@
 .owned-pokemon-add-close { display: grid; place-items: center; width: 2.75rem; min-width: 2.75rem; height: 2.75rem; min-height: 2.75rem; padding: 0; font-size: 1.2rem; line-height: 1; }
 .owned-pokemon-add-form > .pokemon-lookup-error { width: 100%; margin: .2rem 0 0; }
 .owned-pokemon-roster { display: grid; gap: .75rem; }
+.owned-pokemon-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, .65fr); align-items: end; gap: .65rem; }
 .owned-pokemon-filter { display: grid; gap: .35rem; }
 .owned-pokemon-filter input { width: 100%; min-height: 2.75rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }
+.owned-pokemon-sort { display: grid; gap: .35rem; }
+.owned-pokemon-sort select { width: 100%; min-width: 0; min-height: 2.75rem; margin: 0; }
 .owned-pokemon-count { margin: 0; }
 .owned-pokemon-list { display: grid; gap: .65rem; }
 .owned-pokemon-list > .panel { margin: 0; }
@@ -43,6 +46,7 @@
 }
 
 @media (max-width: 24rem) {
+  .owned-pokemon-controls { grid-template-columns: 1fr; }
   .owned-pokemon-card { grid-template-columns: 3.25rem minmax(0, 1fr); }
   .owned-pokemon-visual { width: 3.25rem; height: 3.25rem; }
   .owned-pokemon-edit-form, .owned-pokemon-remove-confirmation { grid-template-columns: 1fr; }

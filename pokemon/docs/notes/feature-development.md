@@ -92,3 +92,5 @@
 The My Pokémon page keeps adding secondary to browsing: a compact `+ Add Pokémon` action expands the autocomplete field and focuses it, and collapses again after selection or explicit dismissal. Roster filtering uses the native `hidden` state backed by a global author-level rule so component display styles cannot accidentally override it.
 
 Roster search performs prefix matching independently against nickname, species name, Pokédex number, and each type resolved for the selected game. It does not match arbitrary substrings inside those fields.
+
+Roster level sorting is a display mode rather than a stored reorder. Low-to-high and high-to-low preserve manual order as the tie-breaker, keep missing levels last, and disable drag handles until manual order is restored.

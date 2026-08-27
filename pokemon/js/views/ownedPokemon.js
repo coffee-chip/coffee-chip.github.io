@@ -19,6 +19,7 @@ let filterQuery = '';
 let addError = '';
 let addRequestToken = 0;
 let addFormExpanded = false;
+let sortMode = 'manual';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -49,6 +50,24 @@ function cardMatchesFilter(card, query) {
   } catch {
     return false;
   }
+}
+
+function entriesForDisplay(entries) {
+  const indexed = entries.map((entry, index) => ({ entry, index }));
+  if (sortMode === 'manual') return indexed;
+  const direction = sortMode === 'level-ascending' ? 1 : -1;
+  return indexed.sort((first, second) => {
+    const firstLevel = Number.isInteger(first.entry.level) ? first.entry.level : null;
+    const secondLevel = Number.isInteger(second.entry.level) ? second.entry.level : null;
+    if (firstLevel === null && secondLevel !== null) return 1;
+    if (firstLevel !== null && secondLevel === null) return -1;
+    if (firstLevel !== secondLevel) return direction * (firstLevel - secondLevel);
+    return first.index - second.index;
+  });
+}
+
+function manualReorderingDisabled() {
+  return Boolean(filterQuery.trim()) || sortMode !== 'manual';
 }
 
 function createNicknameForm(instance, pokemon, card, render) {
@@ -218,7 +237,7 @@ function createOwnedPokemonCard(instance, index, render) {
   }
 
   handle.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || filterQuery.trim()) return;
+    if (event.button !== 0 || manualReorderingDisabled()) return;
     pointerId = event.pointerId;
     proposedIndex = index;
     handle.setPointerCapture(pointerId);
@@ -266,15 +285,20 @@ function applyFilter(list, count) {
     if (matches) visible += 1;
   }
   for (const handle of list.querySelectorAll('.owned-pokemon-drag-handle')) {
-    handle.setAttribute('aria-disabled', String(Boolean(normalized)));
-    handle.title = normalized ? 'Clear the search to reorder' : 'Drag to reorder';
+    const disabled = manualReorderingDisabled();
+    handle.setAttribute('aria-disabled', String(disabled));
+    handle.title = normalized
+      ? 'Clear the search to reorder'
+      : sortMode !== 'manual'
+        ? 'Use manual order to reorder'
+        : 'Drag to reorder';
   }
   count.textContent = normalized
     ? `${visible} matching Pokémon`
     : `${visible} Pokémon`;
 }
 
-function createFilter(entries) {
+function createFilter() {
   const field = el('label', { className: 'owned-pokemon-filter' });
   field.append(el('span', { text: 'Search My Pokémon' }));
   const input = document.createElement('input');
@@ -283,6 +307,29 @@ function createFilter(entries) {
   input.value = filterQuery;
   field.append(input);
   return { field, input };
+}
+
+function createSort(render) {
+  const field = el('label', { className: 'owned-pokemon-sort' });
+  field.append(el('span', { text: 'Sort' }));
+  const select = document.createElement('select');
+  const options = [
+    ['manual', 'Manual order'],
+    ['level-ascending', 'Level: low to high'],
+    ['level-descending', 'Level: high to low']
+  ];
+  for (const [value, label] of options) {
+    const option = el('option', { text: label });
+    option.value = value;
+    select.append(option);
+  }
+  select.value = sortMode;
+  select.addEventListener('change', () => {
+    sortMode = select.value;
+    render();
+  });
+  field.append(select);
+  return field;
 }
 
 function createAddForm(render) {
@@ -359,20 +406,22 @@ export function renderOwnedPokemon(container, render) {
   page.append(createTeamOverviewNavigation('my-pokemon'), createAddSection(render));
 
   const section = el('section', { className: 'owned-pokemon-roster' });
-  const filter = createFilter(entries);
+  const controls = el('div', { className: 'owned-pokemon-controls' });
+  const filter = createFilter();
+  controls.append(filter.field, createSort(render));
   const count = el('p', { className: 'muted owned-pokemon-count' });
   const list = el('div', { className: 'owned-pokemon-list' });
   if (!entries.length) {
     list.append(el('p', { className: 'panel muted', text: 'No Pokémon added yet.' }));
   } else {
-    entries.forEach((entry, index) => list.append(createOwnedPokemonCard(entry, index, render)));
+    entriesForDisplay(entries).forEach(({ entry, index }) => list.append(createOwnedPokemonCard(entry, index, render)));
   }
 
   filter.input.addEventListener('input', () => {
     filterQuery = filter.input.value;
     applyFilter(list, count);
   });
-  section.append(filter.field, count, list);
+  section.append(controls, count, list);
   page.append(section);
   container.replaceChildren(page);
   applyFilter(list, count);
