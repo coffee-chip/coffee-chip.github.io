@@ -1,7 +1,5 @@
 import { state } from './state.js';
 import { serviceWorkerState, subscribeServiceWorker } from './serviceWorker.js';
-
-const APP_BUILD = '2026.08.06.17';
 let overlay = null;
 let unsubscribe = null;
 
@@ -19,7 +17,6 @@ function line(label, value) {
 function updateOverlay() {
   if (!overlay) return;
   overlay.replaceChildren(
-    line('App', APP_BUILD),
     line('Route', state.route),
     line('Hash', location.hash || '(none)'),
     line('Palette', document.documentElement.dataset.palette ?? 'classic'),

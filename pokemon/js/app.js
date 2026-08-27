@@ -101,7 +101,34 @@ function renderTeamHeaderActions(render) {
   pageHeaderActions.prepend(host);
 }
 
-function render() {
+function renderRouteFailure(error) {
+  console.error(`Could not render the ${state.route} route.`, error);
+  pageTitle.textContent = 'Could not open page';
+  pageTitle.hidden = false;
+  pageTitle.classList.remove('team-detail-title-opponent');
+  pageHeaderActions.replaceChildren();
+  document.title = 'Could not open page · Pokémon Type Trainer';
+
+  const page = document.createElement('section');
+  page.className = 'page';
+  const panel = document.createElement('section');
+  panel.className = 'panel';
+  const heading = document.createElement('h2');
+  heading.textContent = 'Could not open this page';
+  const message = document.createElement('p');
+  message.textContent = error?.message ?? String(error ?? 'Unknown error');
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = 'Technical details';
+  const stack = document.createElement('pre');
+  stack.textContent = error?.stack ?? 'No stack trace is available.';
+  details.append(summary, stack);
+  panel.append(heading, message, details);
+  page.append(panel);
+  viewRoot.replaceChildren(page);
+}
+
+function renderCurrentRoute() {
   renderPageHeader();
   const view = VIEWS[state.route] ?? VIEWS.quiz;
   view(viewRoot, render);
@@ -126,6 +153,14 @@ function render() {
   renderUpdateBanner();
   renderDeveloperOverlay();
   auditButtonColorRoles();
+}
+
+function render() {
+  try {
+    renderCurrentRoute();
+  } catch (error) {
+    renderRouteFailure(error);
+  }
 }
 
 function warmPokemonNameIndex() {
