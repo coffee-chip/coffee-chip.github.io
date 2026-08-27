@@ -1,12 +1,13 @@
 import { TYPES } from './types.js';
 import { state } from '../state.js';
-import { saveCache } from '../storage.js';
+import { readCachedMove, saveCachedMove } from '../storage.js';
 import { fetchMove, PokeApiError } from '../api/pokeApi.js';
 import { DEFAULT_GAME_VERSION_GROUP, getGameVersionGroup, isGameVersionGroup } from './gameVersions.js';
 
 const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const DAMAGE_CLASSES = new Set(['physical', 'special', 'status']);
 const PRE_SPLIT_PHYSICAL_TYPES = new Set(['normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug', 'ghost', 'steel']);
+const movesByName = new Map();
 
 function titleCase(value) {
   return value.split('-').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ');
@@ -98,17 +99,20 @@ function normalizeIdentifier(identifier) {
   return normalized;
 }
 
-function getCached(identifier) {
+function rememberCachedMove(move) {
+  if (!isValidCachedMove(move)) return null;
+  movesByName.set(move.name, move);
+  return move;
+}
+
+async function getCached(identifier) {
   const normalized = normalizeIdentifier(identifier);
-  const direct = state.cache.moves?.[normalized];
-  if (isValidCachedMove(direct)) return direct;
-  return Object.values(state.cache.moves ?? {}).find(move => isValidCachedMove(move) && move.name === normalized) ?? null;
+  return movesByName.get(normalized) ?? rememberCachedMove(await readCachedMove(normalized));
 }
 
 function cacheMove(move) {
-  state.cache.moves ??= {};
-  state.cache.moves[move.name] = move;
-  saveCache(state.cache);
+  if (!rememberCachedMove(move)) return;
+  void saveCachedMove(move);
 }
 
 function mergeMove(existing, refreshed) {
@@ -122,7 +126,7 @@ function mergeMove(existing, refreshed) {
 export async function getMove(identifier, { versionGroup = state.settings.gameVersionGroup } = {}) {
   const normalized = normalizeIdentifier(identifier);
   const selectedVersionGroup = isGameVersionGroup(versionGroup) ? versionGroup : DEFAULT_GAME_VERSION_GROUP;
-  const cached = getCached(normalized);
+  const cached = await getCached(normalized);
   if (cached && isFresh(cached) && isValidVersionData(cached.versionData?.[selectedVersionGroup])) {
     return { move: cached, source: 'cache', stale: false };
   }
@@ -159,6 +163,4 @@ export function getMoveVersionData(move, versionGroup = state.settings.gameVersi
   return isValidVersionData(move?.versionData?.[selectedVersionGroup]) ? move.versionData[selectedVersionGroup] : null;
 }
 
-export function getMoveCacheEntryCount() {
-  return new Set(Object.values(state.cache.moves ?? {}).filter(isValidCachedMove).map(move => move.id)).size;
-}
+globalThis.document?.addEventListener('pokemon-game-data-cleared', () => movesByName.clear());

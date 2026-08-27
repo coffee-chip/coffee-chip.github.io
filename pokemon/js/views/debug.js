@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { STORAGE_VERSION, loadPersistentData } from '../storage.js';
+import { STORAGE_VERSION, getCachedDataCounts, getPersistentDataSnapshot } from '../storage.js';
 import { getServiceWorkerDiagnostics } from '../serviceWorker.js';
 
 function el(tag, options = {}) {
@@ -26,7 +26,7 @@ export async function renderDebug(container) {
   page.append(back);
 
   const sw = await getServiceWorkerDiagnostics();
-  const saved = loadPersistentData();
+  const [saved, cacheCounts] = await Promise.all([getPersistentDataSnapshot(), getCachedDataCounts()]);
 
   const worker = el('div', { className: 'panel diagnostic-panel' });
   worker.append(el('h3', { text: 'Service worker' }));
@@ -44,7 +44,9 @@ export async function renderDebug(container) {
   storage.append(row('Schema version', STORAGE_VERSION, 'ok'));
   storage.append(row('Auto-update on launch', state.settings.developer.autoUpdateOnLaunch ? 'On' : 'Off'));
   storage.append(row('Saved questions', savedQuestionCount(saved.progress)));
-  storage.append(row('Cached Pokémon', Object.keys(saved.cache.pokemon ?? {}).length));
+  storage.append(row('Cached Pokémon', cacheCounts.pokemon));
+  storage.append(row('Cached moves', cacheCounts.moves));
+  storage.append(row('Autocomplete indexes', cacheCounts.nameIndexes));
   page.append(storage);
 
   container.replaceChildren(page);

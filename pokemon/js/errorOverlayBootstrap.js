@@ -1,17 +1,7 @@
 (() => {
-  const STORAGE_KEY = 'pokemon-type-trainer';
   let enabled = false;
   let overlay = null;
   let currentError = null;
-
-  function readEnabled() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved?.settings?.developer?.showErrorOverlay === true;
-    } catch {
-      return false;
-    }
-  }
 
   function formatLocation({ filename, lineno, colno }) {
     if (!filename) return '';
@@ -100,7 +90,6 @@
     else if (currentError) render();
   }
 
-  enabled = readEnabled();
   window.addEventListener('error', capture);
   window.addEventListener('unhandledrejection', capture);
   window.pokemonErrorOverlay = {

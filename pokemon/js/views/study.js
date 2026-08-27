@@ -4,7 +4,7 @@ import { getActiveTypes, getOffensiveMatchups, getDefensiveMatchups } from '../e
 import { createTypeBadge, createTypeList } from '../components/typeBadge.js';
 import { createMnemonicTypeBadge } from '../components/mnemonicBadge.js';
 import { createRelationship, parseDirectionalRelationshipKey } from '../relationships.js';
-import { getPokemon, getRecentPokemonLookups, rememberPokemonLookup } from '../data/pokemonRepository.js';
+import { getPokemon, getRecentPokemonLookups, loadRecentPokemonLookups, rememberPokemonLookup } from '../data/pokemonRepository.js';
 
 const MULTIPLIER_LABELS = {
   4: '4× — extremely effective', 2: '2× — super effective', 1: '1× — neutral',
@@ -263,6 +263,11 @@ export function renderStudy(container, render) {
   if (state.study.mode === 'pokemon') renderPokemonLookup(page, render);
   else renderTypeResults(page);
   container.replaceChildren(page);
+  if (state.study.mode === 'pokemon') {
+    void loadRecentPokemonLookups().then(({ loaded }) => {
+      if (loaded && state.route === 'study' && state.study.mode === 'pokemon') render();
+    }).catch(error => console.warn('Could not load recent Pokémon.', error));
+  }
 }
 
 window.addEventListener('hashchange', () => { if (location.hash !== '#study') dismissMnemonicBanner(); });

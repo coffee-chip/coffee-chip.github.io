@@ -154,11 +154,6 @@ function getAllNonNeutralMatchupRecords() {
   return records;
 }
 
-function cachedPokemonName(id) {
-  const record = state.cache.pokemon?.[String(id)];
-  return record?.name ?? null;
-}
-
 function getRecognitionPoolSize() {
   return getNationalDexLimitForVersionGroup(state.settings.gameVersionGroup);
 }
@@ -172,7 +167,7 @@ function getAllRecognitionRecords() {
       state.settings.gameVersionGroup
     );
     return saved ? { ...saved } : {
-      pokemonId, pokemonName: cachedPokemonName(pokemonId), attempts: 0, earnedScore: 0,
+      pokemonId, pokemonName: null, attempts: 0, earnedScore: 0,
       exactAnswers: 0, correctSelections: 0, misses: 0, falseSelections: 0, lastSeen: null
     };
   });

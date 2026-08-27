@@ -41,7 +41,7 @@ export const state = {
   myPokemonIds: [],
   teams: defaultTeams(),
   progress: emptyProgress(),
-  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] }
+  recentPokemonIds: []
 };
 
 export function getQuizModeSettings(modeId = state.quiz.mode) {
@@ -67,49 +67,14 @@ export function hydratePersistentState(persistentData) {
     relationshipStats: structuredClone(persistentData.progress.relationshipStats ?? {}),
     pokemonRecognitionStats: structuredClone(persistentData.progress.pokemonRecognitionStats ?? {})
   };
-  state.cache = {
-    ...state.cache,
-    ...persistentData.cache,
-    recentPokemonIds: [...(persistentData.cache.recentPokemonIds ?? [])]
-  };
   state.starredMoves = [...(persistentData.starredMoves ?? [])];
+  state.recentPokemonIds = [...(persistentData.recentPokemonIds ?? [])];
   state.pokemonInstances = structuredClone(persistentData.pokemonInstances ?? {});
   state.myPokemonIds = [...(persistentData.myPokemonIds ?? [])];
   state.teams = structuredClone(persistentData.teams ?? defaultTeams());
   state.quiz.mode = state.settings.quiz.defaultMode;
   getQuizModeSettings(state.quiz.mode);
   state.quiz.session.mode = state.quiz.mode;
-}
-
-export function getPersistentSnapshot() {
-  return {
-    settings: {
-      paletteTheme: state.settings.paletteTheme,
-      appearance: state.settings.appearance,
-      gameVersionGroup: state.settings.gameVersionGroup,
-      developer: { ...state.settings.developer },
-      quiz: {
-        defaultMode: state.settings.quiz.defaultMode,
-        modes: structuredClone(state.settings.quiz.modes)
-      }
-    },
-    progress: {
-      ...state.progress,
-      quizStats: structuredClone(state.progress.quizStats),
-      relationshipStats: structuredClone(state.progress.relationshipStats),
-      pokemonRecognitionStats: structuredClone(state.progress.pokemonRecognitionStats)
-    },
-    cache: {
-      pokemon: { ...state.cache.pokemon },
-      moves: { ...state.cache.moves },
-      pokemonNameIndex: state.cache.pokemonNameIndex ? structuredClone(state.cache.pokemonNameIndex) : null,
-      recentPokemonIds: [...state.cache.recentPokemonIds]
-    },
-    starredMoves: [...state.starredMoves],
-    pokemonInstances: structuredClone(state.pokemonInstances),
-    myPokemonIds: [...state.myPokemonIds],
-    teams: structuredClone(state.teams)
-  };
 }
 
 export function resetProgress() { state.progress = emptyProgress(); }

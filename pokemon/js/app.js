@@ -43,12 +43,6 @@ const BUTTON_COLOR_ROLE_SELECTOR = [
   '.type-badge-button'
 ].join(',');
 
-hydratePersistentState(loadPersistentData());
-applyTheme(state.settings.paletteTheme, state.settings.appearance);
-watchSystemTheme(() => ({ paletteTheme: state.settings.paletteTheme, appearance: state.settings.appearance }));
-initializePokemonAutocomplete();
-initializeQuizAutoScroll();
-
 const viewRoot = document.querySelector('#app-view');
 const pageTitle = document.querySelector('#page-title');
 const pageHeaderActions = document.querySelector('.page-header-actions');
@@ -140,27 +134,38 @@ function warmPokemonNameIndex() {
   }).catch(error => console.warn('Could not preload Pokémon autocomplete names.', error));
 }
 
-subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
-document.addEventListener('pokemon-game-data-cleared', warmPokemonNameIndex);
-startRouter(route => {
-  state.route = route.name;
-  state.routeParams = route.params;
-  render();
-});
-registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
-if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
-else window.setTimeout(warmPokemonNameIndex, 0);
+async function bootstrap() {
+  hydratePersistentState(await loadPersistentData());
+  applyTheme(state.settings.paletteTheme, state.settings.appearance);
+  watchSystemTheme(() => ({ paletteTheme: state.settings.paletteTheme, appearance: state.settings.appearance }));
+  window.pokemonErrorOverlay?.setEnabled(state.settings.developer.showErrorOverlay);
+  initializePokemonAutocomplete();
+  initializeQuizAutoScroll();
 
-const contractResults = validateApplicationContracts();
-console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
-const failedContracts = contractResults.filter(test => !test.passed);
-if (failedContracts.length) throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
-const engineResults = runEngineSelfTests();
-console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
-if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
-const architectureResults = validateQuizArchitecture();
-console.group('Quiz architecture checks'); console.table(architectureResults); console.groupEnd();
-if (architectureResults.some(test => !test.passed)) console.error('Quiz architecture validation failed.');
-const iconResults = validateTypeIcons();
-console.group('Type icon checks'); console.table(iconResults); console.groupEnd();
-if (iconResults.some(test => !test.passed)) console.error('One or more type icons are missing.');
+  subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
+  document.addEventListener('pokemon-game-data-cleared', warmPokemonNameIndex);
+  startRouter(route => {
+    state.route = route.name;
+    state.routeParams = route.params;
+    render();
+  });
+  registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
+  if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
+  else window.setTimeout(warmPokemonNameIndex, 0);
+
+  const contractResults = validateApplicationContracts();
+  console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
+  const failedContracts = contractResults.filter(test => !test.passed);
+  if (failedContracts.length) throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
+  const engineResults = runEngineSelfTests();
+  console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
+  if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
+  const architectureResults = validateQuizArchitecture();
+  console.group('Quiz architecture checks'); console.table(architectureResults); console.groupEnd();
+  if (architectureResults.some(test => !test.passed)) console.error('Quiz architecture validation failed.');
+  const iconResults = validateTypeIcons();
+  console.group('Type icon checks'); console.table(iconResults); console.groupEnd();
+  if (iconResults.some(test => !test.passed)) console.error('One or more type icons are missing.');
+}
+
+bootstrap().catch(error => window.setTimeout(() => { throw error; }));

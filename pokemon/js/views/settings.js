@@ -1,11 +1,10 @@
 import { state, resetProgress } from '../state.js';
-import { loadPersistentData, saveProgress, saveSettings } from '../storage.js';
+import { getCachedDataCounts, getPersistentDataSnapshot, saveProgress, saveSettings } from '../storage.js';
 import { setGameVersionGroup } from '../data/gameSelection.js';
 import { applyTheme, APPEARANCE_PREFERENCES, PALETTE_THEMES } from '../theme.js';
 import { renderDeveloperOverlay } from '../developerOverlay.js';
-import { clearGameDataCache, getPokemonCacheEntryCount } from '../data/pokemonRepository.js';
+import { clearGameDataCache } from '../data/pokemonRepository.js';
 import { GAME_VERSION_GROUPS } from '../data/gameVersions.js';
-import { getMoveCacheEntryCount } from '../data/moveRepository.js';
 import { serviceWorkerState, subscribeServiceWorker, checkForLatestVersion, applyWaitingUpdate, clearAppCaches } from '../serviceWorker.js';
 
 let resetStage = 'idle';
@@ -13,6 +12,8 @@ let resetMessage = '';
 let serviceMessage = '';
 let pokemonCacheMessage = '';
 let currentRender = null;
+let cachedDataCounts = null;
+let cachedDataCountsLoading = false;
 subscribeServiceWorker(() => { if (state.route === 'settings' && currentRender) currentRender(); });
 
 function el(tag, options = {}) { const node = document.createElement(tag); if (options.className) node.className = options.className; if (options.text) node.textContent = options.text; return node; }
@@ -22,14 +23,31 @@ function totalSavedQuestions(progress = state.progress) { return Object.values(p
 function persistResetProgress() {
   resetProgress();
   const writeSucceeded = saveProgress(state.progress);
-  const stored = loadPersistentData().progress;
+  const stored = getPersistentDataSnapshot().progress;
   const cleared = totalSavedQuestions(stored) === 0
     && Object.keys(stored.relationshipStats ?? {}).length === 0
     && Object.keys(stored.pokemonRecognitionStats ?? {}).length === 0;
   resetStage = writeSucceeded && cleared ? 'complete' : 'error';
   resetMessage = resetStage === 'complete'
     ? 'Past statistics were cleared and saved.'
-    : 'Statistics were cleared for this session, but could not be confirmed in browser storage. They may return after reloading.';
+    : 'Statistics could not be cleared.';
+}
+
+function refreshCachedDataCounts(render) {
+  if (cachedDataCounts || cachedDataCountsLoading) return;
+  cachedDataCountsLoading = true;
+  getCachedDataCounts()
+    .then(counts => {
+      cachedDataCounts = counts;
+      if (state.route === 'settings') render();
+    })
+    .catch(error => console.warn('Could not count cached Pokémon data.', error))
+    .finally(() => { cachedDataCountsLoading = false; });
+}
+
+function cacheSummary() {
+  if (!cachedDataCounts) return 'Cached Pokémon data: loading…';
+  return `Cached Pokémon: ${cachedDataCounts.pokemon} · Cached moves: ${cachedDataCounts.moves} · Autocomplete indexes: ${cachedDataCounts.nameIndexes}`;
 }
 
 function statusLabel() {
@@ -56,8 +74,10 @@ function appendGameDataControl(panel, render) {
     option.selected = state.settings.gameVersionGroup === game.id;
     group.append(option);
   }
-  gameSelect.addEventListener('change', () => {
-    setGameVersionGroup(gameSelect.value);
+  gameSelect.addEventListener('change', async () => {
+    gameSelect.disabled = true;
+    await setGameVersionGroup(gameSelect.value);
+    cachedDataCounts = { pokemon: 0, moves: 0, nameIndexes: 0 };
     render();
   });
   gameLabel.append(gameSelect);
@@ -105,6 +125,7 @@ function appendAppearanceControls(panel) {
 
 export function renderSettings(container, render) {
   currentRender = render;
+  refreshCachedDataCounts(render);
   const page = el('section', { className: 'page' });
 
   const preferences = el('div', { className: 'panel settings-section' });
@@ -157,10 +178,21 @@ export function renderSettings(container, render) {
   updateActions.append(clearButton);
   developerPanel.append(updateActions);
 
-  developerPanel.append(el('p', { className: 'muted', text: `Cached Pokémon: ${getPokemonCacheEntryCount()} · Cached moves: ${getMoveCacheEntryCount()} · Name index: ${state.cache.pokemonNameIndex ? 'cached' : 'not cached'}` }));
+  developerPanel.append(el('p', { className: 'muted', text: cacheSummary() }));
   const clearPokemonButton = el('button', { className: 'secondary-button', text: 'Clear Pokémon cache' });
   clearPokemonButton.type = 'button';
-  clearPokemonButton.addEventListener('click', () => { const cleared = clearGameDataCache(); pokemonCacheMessage = cleared ? 'Pokémon records, move data, and autocomplete names were cleared.' : 'Pokémon cache was cleared for this session, but could not be saved.'; render(); });
+  clearPokemonButton.addEventListener('click', async () => {
+    clearPokemonButton.disabled = true;
+    try {
+      await clearGameDataCache();
+      cachedDataCounts = { pokemon: 0, moves: 0, nameIndexes: 0 };
+      pokemonCacheMessage = 'Pokémon records, move data, and autocomplete names were cleared.';
+    } catch (error) {
+      console.warn('Could not clear cached Pokémon data.', error);
+      pokemonCacheMessage = 'Pokémon cache could not be cleared.';
+    }
+    render();
+  });
   developerPanel.append(clearPokemonButton);
 
   if (serviceMessage || serviceWorkerState.message) { const status = el('p', { className: 'settings-status', text: serviceMessage || serviceWorkerState.message }); status.setAttribute('role', 'status'); developerPanel.append(status); }

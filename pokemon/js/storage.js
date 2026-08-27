@@ -1,9 +1,14 @@
-import { parseDirectionalRelationshipKey } from './relationships.js';
-import { DEFAULT_GAME_VERSION_GROUP, isGameVersionGroup } from './data/gameVersions.js';
-import { parsePokemonRecognitionKey } from './data/pokemonRecognition.js';
+import { DEFAULT_GAME_VERSION_GROUP } from './data/gameVersions.js';
 
-const STORAGE_KEY = 'pokemon-type-trainer';
-export const STORAGE_VERSION = 12;
+export const STORAGE_VERSION = 13;
+
+const DATABASE_NAME = 'pokemon-type-trainer';
+const DATABASE_VERSION = 1;
+const APP_STATE_STORE = 'app-state';
+const POKEMON_STORE = 'pokemon';
+const MOVE_STORE = 'moves';
+const NAME_INDEX_STORE = 'pokemon-name-indexes';
+const APP_STATE_KEY = 'current';
 
 export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   version: STORAGE_VERSION,
@@ -13,8 +18,8 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
     quiz: { defaultMode: 'choose-switch', modes: { 'choose-switch': {} } }
   },
   progress: { quizStats: {}, relationshipStats: {}, pokemonRecognitionStats: {} },
-  cache: { pokemon: {}, moves: {}, pokemonNameIndex: null, recentPokemonIds: [] },
   starredMoves: [],
+  recentPokemonIds: [],
   pokemonInstances: {},
   myPokemonIds: [],
   teams: [
@@ -23,278 +28,207 @@ export const DEFAULT_PERSISTENT_DATA = Object.freeze({
   ]
 });
 
+const memoryStores = {
+  [APP_STATE_STORE]: new Map(),
+  [POKEMON_STORE]: new Map(),
+  [MOVE_STORE]: new Map(),
+  [NAME_INDEX_STORE]: new Map()
+};
+
+let databasePromise = null;
+let persistentData = null;
+let writeQueue = Promise.resolve();
+
 function cloneDefaults() { return structuredClone(DEFAULT_PERSISTENT_DATA); }
-function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
-function nonnegativeNumber(value, fallback = 0) { return Number.isFinite(value) && value >= 0 ? value : fallback; }
+function clone(value) { return structuredClone(value); }
+function supportsIndexedDb() { return typeof indexedDB !== 'undefined'; }
 
-function normalizeSettings(value) {
-  const defaults = cloneDefaults().settings;
-  if (!isObject(value)) return defaults;
-  const quiz = isObject(value.quiz) ? value.quiz : {};
-  const developer = isObject(value.developer) ? value.developer : {};
-  const defaultMode = typeof quiz.defaultMode === 'string' ? quiz.defaultMode : defaults.quiz.defaultMode;
-  const modes = {};
-  for (const [modeId, modeSettings] of Object.entries(isObject(quiz.modes) ? quiz.modes : {})) {
-    if (modeId && isObject(modeSettings)) modes[modeId] = { ...modeSettings };
-  }
-  modes[defaultMode] ??= {};
-  return {
-    paletteTheme: value.paletteTheme === 'classic' ? 'classic' : defaults.paletteTheme,
-    appearance: ['system', 'light', 'dark'].includes(value.appearance) ? value.appearance : defaults.appearance,
-    gameVersionGroup: isGameVersionGroup(value.gameVersionGroup) ? value.gameVersionGroup : defaults.gameVersionGroup,
-    developer: {
-      autoUpdateOnLaunch: developer.autoUpdateOnLaunch === true,
-      showOverlay: developer.showOverlay === true,
-      showErrorOverlay: developer.showErrorOverlay === true
-    },
-    quiz: { defaultMode, modes }
-  };
-}
-
-function normalizeQuizStats(value) {
-  const normalized = {};
-  if (!isObject(value)) return normalized;
-  for (const [modeId, record] of Object.entries(value)) {
-    if (!modeId || !isObject(record)) continue;
-    const questionCount = Math.floor(nonnegativeNumber(record.questionCount));
-    normalized[modeId] = { questionCount, totalScore: Math.min(nonnegativeNumber(record.totalScore), questionCount) };
-  }
-  return normalized;
-}
-
-function normalizeRelationshipStats(value) {
-  const normalized = {};
-  if (!isObject(value)) return normalized;
-  for (const [storedKey, record] of Object.entries(value)) {
-    if (!isObject(record)) continue;
-    let relationship;
-    try { relationship = parseDirectionalRelationshipKey(storedKey); } catch { continue; }
-    const attempts = Math.floor(nonnegativeNumber(record.attempts));
-    normalized[relationship.key] = {
-      genericKey: relationship.genericKey,
-      direction: relationship.direction,
-      attackingType: relationship.attackingType,
-      defendingType: relationship.defendingType,
-      attempts,
-      earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
-      correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
-      misses: Math.floor(nonnegativeNumber(record.misses)),
-      falseSelections: Math.floor(nonnegativeNumber(record.falseSelections)),
-      lastSeen: typeof record.lastSeen === 'string' ? record.lastSeen : null
+function openDatabase() {
+  if (!supportsIndexedDb()) return Promise.resolve(null);
+  if (databasePromise) return databasePromise;
+  databasePromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(APP_STATE_STORE)) database.createObjectStore(APP_STATE_STORE, { keyPath: 'key' });
+      if (!database.objectStoreNames.contains(POKEMON_STORE)) {
+        const store = database.createObjectStore(POKEMON_STORE, { keyPath: 'id' });
+        store.createIndex('name', 'name', { unique: true });
+      }
+      if (!database.objectStoreNames.contains(MOVE_STORE)) database.createObjectStore(MOVE_STORE, { keyPath: 'name' });
+      if (!database.objectStoreNames.contains(NAME_INDEX_STORE)) database.createObjectStore(NAME_INDEX_STORE, { keyPath: 'versionGroup' });
     };
-  }
-  return normalized;
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error('Could not open Pokémon data storage.'));
+  }).catch(error => {
+    console.warn('IndexedDB is unavailable; Pokémon data will only persist for this session.', error);
+    return null;
+  });
+  return databasePromise;
 }
 
-function normalizePokemonRecognitionStats(value) {
-  const normalized = {};
-  if (!isObject(value)) return normalized;
-  for (const [storedKey, record] of Object.entries(value)) {
-    if (!isObject(record)) continue;
-    let recognition;
-    try { recognition = parsePokemonRecognitionKey(storedKey); } catch { continue; }
-    const generationStart = Number(record.generationStart);
-    const generationEnd = record.generationEnd === null ? null : Number(record.generationEnd);
-    if (!Number.isInteger(generationStart) || generationStart < 1
-      || (generationEnd !== null && (!Number.isInteger(generationEnd) || generationEnd < generationStart))) continue;
-    const attempts = Math.floor(nonnegativeNumber(record.attempts));
-    normalized[recognition.key] = {
-      pokemonId: recognition.pokemonId,
-      typeSignature: recognition.typeSignature,
-      generationStart,
-      generationEnd,
-      pokemonName: typeof record.pokemonName === 'string' && record.pokemonName ? record.pokemonName : `pokemon-${recognition.pokemonId}`,
-      attempts,
-      earnedScore: Math.min(nonnegativeNumber(record.earnedScore), attempts),
-      exactAnswers: Math.min(Math.floor(nonnegativeNumber(record.exactAnswers)), attempts),
-      correctSelections: Math.floor(nonnegativeNumber(record.correctSelections)),
-      misses: Math.floor(nonnegativeNumber(record.misses)),
-      falseSelections: Math.floor(nonnegativeNumber(record.falseSelections)),
-      lastSeen: typeof record.lastSeen === 'string' ? record.lastSeen : null
-    };
-  }
-  return normalized;
-}
-
-function normalizeProgress(value) {
-  if (!isObject(value)) return cloneDefaults().progress;
-  return {
-    quizStats: normalizeQuizStats(value.quizStats),
-    relationshipStats: normalizeRelationshipStats(value.relationshipStats),
-    pokemonRecognitionStats: normalizePokemonRecognitionStats(value.pokemonRecognitionStats)
-  };
-}
-
-function normalizePokemonNameIndex(value) {
-  if (!isObject(value) || !isGameVersionGroup(value.versionGroup)
-    || !Array.isArray(value.names) || typeof value.fetchedAt !== 'string') return null;
-  const names = [...new Set(value.names.filter(name => typeof name === 'string' && name.length > 0))];
-  return names.length ? { names, versionGroup: value.versionGroup, fetchedAt: value.fetchedAt } : null;
-}
-
-function normalizeRecentPokemonIds(value) {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(value.map(Number).filter(id => Number.isInteger(id) && id > 0))].slice(0, 10);
-}
-
-function normalizeCache(value) {
-  return {
-    pokemon: isObject(value?.pokemon) ? value.pokemon : {},
-    moves: isObject(value?.moves) ? value.moves : {},
-    pokemonNameIndex: normalizePokemonNameIndex(value?.pokemonNameIndex),
-    recentPokemonIds: normalizeRecentPokemonIds(value?.recentPokemonIds)
-  };
-}
-
-function normalizeStarredMoves(value) {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(value
-    .map(name => typeof name === 'string' ? name.trim().toLowerCase() : '')
-    .filter(Boolean))];
-}
-
-function normalizePokemonInstance(value, storedId) {
-  if (!isObject(value)) return null;
-  const id = typeof storedId === 'string' && storedId.trim() ? storedId.trim() : null;
-  const speciesId = Number(value.speciesId);
-  if (!id || value.id !== id || !Number.isInteger(speciesId) || speciesId < 1) return null;
-  const nickname = typeof value.nickname === 'string' && value.nickname.trim() ? value.nickname.trim().slice(0, 60) : null;
-  const rawLevel = value.level;
-  const numericLevel = Number(rawLevel);
-  const level = rawLevel !== null && rawLevel !== '' && Number.isInteger(numericLevel) && numericLevel >= 1 && numericLevel <= 100
-    ? numericLevel
-    : null;
-  const currentMoves = [];
-  for (const moveName of Array.isArray(value.currentMoves) ? value.currentMoves : []) {
-    const normalized = typeof moveName === 'string' ? moveName.trim().toLowerCase() : '';
-    if (!normalized || currentMoves.includes(normalized)) continue;
-    currentMoves.push(normalized);
-    if (currentMoves.length === 4) break;
-  }
-  return { id, speciesId, nickname, level, currentMoves };
-}
-
-function normalizePokemonInstances(value) {
-  const normalized = {};
-  if (!isObject(value)) return normalized;
-  for (const [storedId, entry] of Object.entries(value)) {
-    const instance = normalizePokemonInstance(entry, storedId);
-    if (instance) normalized[instance.id] = instance;
-  }
-  return normalized;
-}
-
-function normalizeInstanceIds(value, pokemonInstances, limit = Infinity) {
-  if (!Array.isArray(value)) return [];
-  const normalized = [];
-  for (const candidate of value) {
-    const id = typeof candidate === 'string' ? candidate.trim() : '';
-    if (!id || !pokemonInstances[id] || normalized.includes(id)) continue;
-    normalized.push(id);
-    if (normalized.length === limit) break;
-  }
-  return normalized;
-}
-
-function normalizeTeams(value, pokemonInstances) {
-  if (!Array.isArray(value)) return cloneDefaults().teams;
-  const seenIds = new Set();
-  const normalized = [];
-  for (const team of value) {
-    if (!isObject(team)) continue;
-    const id = typeof team.id === 'string' && team.id.trim() ? team.id.trim() : null;
-    const title = typeof team.title === 'string' && team.title.trim() ? team.title.trim().slice(0, 60) : null;
-    if (!id || !title || seenIds.has(id)) continue;
-    seenIds.add(id);
-    const memberIds = normalizeInstanceIds(team.memberIds, pokemonInstances, 6);
-    const isOpponent = typeof team.isOpponent === 'boolean' ? team.isOpponent : id === 'opponents';
-    const rivalTeamId = typeof team.rivalTeamId === 'string' && team.rivalTeamId.trim() ? team.rivalTeamId.trim() : null;
-    normalized.push({ id, title, isOpponent, rivalTeamId, memberIds });
-  }
-  const validIds = new Set(normalized.map(team => team.id));
-  for (const team of normalized) {
-    if (!team.rivalTeamId || team.rivalTeamId === team.id || !validIds.has(team.rivalTeamId)) team.rivalTeamId = null;
-  }
-  for (const team of normalized) {
-    if (!team.rivalTeamId) continue;
-    const rival = normalized.find(candidate => candidate.id === team.rivalTeamId);
-    if (!rival || rival.rivalTeamId !== team.id) team.rivalTeamId = null;
-  }
-  return normalized;
-}
-
-function normalizePokemonCollections(pokemonInstancesValue, myPokemonIdsValue, teamsValue) {
-  const pokemonInstances = normalizePokemonInstances(pokemonInstancesValue);
-  const myPokemonIds = normalizeInstanceIds(myPokemonIdsValue, pokemonInstances);
-  for (const instanceId of myPokemonIds) pokemonInstances[instanceId].level ??= 1;
-  const teams = normalizeTeams(teamsValue, pokemonInstances);
-  const referencedIds = new Set(myPokemonIds);
-  for (const team of teams) for (const instanceId of team.memberIds) referencedIds.add(instanceId);
-  for (const instanceId of Object.keys(pokemonInstances)) {
-    if (!referencedIds.has(instanceId)) delete pokemonInstances[instanceId];
-  }
-  return { pokemonInstances, myPokemonIds, teams };
-}
-
-function normalizeCurrentData(raw) {
-  if (!isObject(raw) || raw.version !== STORAGE_VERSION) return cloneDefaults();
-  const collections = normalizePokemonCollections(raw.pokemonInstances, raw.myPokemonIds, raw.teams);
-  return {
-    version: STORAGE_VERSION,
-    settings: normalizeSettings(raw.settings),
-    progress: normalizeProgress(raw.progress),
-    cache: normalizeCache(raw.cache),
-    starredMoves: normalizeStarredMoves(raw.starredMoves),
-    ...collections
-  };
-}
-
-function write(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
-  catch (error) { console.warn('Could not save data.', error); return false; }
-}
-
-function updateSection(section, value, normalize) {
-  const data = loadPersistentData();
-  data[section] = normalize(value);
-  return write(data);
-}
-
-export function loadPersistentData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return cloneDefaults();
-    const normalized = normalizeCurrentData(JSON.parse(raw));
-    write(normalized);
-    return normalized;
-  } catch (error) {
-    console.warn('Could not load saved data. Using defaults.', error);
-    return cloneDefaults();
-  }
-}
-
-export function savePersistentData({ settings, progress, cache, starredMoves, pokemonInstances, myPokemonIds, teams }) {
-  const collections = normalizePokemonCollections(pokemonInstances, myPokemonIds, teams);
-  return write({
-    version: STORAGE_VERSION,
-    settings: normalizeSettings(settings),
-    progress: normalizeProgress(progress),
-    cache: normalizeCache(cache),
-    starredMoves: normalizeStarredMoves(starredMoves),
-    ...collections
+function requestResult(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed.'));
   });
 }
 
-export function saveSettings(settings) { return updateSection('settings', settings, normalizeSettings); }
-export function saveProgress(progress) { return updateSection('progress', progress, normalizeProgress); }
-export function saveCache(cache) { return updateSection('cache', cache, normalizeCache); }
-export function saveStarredMoves(starredMoves) { return updateSection('starredMoves', starredMoves, normalizeStarredMoves); }
-export function savePokemonCollections(pokemonInstances, myPokemonIds, teams) {
-  const data = loadPersistentData();
-  Object.assign(data, normalizePokemonCollections(pokemonInstances, myPokemonIds, teams));
-  return write(data);
+async function readStore(storeName, key) {
+  try {
+    const database = await openDatabase();
+    if (!database) return clone(memoryStores[storeName].get(key) ?? null);
+    const transaction = database.transaction(storeName, 'readonly');
+    return requestResult(transaction.objectStore(storeName).get(key));
+  } catch (error) {
+    console.warn(`Could not read ${storeName} from Pokémon data storage.`, error);
+    return clone(memoryStores[storeName].get(key) ?? null);
+  }
 }
-export function clearPersistentData() {
-  try { localStorage.removeItem(STORAGE_KEY); return true; }
-  catch (error) { console.warn('Could not clear saved data.', error); return false; }
+
+async function readPokemonByName(name) {
+  try {
+    const database = await openDatabase();
+    if (database) {
+      const transaction = database.transaction(POKEMON_STORE, 'readonly');
+      return requestResult(transaction.objectStore(POKEMON_STORE).index('name').get(name));
+    }
+  } catch (error) {
+    console.warn('Could not read Pokémon by name from Pokémon data storage.', error);
+  }
+  for (const pokemon of memoryStores[POKEMON_STORE].values()) if (pokemon.name === name) return clone(pokemon);
+  return null;
+}
+
+async function countStore(storeName) {
+  try {
+    const database = await openDatabase();
+    if (!database) return memoryStores[storeName].size;
+    const transaction = database.transaction(storeName, 'readonly');
+    return requestResult(transaction.objectStore(storeName).count());
+  } catch (error) {
+    console.warn(`Could not count ${storeName} in Pokémon data storage.`, error);
+    return memoryStores[storeName].size;
+  }
+}
+
+async function writeStore(storeName, value, key = null) {
+  const database = await openDatabase();
+  if (!database) {
+    const memoryKey = key ?? value.id ?? value.name ?? value.versionGroup;
+    memoryStores[storeName].set(memoryKey, clone(value));
+    return;
+  }
+  const transaction = database.transaction(storeName, 'readwrite');
+  transaction.objectStore(storeName).put(value);
+  await new Promise((resolve, reject) => {
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB write failed.'));
+    transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB write was aborted.'));
+  });
+}
+
+async function clearStores(storeNames) {
+  const database = await openDatabase();
+  if (!database) {
+    storeNames.forEach(storeName => memoryStores[storeName].clear());
+    return;
+  }
+  const transaction = database.transaction(storeNames, 'readwrite');
+  storeNames.forEach(storeName => transaction.objectStore(storeName).clear());
+  await new Promise((resolve, reject) => {
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB clear failed.'));
+    transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB clear was aborted.'));
+  });
+}
+
+function queueWrite(write) {
+  writeQueue = writeQueue.then(write).catch(error => console.warn('Could not save Pokémon data.', error));
+  return writeQueue;
+}
+
+function currentData() {
+  persistentData ??= cloneDefaults();
+  return persistentData;
+}
+
+function queueAppStateWrite() {
+  const value = { key: APP_STATE_KEY, data: clone(currentData()) };
+  void queueWrite(() => writeStore(APP_STATE_STORE, value, APP_STATE_KEY));
+  return true;
+}
+
+function normalizedAppData(value) {
+  if (!value || value.version !== STORAGE_VERSION) return cloneDefaults();
+  return clone(value);
+}
+
+export async function loadPersistentData() {
+  if (persistentData) return clone(persistentData);
+  const record = await readStore(APP_STATE_STORE, APP_STATE_KEY);
+  persistentData = normalizedAppData(record?.data);
+  if (!record || record.data?.version !== STORAGE_VERSION) queueAppStateWrite();
+  return clone(persistentData);
+}
+
+export function getPersistentDataSnapshot() { return clone(currentData()); }
+
+export function saveSettings(settings) {
+  currentData().settings = clone(settings);
+  return queueAppStateWrite();
+}
+
+export function saveProgress(progress) {
+  currentData().progress = clone(progress);
+  return queueAppStateWrite();
+}
+
+export function saveStarredMoves(starredMoves) {
+  currentData().starredMoves = [...starredMoves];
+  return queueAppStateWrite();
+}
+
+export function saveRecentPokemonIds(recentPokemonIds) {
+  currentData().recentPokemonIds = [...recentPokemonIds];
+  return queueAppStateWrite();
+}
+
+export function savePokemonCollections(pokemonInstances, myPokemonIds, teams) {
+  Object.assign(currentData(), {
+    pokemonInstances: clone(pokemonInstances),
+    myPokemonIds: [...myPokemonIds],
+    teams: clone(teams)
+  });
+  return queueAppStateWrite();
+}
+
+export function flushPersistentWrites() { return writeQueue; }
+
+export async function readCachedPokemonById(id) { return readStore(POKEMON_STORE, id); }
+export async function readCachedPokemonByName(name) { return readPokemonByName(name); }
+export function saveCachedPokemon(pokemon) { return queueWrite(() => writeStore(POKEMON_STORE, clone(pokemon))); }
+export async function readCachedMove(name) { return readStore(MOVE_STORE, name); }
+export function saveCachedMove(move) { return queueWrite(() => writeStore(MOVE_STORE, clone(move))); }
+export async function readCachedPokemonNameIndex(versionGroup) { return readStore(NAME_INDEX_STORE, versionGroup); }
+export function saveCachedPokemonNameIndex(index) { return queueWrite(() => writeStore(NAME_INDEX_STORE, clone(index))); }
+
+export async function getCachedDataCounts() {
+  const [pokemon, moves, nameIndexes] = await Promise.all([
+    countStore(POKEMON_STORE), countStore(MOVE_STORE), countStore(NAME_INDEX_STORE)
+  ]);
+  return { pokemon, moves, nameIndexes };
+}
+
+export function clearCachedData() {
+  return queueWrite(() => clearStores([POKEMON_STORE, MOVE_STORE, NAME_INDEX_STORE]));
+}
+
+export async function clearPersistentData() {
+  persistentData = cloneDefaults();
+  const initialState = { key: APP_STATE_KEY, data: clone(persistentData) };
+  await queueWrite(async () => {
+    await clearStores([APP_STATE_STORE, POKEMON_STORE, MOVE_STORE, NAME_INDEX_STORE]);
+    await writeStore(APP_STATE_STORE, initialState, APP_STATE_KEY);
+  });
 }

@@ -8,6 +8,7 @@
 
 ## Resolved
 
+- 2026.08.27.1 replaces the monolithic synchronous browser-storage cache that could stall navigation after Pokémon data accumulated. Persistent app state and cached API records now use separate stores in one IndexedDB database, cache writes are queued asynchronously, and views no longer walk or rewrite the full cache during navigation.
 - 2026.08.20.4 restores immediately responsive navigation and page rendering around the selected-game chart startup load.
 - 2026.08.20.5 removes the runtime type-chart fetch entirely. Bundled chart data is available synchronously, so startup and game changes no longer have a chart-loading state.
 

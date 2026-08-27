@@ -82,3 +82,5 @@
 
 - Storage v12 replaces owned-entry arrays and team species snapshots with the normalized instance model. Older storage is intentionally reset rather than migrated during active development.
 - The owned Pokémon detail overflow menu can add that exact instance to a team. Study additions still create new individuals: adding to My Pokémon creates an owned instance, while adding directly to a team creates a team-only instance. Distinct instances of the same species are allowed on one team; the same instance cannot be added twice.
+
+- Storage v13 uses one IndexedDB database as the canonical persistent location. Small app state (settings, progress, starred moves, recent lookups, instances, My Pokémon ordering, and teams) occupies one store; canonical Pokémon, move, and autocomplete-index API records occupy their own stores. Cache writes are asynchronous and no longer serialize or duplicate the full app state. Older localStorage data is intentionally ignored rather than migrated.

@@ -10,21 +10,9 @@
   <meta name="apple-mobile-web-app-title" content="Type Trainer">
   <script>
     (() => {
-      try {
-        const saved = JSON.parse(localStorage.getItem('pokemon-type-trainer') || 'null');
-        const paletteTheme = saved?.settings?.paletteTheme || 'classic';
-        const appearance = saved?.settings?.appearance || 'system';
-        const resolved = appearance === 'system'
-          ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-          : appearance;
-        document.documentElement.dataset.palette = paletteTheme;
-        document.documentElement.dataset.appearancePreference = appearance;
-        document.documentElement.dataset.appearance = resolved;
-      } catch {
-        document.documentElement.dataset.palette = 'classic';
-        document.documentElement.dataset.appearancePreference = 'system';
-        document.documentElement.dataset.appearance = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
+      document.documentElement.dataset.palette = 'classic';
+      document.documentElement.dataset.appearancePreference = 'system';
+      document.documentElement.dataset.appearance = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     })();
   </script>
   <title>Pokémon Type Trainer</title>
