@@ -77,8 +77,11 @@ navigator.serviceWorker?.addEventListener('message', event => {
 });
 
 let refreshing = false;
+const hadServiceWorkerController = Boolean(navigator.serviceWorker?.controller);
 navigator.serviceWorker?.addEventListener('controllerchange', () => {
-  if (refreshing) return;
+  // A first install may claim an uncontrolled page. Only an actual replacement
+  // of the worker that loaded this page requires a reload.
+  if (!hadServiceWorkerController || refreshing) return;
   refreshing = true;
   window.location.reload();
 });
