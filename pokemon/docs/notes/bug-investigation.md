@@ -8,6 +8,7 @@
 
 ## Resolved
 
+- 2026.08.27.5 moves application-contract, engine, quiz-architecture, and icon validation fully into CI instead of rerunning them during every app startup. It also removes the per-render button-role audit from production and makes CI reject unused files in the service-worker shell.
 - 2026.08.27.4 hardens caching, persistence, and async lookup lifecycles. The service worker installs and serves an immutable complete shell, user-state writes no longer wait behind API-cache writes, repository requests use deduplication plus invalidation epochs, missing recent records are pruned without a rerender loop, and My Pokémon/Team Members hydrate individual cards rather than rerendering their routes after background lookups.
 - 2026.08.27.3 decouples Teams-list thumbnail loading from route rendering. Each connected Pokémon image slot now updates itself when its species record resolves; a late background response can no longer rerender the whole application or interfere with navigation.
 - 2026.08.27.1 replaces the monolithic synchronous browser-storage cache that could stall navigation after Pokémon data accumulated. Persistent app state and cached API records now use separate stores in one IndexedDB database, cache writes are queued asynchronously, and views no longer walk or rewrite the full cache during navigation.

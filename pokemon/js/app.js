@@ -2,10 +2,6 @@ import { startRouter } from './router.js';
 import { state, hydratePersistentState } from './state.js';
 import { loadPersistentData } from './storage.js';
 import { VIEWS } from './views/index.js';
-import { validateApplicationContracts } from './appValidation.js';
-import { runEngineSelfTests } from './engine/effectiveness.js';
-import { validateQuizArchitecture } from './quiz/validation.js';
-import { validateTypeIcons } from './components/typeBadge.js';
 import { initializePokemonAutocomplete } from './components/pokemonAutocomplete.js';
 import { enhancePokemonLookupResult } from './components/pokemonMatchupEnhancer.js';
 import { enhancePokemonLevelUpMoves } from './components/pokemonLevelUpMoves.js';
@@ -33,15 +29,6 @@ const ROUTE_TITLES = Object.freeze({
   settings: 'Settings',
   debug: 'Developer diagnostics'
 });
-
-const BUTTON_COLOR_ROLE_SELECTOR = [
-  '.primary-button',
-  '.secondary-button',
-  '.danger-button',
-  '.transparent-button',
-  '.type-button',
-  '.type-badge-button'
-].join(',');
 
 const viewRoot = document.querySelector('#app-view');
 const pageTitle = document.querySelector('#page-title');
@@ -71,12 +58,6 @@ function renderUpdateBanner() {
     banner.append(text, update, later);
     document.body.append(banner);
   }
-}
-
-function auditButtonColorRoles() {
-  const unclassified = [...document.querySelectorAll('button')]
-    .filter(button => !button.matches(BUTTON_COLOR_ROLE_SELECTOR));
-  if (unclassified.length) console.warn('Buttons without an explicit color role:', unclassified);
 }
 
 function getCurrentTeam() {
@@ -153,7 +134,6 @@ function renderCurrentRoute() {
   }
   renderUpdateBanner();
   renderDeveloperOverlay();
-  auditButtonColorRoles();
 }
 
 function render() {
@@ -196,20 +176,6 @@ async function bootstrap() {
   registerServiceWorker({ autoUpdate: state.settings.developer.autoUpdateOnLaunch });
   if ('requestIdleCallback' in window) window.requestIdleCallback(warmPokemonNameIndex, { timeout: 2000 });
   else window.setTimeout(warmPokemonNameIndex, 0);
-
-  const contractResults = validateApplicationContracts();
-  console.group('Application contract checks'); console.table(contractResults); console.groupEnd();
-  const failedContracts = contractResults.filter(test => !test.passed);
-  if (failedContracts.length) throw new Error(`Application contract validation failed: ${failedContracts.map(test => test.name).join('; ')}`);
-  const engineResults = runEngineSelfTests();
-  console.group('Type engine checks'); console.table(engineResults); console.groupEnd();
-  if (engineResults.some(test => !test.passed)) console.error('Type engine self-test failed.');
-  const architectureResults = validateQuizArchitecture();
-  console.group('Quiz architecture checks'); console.table(architectureResults); console.groupEnd();
-  if (architectureResults.some(test => !test.passed)) console.error('Quiz architecture validation failed.');
-  const iconResults = validateTypeIcons();
-  console.group('Type icon checks'); console.table(iconResults); console.groupEnd();
-  if (iconResults.some(test => !test.passed)) console.error('One or more type icons are missing.');
 }
 
 bootstrap().catch(error => window.setTimeout(() => { throw error; }));

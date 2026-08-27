@@ -60,6 +60,7 @@ if (required.has(manifestAsset)) {
 }
 
 const missing = [...required].filter(asset => !shellSet.has(asset)).sort();
+const extra = [...shellSet].filter(asset => !required.has(asset)).sort();
 const duplicates = shellAssets.filter((asset, index) => shellAssets.indexOf(asset) !== index);
 const absent = [];
 for (const asset of shellSet) {
@@ -68,8 +69,9 @@ for (const asset of shellSet) {
   catch { absent.push(asset); }
 }
 
-if (missing.length || duplicates.length || absent.length) {
+if (missing.length || extra.length || duplicates.length || absent.length) {
   if (missing.length) console.error(`Missing from CORE_ASSETS:\n${missing.join('\n')}`);
+  if (extra.length) console.error(`Unused CORE_ASSETS:\n${extra.join('\n')}`);
   if (duplicates.length) console.error(`Duplicate CORE_ASSETS:\n${[...new Set(duplicates)].join('\n')}`);
   if (absent.length) console.error(`CORE_ASSETS files not found:\n${absent.join('\n')}`);
   process.exitCode = 1;
