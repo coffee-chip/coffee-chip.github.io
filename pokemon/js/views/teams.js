@@ -2,7 +2,6 @@ import { createTeam, getTeams, reorderTeams } from '../data/teamRepository.js';
 import { getPokemonInstanceView, resolvePokemonInstance } from '../data/pokemonInstanceRepository.js';
 import { createTeamActionsButton } from '../components/teamActionsMenu.js';
 import { createTeamOverviewNavigation } from '../components/teamOverviewNavigation.js';
-import { state } from '../state.js';
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -11,12 +10,12 @@ function el(tag, options = {}) {
   return node;
 }
 
-function pokemonSlot(instanceId) {
-  const instanceView = getPokemonInstanceView(instanceId);
+function updatePokemonSlot(slot, instanceView) {
   const pokemon = instanceView?.pokemon;
-  const slot = el('div', { className: 'team-pokemon-slot' });
   slot.title = instanceView?.displayName ?? 'Unknown Pokémon';
   slot.setAttribute('aria-label', slot.title);
+  slot.setAttribute('aria-busy', String(instanceView?.status === 'idle' || instanceView?.status === 'loading'));
+  slot.replaceChildren();
   if (pokemon?.spriteUrl) {
     const image = document.createElement('img');
     image.src = pokemon.spriteUrl;
@@ -26,7 +25,31 @@ function pokemonSlot(instanceId) {
   } else {
     slot.append(el('span', { text: instanceView ? `#${instanceView.instance.speciesId}` : '?' }));
   }
+}
+
+function pokemonSlot(instanceId) {
+  const slot = el('div', { className: 'team-pokemon-slot' });
+  slot.dataset.instanceId = instanceId;
+  updatePokemonSlot(slot, getPokemonInstanceView(instanceId));
   return slot;
+}
+
+function hydratePokemonSlots(page) {
+  for (const slot of page.querySelectorAll('.team-pokemon-slot[data-instance-id]')) {
+    const instanceId = slot.dataset.instanceId;
+    const instanceView = getPokemonInstanceView(instanceId);
+    if (!instanceView || instanceView.status === 'resolved' || instanceView.status === 'error') continue;
+    resolvePokemonInstance(instanceId)
+      .then(resolvedView => {
+        if (slot.isConnected) updatePokemonSlot(slot, resolvedView);
+      })
+      .catch(error => {
+        if (!slot.isConnected) return;
+        updatePokemonSlot(slot, getPokemonInstanceView(instanceId));
+        slot.title = error?.message ?? 'Could not load Pokémon';
+        slot.setAttribute('aria-label', slot.title);
+      });
+  }
 }
 
 function createTeamCard(team, index, render) {
@@ -164,11 +187,5 @@ export function renderTeams(container, render) {
   list.append(createNewTeamCard(render));
   page.append(createTeamOverviewNavigation('teams'), list);
   container.replaceChildren(page);
-  const unresolved = [...new Set(getTeams().flatMap(team => team.memberIds))]
-    .filter(instanceId => getPokemonInstanceView(instanceId)?.status === 'idle');
-  if (unresolved.length) {
-    Promise.allSettled(unresolved.map(resolvePokemonInstance)).then(() => {
-      if (state.route === 'teams') render();
-    });
-  }
+  hydratePokemonSlots(page);
 }
