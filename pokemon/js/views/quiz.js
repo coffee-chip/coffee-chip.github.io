@@ -83,13 +83,19 @@ function clearPrefetch() {
   prefetchSessionToken += 1;
 }
 
-function finishSession(refreshQuiz) {
+function invalidateQuestionWork() {
   questionLoadToken += 1;
   clearPrefetch();
+}
+
+function finishSession(refreshQuiz) {
+  invalidateQuestionWork();
   dismissFeedbackMnemonic();
   endQuizSession();
   refreshQuiz();
 }
+
+document.addEventListener('pokemon-game-data-cleared', invalidateQuestionWork);
 
 function createFinishButton(refreshQuiz) {
   const finish = el('button', { className: 'secondary-button', text: 'Finish session' });

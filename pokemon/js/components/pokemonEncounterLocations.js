@@ -4,6 +4,7 @@ import { getPokemonEncounterLocations, loadPokemonEncounterLocations } from '../
 
 const pendingLoads = new Map();
 const loadErrors = new Map();
+const ERROR_RETRY_DELAY_MS = 10_000;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -46,7 +47,7 @@ function createEncounterSection(pokemon, versionGroup) {
 
   const key = `${pokemon.id}:${versionGroup}`;
   if (locations === null) {
-    const error = loadErrors.get(key);
+    const error = loadErrors.get(key)?.error;
     section.append(el('p', {
       className: 'muted pokemon-encounters-status',
       text: error ? (error.message ?? 'Could not load encounter locations.') : 'Loading encounter locations…'
@@ -76,7 +77,9 @@ function createEncounterSection(pokemon, versionGroup) {
 
 function loadLocations(pokemon, versionGroup, render) {
   const key = `${pokemon.id}:${versionGroup}`;
-  if (pendingLoads.has(key) || loadErrors.has(key)) return;
+  const failed = loadErrors.get(key);
+  if (pendingLoads.has(key) || (failed && Date.now() - failed.failedAt < ERROR_RETRY_DELAY_MS)) return;
+  loadErrors.delete(key);
   const request = loadPokemonEncounterLocations(pokemon.id, { versionGroup })
     .then(result => {
       loadErrors.delete(key);
@@ -86,12 +89,20 @@ function loadLocations(pokemon, versionGroup, render) {
       }
     })
     .catch(error => {
-      loadErrors.set(key, error);
+      if (error?.name === 'AbortError') return;
+      loadErrors.set(key, { error, failedAt: Date.now() });
       if (state.study.pokemonResult?.id === pokemon.id && state.settings.gameVersionGroup === versionGroup) render();
     })
-    .finally(() => pendingLoads.delete(key));
+    .finally(() => {
+      if (pendingLoads.get(key) === request) pendingLoads.delete(key);
+    });
   pendingLoads.set(key, request);
 }
+
+document.addEventListener('pokemon-game-data-cleared', () => {
+  pendingLoads.clear();
+  loadErrors.clear();
+});
 
 export function enhancePokemonEncounterLocations(root, render) {
   root.querySelector('.pokemon-encounters')?.remove();

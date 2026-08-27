@@ -1,4 +1,4 @@
-const APP_VERSION = '2026.08.27.3';
+const APP_VERSION = '2026.08.27.4';
 const CACHE_PREFIX = 'pokemon-type-trainer-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const CORE_ASSETS = [
@@ -38,6 +38,7 @@ const CORE_ASSETS = [
   './js/components/pokemonLevelUpMoves.js',
   './js/components/pokemonEncounterLocations.js',
   './js/components/pokemonEvolutionControls.js',
+  './js/components/overflowMenuButton.js',
   './js/components/pokemonTeamMenu.js',
   './js/components/pokemonStudyNavigation.js',
   './js/components/teamOverviewNavigation.js',
@@ -57,10 +58,14 @@ const CORE_ASSETS = [
   './js/data/pokemonInstanceRepository.js',
   './js/data/teamRepository.js',
   './js/engine/pokemonAdvantage.js',
+  './js/engine/effectiveness.js',
   './js/quiz/battleScenarioQuestions.js',
   './js/quiz/battleScenarioExplanations.js',
   './js/quiz/generators.js',
+  './js/quiz/displays.js',
+  './js/quiz/formats.js',
   './js/quiz/modes.js',
+  './js/quiz/objectives.js',
   './js/quiz/scoring.js',
   './js/quiz/validation.js',
   './js/views/index.js',
@@ -73,11 +78,23 @@ const CORE_ASSETS = [
   './js/views/progress.js',
   './js/views/settings.js',
   './js/views/debug.js',
+  './js/router.js',
   './manifest.webmanifest',
-  './icons/app-icon.svg'
+  './icons/app-icon.svg',
+  './icons/drag-handle.svg'
 ];
-self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))); });
-self.addEventListener('activate', event => { event.waitUntil((async () => { const names = await caches.keys(); await Promise.all(names.filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map(name => caches.delete(name))); await self.clients.claim(); })()); });
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)));
+});
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names
+      .filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
+      .map(name => caches.delete(name)));
+    await self.clients.claim();
+  })());
+});
 self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting(); if (event.data?.type === 'GET_VERSION') event.source?.postMessage({ type: 'SW_VERSION', version: APP_VERSION, cacheName: CACHE_NAME }); });
 self.addEventListener('fetch', event => {
   const request = event.request;
@@ -85,8 +102,18 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
-    event.respondWith((async () => { try { const response = await fetch(request); const cache = await caches.open(CACHE_NAME); cache.put('./index.html', response.clone()); return response; } catch { return (await caches.match('./index.html')) || (await caches.match('./')); } })());
+    // A controlled client always receives the HTML from its active worker's
+    // immutable shell. This prevents new HTML from importing old cached modules.
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      return (await cache.match('./index.html')) || (await cache.match('./')) || fetch(request);
+    })());
     return;
   }
-  event.respondWith((async () => { const cached = await caches.match(request); const network = fetch(request).then(async response => { if (response.ok) { const cache = await caches.open(CACHE_NAME); cache.put(request, response.clone()); } return response; }).catch(() => null); return cached || (await network) || Response.error(); })());
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    // Search only the active version cache and never rewrite shell entries at
+    // runtime. A release is installed atomically or not activated at all.
+    return (await cache.match(request)) || fetch(request);
+  })());
 });

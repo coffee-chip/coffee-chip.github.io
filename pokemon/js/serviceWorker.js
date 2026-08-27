@@ -121,13 +121,20 @@ export function applyWaitingUpdate() {
 
 export async function clearAppCaches() {
   if (!('caches' in window)) return false;
+  const registration = serviceWorkerState.registration || await navigator.serviceWorker?.getRegistration('./');
   const names = await caches.keys();
   const appNames = names.filter(name => name.startsWith('pokemon-type-trainer-shell-'));
   const results = await Promise.all(appNames.map(name => caches.delete(name)));
+  const unregistered = registration ? await registration.unregister() : true;
+  serviceWorkerState.registration = null;
+  serviceWorkerState.waiting = null;
+  serviceWorkerState.status = unregistered ? 'not-registered' : 'error';
   await refreshCacheNames();
-  serviceWorkerState.message = results.every(Boolean) ? 'App cache cleared. Reload while online to rebuild it.' : 'Some cache entries could not be cleared.';
+  serviceWorkerState.message = results.every(Boolean) && unregistered
+    ? 'App cache cleared. Reload while online to install a fresh complete shell.'
+    : 'Some app cache entries could not be cleared.';
   emit();
-  return results.every(Boolean);
+  return results.every(Boolean) && unregistered;
 }
 
 export async function getServiceWorkerDiagnostics() {

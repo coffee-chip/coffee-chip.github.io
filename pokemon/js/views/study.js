@@ -13,6 +13,7 @@ const MULTIPLIER_LABELS = {
 
 let activeMnemonicKey = null;
 let activeMnemonicBanner = null;
+let pokemonLookupToken = 0;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -132,13 +133,19 @@ function renderPokemonResult(page) {
 }
 
 async function lookupPokemon(identifier, render) {
+  const token = ++pokemonLookupToken;
+  const versionGroup = state.settings.gameVersionGroup;
   state.study.moveComparisonPokemonName = null;
   state.study.pokemonQuery = String(identifier);
   state.study.pokemonStatus = 'loading';
   state.study.pokemonError = null;
   render();
   try {
-    const result = await getPokemon(identifier);
+    const result = await getPokemon(identifier, { versionGroup });
+    if (token !== pokemonLookupToken
+      || state.settings.gameVersionGroup !== versionGroup
+      || state.route !== 'study'
+      || state.study.mode !== 'pokemon') return;
     state.study.pokemonResult = result.pokemon;
     state.study.pokemonSource = result.source;
     state.study.pokemonError = result.stale ? 'The live lookup failed, so this result may be out of date.' : null;
@@ -146,6 +153,11 @@ async function lookupPokemon(identifier, render) {
     state.study.pokemonQuery = result.pokemon.displayName;
     rememberPokemonLookup(result.pokemon);
   } catch (error) {
+    if (token !== pokemonLookupToken
+      || state.settings.gameVersionGroup !== versionGroup
+      || state.route !== 'study'
+      || state.study.mode !== 'pokemon'
+      || error?.name === 'AbortError') return;
     state.study.pokemonResult = null;
     state.study.pokemonSource = null;
     state.study.pokemonError = error?.message ?? 'Could not look up that Pokémon.';
@@ -271,3 +283,4 @@ export function renderStudy(container, render) {
 }
 
 window.addEventListener('hashchange', () => { if (location.hash !== '#study') dismissMnemonicBanner(); });
+document.addEventListener('pokemon-game-data-cleared', () => { pokemonLookupToken += 1; });

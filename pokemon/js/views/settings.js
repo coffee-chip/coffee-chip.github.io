@@ -20,9 +20,12 @@ function el(tag, options = {}) { const node = document.createElement(tag); if (o
 function toggle(label, checked, onChange) { const field = el('label', { className: 'toggle-field' }); const input = document.createElement('input'); input.type = 'checkbox'; input.setAttribute('role', 'switch'); input.checked = checked; input.addEventListener('change', () => onChange(input.checked)); field.append(input, el('span', { text: label })); return field; }
 function totalSavedQuestions(progress = state.progress) { return Object.values(progress.quizStats ?? {}).reduce((sum, stat) => sum + (stat.questionCount ?? 0), 0); }
 
-function persistResetProgress() {
+async function persistResetProgress(render) {
   resetProgress();
-  const writeSucceeded = saveProgress(state.progress);
+  resetStage = 'saving';
+  resetMessage = 'Saving cleared statistics…';
+  render();
+  const writeSucceeded = await saveProgress(state.progress);
   const stored = getPersistentDataSnapshot().progress;
   const cleared = totalSavedQuestions(stored) === 0
     && Object.keys(stored.relationshipStats ?? {}).length === 0
@@ -31,6 +34,7 @@ function persistResetProgress() {
   resetMessage = resetStage === 'complete'
     ? 'Past statistics were cleared and saved.'
     : 'Statistics could not be cleared.';
+  if (state.route === 'settings') render();
 }
 
 function refreshCachedDataCounts(render) {
@@ -77,7 +81,7 @@ function appendGameDataControl(panel, render) {
   gameSelect.addEventListener('change', async () => {
     gameSelect.disabled = true;
     await setGameVersionGroup(gameSelect.value);
-    cachedDataCounts = { pokemon: 0, moves: 0, nameIndexes: 0 };
+    cachedDataCounts = null;
     render();
   });
   gameLabel.append(gameSelect);
@@ -209,9 +213,9 @@ export function renderSettings(container, render) {
     const cancelButton = el('button', { className: 'secondary-button', text: 'Cancel' });
     cancelButton.type = 'button'; cancelButton.addEventListener('click', () => { resetStage = 'idle'; resetMessage = ''; render(); });
     const confirmButton = el('button', { className: 'danger-button', text: 'Yes, clear statistics' });
-    confirmButton.type = 'button'; confirmButton.addEventListener('click', () => { persistResetProgress(); render(); });
+    confirmButton.type = 'button'; confirmButton.addEventListener('click', () => { void persistResetProgress(render); });
     actions.append(cancelButton, confirmButton); confirmPanel.append(actions); dataPanel.append(confirmPanel);
-  } else {
+  } else if (resetStage !== 'saving') {
     const resetButton = el('button', { className: 'danger-button', text: 'Clear past statistics' });
     resetButton.type = 'button'; resetButton.addEventListener('click', () => { resetStage = 'confirming'; resetMessage = ''; render(); }); dataPanel.append(resetButton);
   }

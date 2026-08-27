@@ -1,7 +1,7 @@
 import { state, resetStudyPokemonLookup } from '../state.js';
 import { saveSettings } from '../storage.js';
 import { isGameVersionGroup } from './gameVersions.js';
-import { clearGameDataCache } from './pokemonRepository.js';
+import { switchGameDataContext } from './pokemonRepository.js';
 import { getTypesForVersionGroup } from './types.js';
 
 export async function setGameVersionGroup(versionGroup) {
@@ -16,7 +16,9 @@ export async function setGameVersionGroup(versionGroup) {
   state.quiz.question = null;
   state.quiz.selectedAnswers = new Set();
   state.quiz.result = null;
-  saveSettings(state.settings);
-  await clearGameDataCache();
+  void saveSettings(state.settings);
+  // Canonical API records can contain data for several version groups. Keep them
+  // across game changes and invalidate only active requests/materialized views.
+  switchGameDataContext();
   return true;
 }

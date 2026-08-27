@@ -11,6 +11,7 @@ import { openPokemonInStudy } from '../components/pokemonStudyNavigation.js';
 
 const pendingLoads = new Map();
 let pendingSpeciesChange = false;
+let speciesChangeToken = 0;
 let actionError = '';
 let levelError = '';
 
@@ -48,12 +49,18 @@ function loadEntryPokemon(instance, render) {
       render();
     })
     .catch(error => {
-      if (state.route !== 'owned-pokemon' || state.routeParams.instanceId !== instance.id) return;
+      if (error?.name === 'AbortError'
+        || state.route !== 'owned-pokemon'
+        || state.routeParams.instanceId !== instance.id
+        || state.settings.gameVersionGroup !== versionGroup
+        || getMyPokemonById(instance.id)?.speciesId !== instance.speciesId) return;
       state.ownedPokemonDetail.status = 'error';
       state.ownedPokemonDetail.error = error?.message ?? 'Could not load this Pokémon.';
       render();
     })
-    .finally(() => pendingLoads.delete(key));
+    .finally(() => {
+      if (pendingLoads.get(key) === request) pendingLoads.delete(key);
+    });
   pendingLoads.set(key, request);
 }
 
@@ -82,11 +89,19 @@ function createStudyLinkVisual(instance, pokemon, displayName) {
 
 async function changeSpecies(instance, target, render) {
   if (!target?.name || pendingSpeciesChange) return;
+  const token = ++speciesChangeToken;
+  const versionGroup = state.settings.gameVersionGroup;
+  const originalSpeciesId = instance.speciesId;
   pendingSpeciesChange = true;
   actionError = '';
   render();
   try {
-    const result = await getPokemon(target.name);
+    const result = await getPokemon(target.name, { versionGroup });
+    if (token !== speciesChangeToken
+      || state.route !== 'owned-pokemon'
+      || state.routeParams.instanceId !== instance.id
+      || state.settings.gameVersionGroup !== versionGroup
+      || getMyPokemonById(instance.id)?.speciesId !== originalSpeciesId) return;
     const updated = setPokemonInstanceSpecies(instance.id, result.pokemon);
     if (!updated) throw new Error('Could not save the evolution change.');
     state.ownedPokemonDetail = {
@@ -98,10 +113,13 @@ async function changeSpecies(instance, target, render) {
       moveComparisonPokemonName: null
     };
   } catch (error) {
+    if (token !== speciesChangeToken || error?.name === 'AbortError') return;
     actionError = error?.message ?? 'Could not change this Pokémon’s evolution.';
   } finally {
-    pendingSpeciesChange = false;
-    render();
+    if (token === speciesChangeToken) {
+      pendingSpeciesChange = false;
+      render();
+    }
   }
 }
 
@@ -213,6 +231,8 @@ export function renderOwnedPokemonDetail(container, render) {
 }
 
 document.addEventListener('pokemon-game-data-cleared', () => {
+  speciesChangeToken += 1;
+  pendingSpeciesChange = false;
   pendingLoads.clear();
   if (state.route !== 'owned-pokemon') return;
   const instance = getMyPokemonById(state.routeParams.instanceId);

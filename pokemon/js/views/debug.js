@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { STORAGE_VERSION, getCachedDataCounts, getPersistentDataSnapshot } from '../storage.js';
+import { STORAGE_VERSION, getCachedDataCounts, getPersistentDataSnapshot, getStorageStatus } from '../storage.js';
 import { getServiceWorkerDiagnostics } from '../serviceWorker.js';
 
 function el(tag, options = {}) {
@@ -19,14 +19,27 @@ function savedQuestionCount(progress) {
   return Object.values(progress.quizStats ?? {}).reduce((sum, stat) => sum + (stat.questionCount ?? 0), 0);
 }
 
-export async function renderDebug(container) {
+let debugLoadToken = 0;
+
+export function renderDebug(container) {
+  const token = ++debugLoadToken;
   const page = el('section', { className: 'page' });
   const back = el('a', { className: 'back-link', text: '← Back to settings' });
   back.href = '#settings';
-  page.append(back);
+  page.append(back, el('p', { className: 'panel muted', text: 'Loading diagnostics…' }));
+  container.replaceChildren(page);
 
-  const sw = await getServiceWorkerDiagnostics();
-  const [saved, cacheCounts] = await Promise.all([getPersistentDataSnapshot(), getCachedDataCounts()]);
+  void loadDiagnostics(page, back, token).catch(error => {
+    if (token !== debugLoadToken || state.route !== 'debug' || !page.isConnected) return;
+    page.replaceChildren(back, el('p', { className: 'panel pokemon-lookup-error', text: error?.message ?? 'Could not load diagnostics.' }));
+  });
+}
+
+async function loadDiagnostics(page, back, token) {
+  const [sw, cacheCounts] = await Promise.all([getServiceWorkerDiagnostics(), getCachedDataCounts()]);
+  if (token !== debugLoadToken || state.route !== 'debug' || !page.isConnected) return;
+  const saved = getPersistentDataSnapshot();
+  const persistence = getStorageStatus();
 
   const worker = el('div', { className: 'panel diagnostic-panel' });
   worker.append(el('h3', { text: 'Service worker' }));
@@ -37,17 +50,19 @@ export async function renderDebug(container) {
   worker.append(row('Waiting update', sw.waiting ? 'Yes' : 'No'));
   worker.append(row('Known app caches', sw.cacheNames.length));
   for (const cacheName of sw.cacheNames) worker.append(row('Cache', cacheName));
-  page.append(worker);
-
   const storage = el('div', { className: 'panel diagnostic-panel' });
   storage.append(el('h3', { text: 'Persistent data' }));
   storage.append(row('Schema version', STORAGE_VERSION, 'ok'));
+  storage.append(row('Backend', persistence.backend, persistence.backend === 'indexeddb' ? 'ok' : 'bad'));
+  storage.append(row('App-state writes', persistence.appState, persistence.appState === 'error' ? 'bad' : 'ok'));
+  storage.append(row('Pending app-state writes', persistence.pendingAppStateWrites));
+  storage.append(row('Pending cache writes', persistence.pendingCacheWrites));
+  storage.append(row('Last durable state save', persistence.lastAppStateCommit ?? 'Not yet'));
+  if (persistence.lastError) storage.append(row('Last storage error', `${persistence.lastError.scope}: ${persistence.lastError.message}`, 'bad'));
   storage.append(row('Auto-update on launch', state.settings.developer.autoUpdateOnLaunch ? 'On' : 'Off'));
   storage.append(row('Saved questions', savedQuestionCount(saved.progress)));
   storage.append(row('Cached Pokémon', cacheCounts.pokemon));
   storage.append(row('Cached moves', cacheCounts.moves));
   storage.append(row('Autocomplete indexes', cacheCounts.nameIndexes));
-  page.append(storage);
-
-  container.replaceChildren(page);
+  page.replaceChildren(back, worker, storage);
 }

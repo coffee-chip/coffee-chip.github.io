@@ -17,5 +17,6 @@ export function setMoveStarred(identifier, starred) {
   if (starred) moves.add(moveName);
   else moves.delete(moveName);
   state.starredMoves = [...moves];
-  return saveStarredMoves(state.starredMoves);
+  void saveStarredMoves(state.starredMoves);
+  return true;
 }

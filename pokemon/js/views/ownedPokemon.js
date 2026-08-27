@@ -17,6 +17,7 @@ import { state } from '../state.js';
 let currentRender = null;
 let filterQuery = '';
 let addError = '';
+let addRequestToken = 0;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -210,7 +211,25 @@ function createOwnedPokemonCard(instance, index, render) {
   handle.addEventListener('pointerup', stopDrag);
   handle.addEventListener('pointercancel', stopDrag);
   handle.addEventListener('lostpointercapture', stopDrag);
+  if (instanceView.status === 'idle') hydrateOwnedPokemonCard(card, instance.id, render);
   return card;
+}
+
+function hydrateOwnedPokemonCard(card, instanceId, render) {
+  resolvePokemonInstance(instanceId)
+    .catch(error => {
+      if (error?.name !== 'AbortError') console.warn('Could not resolve an owned Pokémon.', error);
+    })
+    .finally(() => {
+      if (!card.isConnected || state.route !== 'my-pokemon') return;
+      const entries = getMyPokemon();
+      const index = entries.findIndex(entry => entry.id === instanceId);
+      if (index < 0) return;
+      const replacement = createOwnedPokemonCard(entries[index], index, render);
+      const normalized = filterQuery.trim().toLowerCase();
+      replacement.hidden = Boolean(normalized) && !replacement.dataset.search.includes(normalized);
+      card.replaceWith(replacement);
+    });
 }
 
 function applyFilter(list, count) {
@@ -262,25 +281,21 @@ function createAddForm(render) {
   input.addEventListener('pokemon-autocomplete-select', async event => {
     const name = event.detail?.name;
     if (!name) return;
+    const token = ++addRequestToken;
+    const versionGroup = state.settings.gameVersionGroup;
     input.disabled = true;
     addError = '';
     try {
-      const result = await getPokemon(name);
+      const result = await getPokemon(name, { versionGroup });
+      if (token !== addRequestToken || state.route !== 'my-pokemon' || state.settings.gameVersionGroup !== versionGroup) return;
       if (!addPokemonToMyPokemon(result.pokemon)) addError = 'Could not add that Pokémon.';
     } catch (error) {
+      if (token !== addRequestToken || error?.name === 'AbortError') return;
       addError = error?.message ?? 'Could not look up that Pokémon.';
     }
     render();
   });
   return form;
-}
-
-function loadOwnedPokemon(instances, render) {
-  const unresolved = instances.filter(instance => getPokemonInstanceView(instance.id)?.status === 'idle');
-  if (!unresolved.length) return;
-  Promise.allSettled(unresolved.map(instance => resolvePokemonInstance(instance.id))).then(() => {
-    if (state.route === 'my-pokemon') render();
-  });
 }
 
 export function renderOwnedPokemon(container, render) {
@@ -307,9 +322,9 @@ export function renderOwnedPokemon(container, render) {
   page.append(section);
   container.replaceChildren(page);
   applyFilter(list, count);
-  loadOwnedPokemon(entries, render);
 }
 
 document.addEventListener('pokemon-game-data-cleared', () => {
+  addRequestToken += 1;
   if (state.route === 'my-pokemon' && currentRender) currentRender();
 });

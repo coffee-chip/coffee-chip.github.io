@@ -115,6 +115,7 @@ function createMemberCard(team, instanceId, index, render) {
   const card = el('article', { className: `panel team-detail-member${expanded ? ' team-detail-member-expanded' : ''}` }); card.dataset.memberIndex = String(index);
   const visual = el('div', { className: 'team-detail-member-visual' });
   if (pokemon.spriteUrl) { const image = document.createElement('img'); image.src = pokemon.spriteUrl; image.alt = pokemon.displayName; image.loading = 'lazy'; visual.append(image); }
+  else visual.append(el('span', { className: 'muted', text: `#${pokemon.id}` }));
   const content = el('div', { className: 'team-detail-member-content' });
   const header = el('div', { className: 'team-detail-member-header' });
   const name = el('strong', { className: 'team-detail-member-name', text: pokemon.displayName });
@@ -150,7 +151,24 @@ function createMemberCard(team, instanceId, index, render) {
   handle.addEventListener('pointerdown', event => { if (event.button !== 0) return; pointerId = event.pointerId; proposedIndex = index; handle.setPointerCapture(pointerId); holdTimer = window.setTimeout(() => { dragging = true; card.classList.add('team-card-dragging'); updateInsertionMarker(event.clientY); }, event.pointerType === 'touch' ? 300 : 0); });
   handle.addEventListener('pointermove', event => { if (!dragging) return; event.preventDefault(); updateInsertionMarker(event.clientY); });
   handle.addEventListener('pointerup', stopDrag); handle.addEventListener('pointercancel', stopDrag); handle.addEventListener('lostpointercapture', stopDrag);
+  if (instanceView?.status === 'idle') hydrateMemberCard(card, team.id, instanceId, render);
   return card;
+}
+function hydrateMemberCard(card, teamId, instanceId, render) {
+  resolvePokemonInstance(instanceId)
+    .catch(error => {
+      if (error?.name !== 'AbortError') console.warn('Could not resolve a team member.', error);
+    })
+    .finally(() => {
+      if (!card.isConnected
+        || state.route !== 'team'
+        || state.routeParams.teamId !== teamId
+        || activeTeamDetailMode !== 'members') return;
+      const team = getTeam(teamId);
+      const index = team?.memberIds.indexOf(instanceId) ?? -1;
+      if (!team || index < 0) return;
+      card.replaceWith(createMemberCard(team, instanceId, index, render));
+    });
 }
 function createRoster(team, render) {
   const roster = el('section', { className: 'team-detail-roster' });
@@ -232,10 +250,14 @@ function createOverallMatchupMatrix(team) {
   table.append(body); wrapper.append(table); section.append(wrapper); return section;
 }
 async function loadTeamPokemon(team, render) {
+  const versionGroup = state.settings.gameVersionGroup;
   const unresolved = team.memberIds.filter(instanceId => getPokemonInstanceView(instanceId)?.status === 'idle');
   if (!unresolved.length) return;
   await Promise.allSettled(unresolved.map(resolvePokemonInstance));
-  if (state.route === 'team' && state.routeParams.teamId === team.id) render();
+  if (state.route === 'team'
+    && state.routeParams.teamId === team.id
+    && state.settings.gameVersionGroup === versionGroup
+    && activeTeamDetailMode !== 'members') render();
 }
 export function renderTeamDetail(container, render) {
   const team = getTeam(state.routeParams.teamId), page = el('section', { className: 'page team-detail-page' }); page.append(createBackLink());
@@ -245,5 +267,6 @@ export function renderTeamDetail(container, render) {
   heading.append(createTeamActionsButton(team, heading, render, { onDelete: () => { location.hash = 'teams'; } }));
   page.append(heading, createTeamDetailTabs(render));
   if (activeTeamDetailMode === 'members') page.append(createRoster(team, render)); else if (activeTeamDetailMode === 'matchups') page.append(createAnalysis(team, render)); else page.append(createOverallMatchupMatrix(team));
-  container.replaceChildren(page); loadTeamPokemon(team, render);
+  container.replaceChildren(page);
+  if (activeTeamDetailMode !== 'members') void loadTeamPokemon(team, render);
 }

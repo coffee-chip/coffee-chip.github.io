@@ -12,6 +12,9 @@ const pendingLearnsetLoads = new Map();
 const comparisonPokemonByKey = new Map();
 const moveDetailsByLearnset = new Map();
 const pendingMoveDetailLoads = new Map();
+const moveDetailRetryAt = new Map();
+const MOVE_DETAIL_RETRY_DELAY_MS = 10_000;
+const COMPARISON_RETRY_DELAY_MS = 10_000;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -323,16 +326,23 @@ function createMovesSection(pokemon, versionGroup, currentDetails, comparison, c
 
 function loadMoveDetails(pokemon, moves, versionGroup, render, shouldRender) {
   const key = `${pokemon.id}:${versionGroup}`;
-  if (moveDetailsByLearnset.has(key) || pendingMoveDetailLoads.has(key)) return;
-  const request = getMoves(moves.map(move => move.name), { versionGroup })
+  const retryAt = moveDetailRetryAt.get(key) ?? 0;
+  if (pendingMoveDetailLoads.has(key)
+    || (moveDetailsByLearnset.has(key) && (!retryAt || Date.now() < retryAt))) return;
+  const moveNames = [...new Set(moves.map(move => move.name))];
+  const request = getMoves(moveNames, { versionGroup })
     .then(details => {
       moveDetailsByLearnset.set(key, details);
+      if (details.size < moveNames.length) moveDetailRetryAt.set(key, Date.now() + MOVE_DETAIL_RETRY_DELAY_MS);
+      else moveDetailRetryAt.delete(key);
       if (shouldRender()) render();
     })
     .catch(error => {
-      console.warn('Could not preload move details.', error);
+      if (error?.name !== 'AbortError') console.warn('Could not preload move details.', error);
     })
-    .finally(() => pendingMoveDetailLoads.delete(key));
+    .finally(() => {
+      if (pendingMoveDetailLoads.get(key) === request) pendingMoveDetailLoads.delete(key);
+    });
   pendingMoveDetailLoads.set(key, request);
 }
 
@@ -347,10 +357,13 @@ function loadLearnset(pokemon, versionGroup, render, context) {
       }
     })
     .catch(error => {
+      if (error?.name === 'AbortError' || !context.isCurrent(pokemon.id)) return;
       const status = document.querySelector('.pokemon-level-up-moves-status');
       if (status) status.textContent = error?.message ?? 'Could not load level-up moves.';
     })
-    .finally(() => pendingLearnsetLoads.delete(key));
+    .finally(() => {
+      if (pendingLearnsetLoads.get(key) === request) pendingLearnsetLoads.delete(key);
+    });
   pendingLearnsetLoads.set(key, request);
 }
 
@@ -369,14 +382,26 @@ function loadComparisonPokemon(pokemon, comparisonName, versionGroup, render, co
         && state.settings.gameVersionGroup === versionGroup) render();
     })
     .catch(error => {
-      comparisonPokemonByKey.set(key, { pokemon: null, error });
+      if (error?.name === 'AbortError') return;
+      comparisonPokemonByKey.set(key, { pokemon: null, error, failedAt: Date.now() });
       if (context.isCurrent(pokemon.id)
         && context.getComparisonName() === comparisonName
         && state.settings.gameVersionGroup === versionGroup) render();
     })
-    .finally(() => pendingLearnsetLoads.delete(key));
+    .finally(() => {
+      if (pendingLearnsetLoads.get(key) === request) pendingLearnsetLoads.delete(key);
+    });
   pendingLearnsetLoads.set(key, request);
 }
+
+document.addEventListener('pokemon-game-data-cleared', () => {
+  dismissMoveDetails();
+  pendingLearnsetLoads.clear();
+  comparisonPokemonByKey.clear();
+  moveDetailsByLearnset.clear();
+  pendingMoveDetailLoads.clear();
+  moveDetailRetryAt.clear();
+});
 
 export function enhancePokemonLevelUpMoves(root, render) {
   dismissMoveDetails();
@@ -394,9 +419,13 @@ export function enhancePokemonLevelUpMoves(root, render) {
     context.setComparisonName(null);
   }
   const comparisonName = context.getComparisonName();
-  const comparisonEntry = comparisonName
+  let comparisonEntry = comparisonName
     ? comparisonPokemonByKey.get(getComparisonKey(pokemon, comparisonName, versionGroup))
     : null;
+  if (comparisonEntry?.error && Date.now() - comparisonEntry.failedAt >= COMPARISON_RETRY_DELAY_MS) {
+    comparisonPokemonByKey.delete(getComparisonKey(pokemon, comparisonName, versionGroup));
+    comparisonEntry = null;
+  }
   const comparisonPokemon = comparisonEntry?.pokemon ?? null;
   const comparisonMoves = comparisonPokemon ? getLevelUpMoves(comparisonPokemon, versionGroup) : null;
   const comparison = comparisonMoves === null ? null : { pokemon: comparisonPokemon, moves: comparisonMoves };

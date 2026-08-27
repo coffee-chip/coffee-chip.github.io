@@ -5,6 +5,8 @@ import { getPokemon } from './pokemonRepository.js';
 const resolvedSpecies = new Map();
 const pendingSpecies = new Map();
 const speciesErrors = new Map();
+const ERROR_RETRY_DELAY_MS = 10_000;
+let resolutionEpoch = 0;
 
 function createInstanceId() {
   const random = globalThis.crypto?.randomUUID?.();
@@ -23,27 +25,13 @@ function persistCollections() {
   return savePokemonCollections(state.pokemonInstances, state.myPokemonIds, state.teams);
 }
 
-function snapshotCollections() {
-  return {
-    pokemonInstances: structuredClone(state.pokemonInstances),
-    myPokemonIds: [...state.myPokemonIds],
-    teams: structuredClone(state.teams)
-  };
-}
-
-function restoreCollections(snapshot) {
-  state.pokemonInstances = snapshot.pokemonInstances;
-  state.myPokemonIds = snapshot.myPokemonIds;
-  state.teams = snapshot.teams;
-}
-
 export function updatePokemonCollections(mutate) {
-  const previous = snapshotCollections();
   const result = mutate();
   if (result === null || result === false) return result;
-  if (persistCollections()) return result;
-  restoreCollections(previous);
-  return null;
+  // Mutations are optimistic. The storage layer reports durable commit failures
+  // through its observable status instead of pretending a queued write succeeded.
+  void persistCollections();
+  return result;
 }
 
 export function createPokemonInstanceRecord(pokemon, { level = 1 } = {}) {
@@ -168,7 +156,9 @@ export function getPokemonInstanceView(instanceId, versionGroup = state.settings
   if (!instance) return null;
   const key = resolutionKey(instance.speciesId, versionGroup);
   const pokemon = resolvedSpecies.get(key) ?? null;
-  const error = speciesErrors.get(key) ?? null;
+  const failed = speciesErrors.get(key);
+  if (failed && Date.now() - failed.failedAt >= ERROR_RETRY_DELAY_MS) speciesErrors.delete(key);
+  const error = speciesErrors.get(key)?.error ?? null;
   return {
     instance,
     pokemon,
@@ -183,25 +173,41 @@ export function resolvePokemonInstance(instanceId, versionGroup = state.settings
   if (!instance) return Promise.reject(new Error('That Pokémon instance no longer exists.'));
   const key = resolutionKey(instance.speciesId, versionGroup);
   if (resolvedSpecies.has(key)) return Promise.resolve(getPokemonInstanceView(instanceId, versionGroup));
-  if (speciesErrors.has(key)) return Promise.reject(speciesErrors.get(key));
+  const failed = speciesErrors.get(key);
+  if (failed && Date.now() - failed.failedAt < ERROR_RETRY_DELAY_MS) return Promise.reject(failed.error);
+  speciesErrors.delete(key);
+  const expectedEpoch = resolutionEpoch;
   if (!pendingSpecies.has(key)) {
+    const epoch = expectedEpoch;
     const request = getPokemon(instance.speciesId, { versionGroup })
       .then(result => {
+        if (epoch !== resolutionEpoch) return null;
         resolvedSpecies.set(key, result.pokemon);
         speciesErrors.delete(key);
         return result.pokemon;
       })
       .catch(error => {
-        speciesErrors.set(key, error);
+        if (epoch === resolutionEpoch && error?.name !== 'AbortError') {
+          speciesErrors.set(key, { error, failedAt: Date.now() });
+        }
         throw error;
       })
-      .finally(() => pendingSpecies.delete(key));
+      .finally(() => {
+        if (pendingSpecies.get(key) === request) pendingSpecies.delete(key);
+      });
     pendingSpecies.set(key, request);
   }
-  return pendingSpecies.get(key).then(() => getPokemonInstanceView(instanceId, versionGroup));
+  return pendingSpecies.get(key).then(() => {
+    const current = getPokemonInstance(instanceId);
+    if (!current || current.speciesId !== instance.speciesId || expectedEpoch !== resolutionEpoch) {
+      throw new DOMException('This Pokémon lookup is no longer current.', 'AbortError');
+    }
+    return getPokemonInstanceView(instanceId, versionGroup);
+  });
 }
 
 export function clearResolvedPokemonInstances() {
+  resolutionEpoch += 1;
   resolvedSpecies.clear();
   pendingSpecies.clear();
   speciesErrors.clear();

@@ -1,7 +1,9 @@
 import { state } from './state.js';
 import { serviceWorkerState, subscribeServiceWorker } from './serviceWorker.js';
+import { storageStatus, subscribeStorageStatus } from './storage.js';
 let overlay = null;
 let unsubscribe = null;
+let unsubscribeStorage = null;
 
 function line(label, value) {
   const row = document.createElement('div');
@@ -25,7 +27,9 @@ function updateOverlay() {
     line('SW status', serviceWorkerState.status),
     line('SW version', serviceWorkerState.version ?? 'Unknown'),
     line('Controlled', navigator.serviceWorker?.controller ? 'Yes' : 'No'),
-    line('Caches', serviceWorkerState.cacheNames.length)
+    line('Caches', serviceWorkerState.cacheNames.length),
+    line('Storage', `${storageStatus.backend} · ${storageStatus.appState}`),
+    line('Pending saves', storageStatus.pendingAppStateWrites)
   );
 }
 
@@ -35,6 +39,7 @@ export function renderDeveloperOverlay() {
     overlay?.remove();
     overlay = null;
     if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+    if (unsubscribeStorage) { unsubscribeStorage(); unsubscribeStorage = null; }
     return;
   }
   if (!overlay) {
@@ -43,6 +48,7 @@ export function renderDeveloperOverlay() {
     overlay.setAttribute('aria-label', 'Developer status overlay');
     document.body.append(overlay);
     unsubscribe = subscribeServiceWorker(updateOverlay);
+    unsubscribeStorage = subscribeStorageStatus(updateOverlay);
   }
   updateOverlay();
 }

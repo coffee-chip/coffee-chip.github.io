@@ -47,6 +47,7 @@ const viewRoot = document.querySelector('#app-view');
 const pageTitle = document.querySelector('#page-title');
 const pageHeaderActions = document.querySelector('.page-header-actions');
 const navLinks = [...document.querySelectorAll('[data-route]')];
+let pokemonNameIndexWarmToken = 0;
 
 function renderUpdateBanner() {
   let banner = document.querySelector('.update-banner');
@@ -164,9 +165,14 @@ function render() {
 }
 
 function warmPokemonNameIndex() {
-  getPokemonNameIndex().then(result => {
+  const token = ++pokemonNameIndexWarmToken;
+  const versionGroup = state.settings.gameVersionGroup;
+  getPokemonNameIndex({ versionGroup }).then(result => {
+    if (token !== pokemonNameIndexWarmToken || state.settings.gameVersionGroup !== versionGroup) return;
     document.dispatchEvent(new CustomEvent('pokemon-name-index-ready', { detail: { names: result.names, source: result.source } }));
-  }).catch(error => console.warn('Could not preload Pokémon autocomplete names.', error));
+  }).catch(error => {
+    if (error?.name !== 'AbortError') console.warn('Could not preload Pokémon autocomplete names.', error);
+  });
 }
 
 async function bootstrap() {
@@ -178,7 +184,10 @@ async function bootstrap() {
   initializeQuizAutoScroll();
 
   subscribeServiceWorker(() => { renderUpdateBanner(); renderDeveloperOverlay(); });
-  document.addEventListener('pokemon-game-data-cleared', warmPokemonNameIndex);
+  document.addEventListener('pokemon-game-data-cleared', () => {
+    pokemonNameIndexWarmToken += 1;
+    warmPokemonNameIndex();
+  });
   startRouter(route => {
     state.route = route.name;
     state.routeParams = route.params;
