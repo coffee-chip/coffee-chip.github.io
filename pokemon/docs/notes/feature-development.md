@@ -95,4 +95,4 @@ Roster search performs prefix matching independently against nickname, species n
 
 Roster level sorting is a display mode rather than a stored reorder. Low-to-high and high-to-low preserve manual order as the tie-breaker, keep missing levels last, and disable drag handles until manual order is restored.
 
-Roster type-advantage sorting treats the selected one- or two-type combination as an opponent Pokémon and ranks owned Pokémon by `getPokemonTypeAdvantageScore`. It is display-only, uses manual order to break ties, places unresolved Pokémon last, and excludes the first selected type from the optional second-type choices.
+Roster type-advantage sorting treats the selected one- or two-type combination as an opponent Pokémon and ranks owned Pokémon by `getPokemonTypeAdvantageScore`. It is display-only, breaks equal-score ties by level from high to low and then manual order, places unresolved Pokémon last, and excludes the first selected type from the optional second-type choices.

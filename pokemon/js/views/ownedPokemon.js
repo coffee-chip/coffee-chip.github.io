@@ -84,6 +84,11 @@ function entriesForDisplay(entries) {
         if (first.advantageScore === null && second.advantageScore !== null) return 1;
         if (first.advantageScore !== null && second.advantageScore === null) return -1;
         if (first.advantageScore !== second.advantageScore) return second.advantageScore - first.advantageScore;
+        const firstLevel = Number.isInteger(first.entry.level) ? first.entry.level : null;
+        const secondLevel = Number.isInteger(second.entry.level) ? second.entry.level : null;
+        if (firstLevel === null && secondLevel !== null) return 1;
+        if (firstLevel !== null && secondLevel === null) return -1;
+        if (firstLevel !== secondLevel) return secondLevel - firstLevel;
         return first.index - second.index;
       });
   }

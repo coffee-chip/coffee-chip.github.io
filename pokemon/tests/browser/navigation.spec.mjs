@@ -140,6 +140,8 @@ test('a populated team remains navigable and hydrated across repeated route chan
   const secondType = page.getByRole('combobox', { name: 'Second type (optional)' });
   await expect(firstType).toBeVisible();
   await expect(secondType).toBeDisabled();
+  await firstType.selectOption('normal');
+  await expect(page.locator('.owned-pokemon-name')).toHaveText(['Shell', 'Sprout']);
   await firstType.selectOption('fire');
   await expect(page.locator('.owned-pokemon-name')).toHaveText(['Shell', 'Sprout']);
   await expect(secondType).toBeEnabled();
