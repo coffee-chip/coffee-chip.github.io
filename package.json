@@ -1,0 +1,13 @@
+{
+  "name": "pokemon-type-trainer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "npm run test:static && npm run test:browser",
+    "test:static": "node pokemon/scripts/test-syntax.mjs && node pokemon/scripts/validate-service-worker-assets.mjs && node pokemon/scripts/test-storage.mjs && node pokemon/scripts/test-repositories.mjs && node pokemon/scripts/test-contracts.mjs",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0"
+  }
+}

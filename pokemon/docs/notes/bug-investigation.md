@@ -15,3 +15,8 @@
 - 2026.08.20.5 removes the runtime type-chart fetch entirely. Bundled chart data is available synchronously, so startup and game changes no longer have a chart-loading state.
 
 - 2026.08.21.4 closes the autocomplete popup after restoring input focus on suggestion selection. This prevents the focus handler from recreating a one-item popup after a selection.
+## Automated regression coverage
+
+The populated-team navigation failure is covered by a mobile-sized Playwright smoke test in Chromium and WebKit. The fixture seeds the canonical IndexedDB stores directly, then repeatedly traverses My Pokémon, Teams, Team detail, and bottom navigation, reloads the app, and verifies that team sprites hydrate from the canonical cache. Chromium also verifies that the installed service-worker shell starts offline.
+
+The GitHub Actions workflow runs these browser checks only after the faster syntax, service-worker asset, storage, repository, and application-contract checks pass.
