@@ -18,6 +18,7 @@ let currentRender = null;
 let filterQuery = '';
 let addError = '';
 let addRequestToken = 0;
+let addFormExpanded = false;
 
 function el(tag, options = {}) {
   const node = document.createElement(tag);
@@ -261,11 +262,11 @@ function createFilter(entries) {
 }
 
 function createAddForm(render) {
-  const form = el('div', { className: 'panel pokemon-lookup-form owned-pokemon-add-form' });
-  const label = el('label');
-  label.append(el('span', { text: 'Add Pokémon' }));
+  const form = el('div', { className: 'pokemon-lookup-form owned-pokemon-add-form' });
+  const row = el('div', { className: 'owned-pokemon-add-row' });
   const searchField = el('div', { className: 'search-field' });
   const input = document.createElement('input');
+  input.id = 'owned-pokemon-add-input';
   input.type = 'search';
   input.dataset.pokemonAutocomplete = 'true';
   input.autocomplete = 'off';
@@ -274,8 +275,17 @@ function createAddForm(render) {
   input.placeholder = 'Start typing a Pokémon name';
   input.setAttribute('aria-label', 'Pokémon name');
   searchField.append(input);
-  label.append(searchField);
-  form.append(label);
+  const close = el('button', { className: 'secondary-button owned-pokemon-add-close', text: '×' });
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Close Add Pokémon');
+  close.addEventListener('click', () => {
+    addRequestToken += 1;
+    addFormExpanded = false;
+    addError = '';
+    render();
+  });
+  row.append(searchField, close);
+  form.append(row);
   if (addError) form.append(el('p', { className: 'pokemon-lookup-error', text: addError }));
 
   input.addEventListener('pokemon-autocomplete-select', async event => {
@@ -289,6 +299,7 @@ function createAddForm(render) {
       const result = await getPokemon(name, { versionGroup });
       if (token !== addRequestToken || state.route !== 'my-pokemon' || state.settings.gameVersionGroup !== versionGroup) return;
       if (!addPokemonToMyPokemon(result.pokemon)) addError = 'Could not add that Pokémon.';
+      else addFormExpanded = false;
     } catch (error) {
       if (token !== addRequestToken || error?.name === 'AbortError') return;
       addError = error?.message ?? 'Could not look up that Pokémon.';
@@ -298,11 +309,30 @@ function createAddForm(render) {
   return form;
 }
 
+function createAddSection(render) {
+  const section = el('section', { className: 'owned-pokemon-add' });
+  section.setAttribute('aria-label', 'Add Pokémon');
+  if (addFormExpanded) {
+    section.append(createAddForm(render));
+    return section;
+  }
+  const open = el('button', { className: 'secondary-button owned-pokemon-add-toggle', text: '+ Add Pokémon' });
+  open.type = 'button';
+  open.addEventListener('click', () => {
+    addError = '';
+    addFormExpanded = true;
+    render();
+    document.querySelector('#owned-pokemon-add-input')?.focus();
+  });
+  section.append(open);
+  return section;
+}
+
 export function renderOwnedPokemon(container, render) {
   currentRender = render;
   const entries = getMyPokemon();
   const page = el('section', { className: 'page owned-pokemon-page' });
-  page.append(createTeamOverviewNavigation('my-pokemon'), createAddForm(render));
+  page.append(createTeamOverviewNavigation('my-pokemon'), createAddSection(render));
 
   const section = el('section', { className: 'owned-pokemon-roster' });
   const filter = createFilter(entries);

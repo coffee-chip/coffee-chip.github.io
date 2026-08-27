@@ -1,6 +1,11 @@
 .owned-pokemon-page { display: grid; gap: 1rem; }
 .owned-pokemon-page .button-selector { margin-block-end: 0; }
-.owned-pokemon-add-form { margin: 0; }
+.owned-pokemon-add { display: grid; justify-items: start; }
+.owned-pokemon-add-toggle { min-height: 2.5rem; padding-inline: .8rem; }
+.owned-pokemon-add-form { width: 100%; margin: 0; gap: .4rem; }
+.owned-pokemon-add-row { display: grid; grid-template-columns: minmax(0, 1fr) 2.75rem; align-items: start; gap: .4rem; width: 100%; }
+.owned-pokemon-add-close { display: grid; place-items: center; width: 2.75rem; min-width: 2.75rem; height: 2.75rem; min-height: 2.75rem; padding: 0; font-size: 1.2rem; line-height: 1; }
+.owned-pokemon-add-form > .pokemon-lookup-error { width: 100%; margin: .2rem 0 0; }
 .owned-pokemon-roster { display: grid; gap: .75rem; }
 .owned-pokemon-filter { display: grid; gap: .35rem; }
 .owned-pokemon-filter input { width: 100%; min-height: 2.75rem; border: 1px solid var(--border-default); border-radius: .45rem; background: var(--subtle-background); padding: 0 .65rem; }

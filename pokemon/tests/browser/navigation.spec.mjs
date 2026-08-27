@@ -106,6 +106,22 @@ test('a populated team remains navigable and hydrated across repeated route chan
   await page.goto('/pokemon/#my-pokemon');
   await expectOwnedPokemon(page);
 
+  const addButton = page.getByRole('button', { name: 'Add Pokémon' });
+  await expect(addButton).toBeVisible();
+  await expect(page.getByRole('searchbox', { name: 'Pokémon name' })).toHaveCount(0);
+  await addButton.click();
+  await expect(page.getByRole('searchbox', { name: 'Pokémon name' })).toBeFocused();
+  await page.getByRole('button', { name: 'Close Add Pokémon' }).click();
+  await expect(page.getByRole('searchbox', { name: 'Pokémon name' })).toHaveCount(0);
+
+  const filter = page.getByRole('searchbox', { name: 'Search My Pokémon' });
+  await filter.fill('missing');
+  await expect(page.locator('.owned-pokemon-card')).toBeHidden();
+  await expect(page.locator('.owned-pokemon-count')).toHaveText('0 matching Pokémon');
+  await filter.fill('sprout');
+  await expect(page.locator('.owned-pokemon-card')).toBeVisible();
+  await filter.fill('');
+
   for (let pass = 0; pass < 3; pass += 1) {
     await page.getByRole('tab', { name: 'Teams' }).click();
     await expectTeams(page);

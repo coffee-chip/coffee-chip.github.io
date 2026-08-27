@@ -87,3 +87,6 @@
 
 - Storage v14 deliberately resets the v13 database. User-state writes are coalesced on a high-priority queue separate from disposable API-cache writes, expose pending/committed/error status, and no longer report a queued write as durably saved. Canonical Pokémon and move records contain all supported version-group projections from one API payload; the National Dex name index is stored once and sliced at the output boundary. Repository requests are deduplicated, commit merges are serialized per entity, and game/cache epochs reject stale completions.
 - Installed PWA shells are immutable per app version. The active worker serves only its own complete dependency closure; shell entries are never updated piecemeal at runtime. `scripts/validate-service-worker-assets.mjs` verifies that every local HTML/CSS/JavaScript/manifest dependency is precached exactly once and exists on disk.
+## My Pokémon roster controls
+
+The My Pokémon page keeps adding secondary to browsing: a compact `+ Add Pokémon` action expands the autocomplete field and focuses it, and collapses again after selection or explicit dismissal. Roster filtering uses the native `hidden` state backed by a global author-level rule so component display styles cannot accidentally override it.
