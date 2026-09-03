@@ -282,13 +282,19 @@ function compareCounterCandidates(first, second) {
   return first.pokemon.manualIndex - second.pokemon.manualIndex;
 }
 
-function getBestCounter(opponent, ownedPokemon) {
-  return ownedPokemon
+function getBestCounters(opponent, ownedPokemon) {
+  const ranked = ownedPokemon
     .map(pokemon => ({
       pokemon,
       score: getPokemonTypeAdvantageScore(pokemon.types, opponent.types)
     }))
-    .sort(compareCounterCandidates)[0] ?? null;
+    .sort(compareCounterCandidates);
+  const best = ranked[0];
+  if (!best) return [];
+  return ranked.filter(candidate => (
+    candidate.score === best.score
+    && candidate.pokemon.level === best.pokemon.level
+  ));
 }
 
 function createCounterIdentity(pokemon, { label, href = '' } = {}) {
@@ -318,20 +324,24 @@ function getCounterResultLabel(score) {
   return 'Even type matchup';
 }
 
-function createCounterMatchup(opponent, counter) {
+function createCounterMatchup(opponent, counters) {
   const card = el('article', { className: 'panel team-counter-matchup' });
-  card.append(
-    createCounterIdentity(opponent, { label: 'Against' }),
-    createCounterIdentity(counter.pokemon, {
-      label: 'Best matchup',
+  card.append(createCounterIdentity(opponent, { label: 'Against' }));
+  const candidates = el('div', { className: 'team-counter-candidates' });
+  for (const counter of counters) {
+    const candidate = el('div', { className: 'team-counter-candidate' });
+    candidate.append(createCounterIdentity(counter.pokemon, {
+      label: counters.length > 1 ? 'Best matchup (tie)' : 'Best matchup',
       href: `#my-pokemon/${encodeURIComponent(counter.pokemon.instanceId)}`
-    })
-  );
-  const level = counter.pokemon.level === null ? 'Level not set' : `Lv. ${counter.pokemon.level}`;
-  card.append(el('p', {
-    className: 'team-counter-result',
-    text: `${getCounterResultLabel(counter.score)} · ${level}`
-  }));
+    }));
+    const level = counter.pokemon.level === null ? 'Level not set' : `Lv. ${counter.pokemon.level}`;
+    candidate.append(el('p', {
+      className: 'team-counter-result',
+      text: `${getCounterResultLabel(counter.score)} · ${level}`
+    }));
+    candidates.append(candidate);
+  }
+  card.append(candidates);
   return card;
 }
 
@@ -361,8 +371,8 @@ function createCounterRecommendations(team) {
     return section;
   }
   for (const opponent of opponentPokemon) {
-    const counter = getBestCounter(opponent, ownedPokemon);
-    if (counter) section.append(createCounterMatchup(opponent, counter));
+    const counters = getBestCounters(opponent, ownedPokemon);
+    if (counters.length) section.append(createCounterMatchup(opponent, counters));
   }
   return section;
 }

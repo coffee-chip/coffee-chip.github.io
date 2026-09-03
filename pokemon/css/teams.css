@@ -85,6 +85,9 @@ button.team-analysis-status-success:focus-visible, button.team-analysis-status-d
 .team-counter-title { margin: .35rem 0 0; font-size: 1rem; color: var(--heading-color); }
 .team-counter-intro { margin: -.25rem 0 0; }
 .team-counter-matchup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .65rem 1rem; margin: 0; padding: .65rem; }
+.team-counter-candidates { display: grid; gap: .65rem; min-width: 0; }
+.team-counter-candidate { display: grid; gap: .25rem; min-width: 0; }
+.team-counter-candidate + .team-counter-candidate { padding-top: .65rem; border-top: 1px solid var(--border-default); }
 .team-counter-identity { display: grid; grid-template-columns: 3.25rem minmax(0, 1fr); align-items: center; gap: .6rem; min-width: 0; color: inherit; text-decoration: none; border-radius: .45rem; }
 a.team-counter-identity { cursor: pointer; }
 a.team-counter-identity:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
@@ -93,7 +96,7 @@ a.team-counter-identity:focus-visible { outline: 3px solid var(--focus-ring); ou
 .team-counter-content { display: grid; gap: .15rem; min-width: 0; }
 .team-counter-label { font-size: .78rem; }
 .team-counter-opponent-name, .team-counter-recommendation-name { min-width: 0; overflow-wrap: anywhere; color: var(--heading-color); }
-.team-counter-result { grid-column: 2; margin: 0; color: var(--text-muted); font-size: .86rem; font-weight: 700; }
+.team-counter-result { margin: 0; padding-left: 3.85rem; color: var(--text-muted); font-size: .86rem; font-weight: 700; }
 
 @media (hover: hover) {
   .team-card:hover { border-color: var(--action-primary); }
@@ -107,7 +110,6 @@ a.team-counter-identity:focus-visible { outline: 3px solid var(--focus-ring); ou
 
 @media (max-width: 30rem) {
   .team-counter-matchup { grid-template-columns: 1fr; }
-  .team-counter-result { grid-column: 1; padding-left: 3.85rem; }
 }
 
 @media (max-width: 24rem) {
