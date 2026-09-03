@@ -174,7 +174,9 @@ test('a populated team remains navigable and hydrated across repeated route chan
   await expect(page).toHaveURL(/#team\/my-team$/);
   await expect(page.locator('.team-detail-member-name')).toHaveText('Sprout');
 
-  await page.locator('.team-detail-back').click();
+  await page.getByRole('link', { name: 'Teams', exact: true }).click();
+  await expectOwnedPokemon(page);
+  await page.getByRole('tab', { name: 'Teams' }).click();
   await expectTeams(page);
   await page.getByRole('link', { name: 'Open Opponents' }).click();
   await expect(page).toHaveURL(/#team\/opponents$/);
