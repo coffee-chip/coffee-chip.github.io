@@ -1,10 +1,12 @@
 import { getTeam, removePokemonFromTeam, reorderPokemonInTeam } from '../data/teamRepository.js';
+import { isPokemonAvailableInVersionGroup } from '../data/gameVersions.js';
 import {
+  getMyPokemon,
   getPokemonInstanceView,
   resolvePokemonInstance,
   setPokemonInstanceNickname
 } from '../data/pokemonInstanceRepository.js';
-import { getActiveTypes, getMultiplier, getTypeAdvantageScore } from '../engine/effectiveness.js';
+import { getActiveTypes, getMultiplier, getPokemonTypeAdvantageScore, getTypeAdvantageScore } from '../engine/effectiveness.js';
 import { state } from '../state.js';
 import { createTypeList, createTypeIcon } from '../components/typeBadge.js';
 import { createTeamActionsButton } from '../components/teamActionsMenu.js';
@@ -209,12 +211,13 @@ function getResolvedTeamPokemon(team) {
       : null;
   }).filter(member => Array.isArray(member?.types) && member.types.length);
 }
-function getTeamResolutionMessage(team) {
-  const views = team.memberIds.map(instanceId => getPokemonInstanceView(instanceId));
+function getResolutionMessage(instanceIds) {
+  const views = instanceIds.map(instanceId => getPokemonInstanceView(instanceId));
   return views.some(instanceView => instanceView?.status === 'error')
     ? 'Some matchup data could not be loaded.'
     : 'Loading matchup data…';
 }
+function getTeamResolutionMessage(team) { return getResolutionMessage(team.memberIds); }
 function createAnalysisTable(pokemon, mode, relationships, team) {
   const wrapper = el('div', { className: 'team-matchup-table-scroll' }), table = el('table', { className: 'team-matchup-table' }), caption = document.createElement('caption'); caption.textContent = getAnalysisCaption(mode, relationships); table.append(caption);
   const head = document.createElement('thead'), headRow = document.createElement('tr'), corner = document.createElement('th'); corner.scope = 'col'; corner.setAttribute('aria-label', 'Type'); headRow.append(corner); for (const member of pokemon) headRow.append(createPokemonColumnHeader(member)); head.append(headRow); table.append(head);
@@ -249,11 +252,133 @@ function createOverallMatchupMatrix(team) {
   for (const type of getActiveTypes()) { const row = document.createElement('tr'), typeHeader = document.createElement('th'); typeHeader.scope = 'row'; typeHeader.title = type; typeHeader.setAttribute('aria-label', `${type} type`); typeHeader.append(createTypeIcon(type, { className: 'team-matchup-type-icon' })); row.append(typeHeader); for (const member of pokemon) { const score = getTypeAdvantageScore(member.types, type), shouldMark = isOpponent ? score < 0 : score > 0, cell = document.createElement('td'); if (shouldMark) { const intensity = getAdvantageIntensity(score), dot = el('span', { className: `team-advantage-dot team-advantage-dot-${role} team-advantage-dot-${intensity}` }), perspectiveScore = isOpponent ? -score : score, label = isOpponent ? `${type} has advantage score ${perspectiveScore} against ${member.displayName}` : `${member.displayName} has advantage score ${score} against ${type}`; dot.setAttribute('aria-label', label); dot.title = label; cell.append(dot); } row.append(cell); } body.append(row); }
   table.append(body); wrapper.append(table); section.append(wrapper); return section;
 }
+
+function getEligibleMyPokemon() {
+  return getMyPokemon().filter(instance => isPokemonAvailableInVersionGroup(
+    instance.speciesId,
+    state.settings.gameVersionGroup
+  ));
+}
+
+function getResolvedMyPokemon(instances) {
+  return instances.map((instance, manualIndex) => {
+    const instanceView = getPokemonInstanceView(instance.id);
+    if (!instanceView?.pokemon?.types?.length) return null;
+    return {
+      ...instanceView.pokemon,
+      instanceId: instance.id,
+      displayName: instanceView.displayName,
+      level: Number.isInteger(instance.level) ? instance.level : null,
+      manualIndex
+    };
+  }).filter(Boolean);
+}
+
+function compareCounterCandidates(first, second) {
+  if (first.score !== second.score) return second.score - first.score;
+  if (first.pokemon.level === null && second.pokemon.level !== null) return 1;
+  if (first.pokemon.level !== null && second.pokemon.level === null) return -1;
+  if (first.pokemon.level !== second.pokemon.level) return second.pokemon.level - first.pokemon.level;
+  return first.pokemon.manualIndex - second.pokemon.manualIndex;
+}
+
+function getBestCounter(opponent, ownedPokemon) {
+  return ownedPokemon
+    .map(pokemon => ({
+      pokemon,
+      score: getPokemonTypeAdvantageScore(pokemon.types, opponent.types)
+    }))
+    .sort(compareCounterCandidates)[0] ?? null;
+}
+
+function createCounterIdentity(pokemon, { label, href = '' } = {}) {
+  const identity = el(href ? 'a' : 'div', { className: 'team-counter-identity' });
+  if (href) identity.href = href;
+  const visual = el('span', { className: 'team-counter-visual' });
+  if (pokemon.spriteUrl) {
+    const image = document.createElement('img');
+    image.src = pokemon.spriteUrl;
+    image.alt = '';
+    image.loading = 'lazy';
+    visual.append(image);
+  } else visual.append(el('span', { className: 'muted', text: `#${pokemon.id}` }));
+  const content = el('span', { className: 'team-counter-content' });
+  content.append(
+    el('span', { className: 'muted team-counter-label', text: label }),
+    el('strong', { className: label === 'Against' ? 'team-counter-opponent-name' : 'team-counter-recommendation-name', text: pokemon.displayName }),
+    createTypeList(pokemon.types)
+  );
+  identity.append(visual, content);
+  return identity;
+}
+
+function getCounterResultLabel(score) {
+  if (score > 0) return `Type advantage +${score}`;
+  if (score < 0) return `Type disadvantage ${score}`;
+  return 'Even type matchup';
+}
+
+function createCounterMatchup(opponent, counter) {
+  const card = el('article', { className: 'panel team-counter-matchup' });
+  card.append(
+    createCounterIdentity(opponent, { label: 'Against' }),
+    createCounterIdentity(counter.pokemon, {
+      label: 'Best matchup',
+      href: `#my-pokemon/${encodeURIComponent(counter.pokemon.instanceId)}`
+    })
+  );
+  const level = counter.pokemon.level === null ? 'Level not set' : `Lv. ${counter.pokemon.level}`;
+  card.append(el('p', {
+    className: 'team-counter-result',
+    text: `${getCounterResultLabel(counter.score)} · ${level}`
+  }));
+  return card;
+}
+
+function createCounterRecommendations(team) {
+  const section = el('section', { className: 'team-counter-recommendations' });
+  section.append(
+    el('h3', { className: 'team-counter-title', text: 'Best matchups from My Pokémon' }),
+    el('p', { className: 'muted team-counter-intro', text: 'Ranked by type advantage, then level.' })
+  );
+  const opponentPokemon = getResolvedTeamPokemon(team);
+  if (opponentPokemon.length !== team.memberIds.length) {
+    section.append(el('p', { className: 'muted', text: getTeamResolutionMessage(team) }));
+    return section;
+  }
+  if (!opponentPokemon.length) {
+    section.append(el('p', { className: 'panel muted', text: 'Add Pokémon to this opponent team to compare matchups.' }));
+    return section;
+  }
+  const ownedInstances = getEligibleMyPokemon();
+  if (!ownedInstances.length) {
+    section.append(el('p', { className: 'panel muted', text: 'Add an available Pokémon to My Pokémon to see recommendations.' }));
+    return section;
+  }
+  const ownedPokemon = getResolvedMyPokemon(ownedInstances);
+  if (ownedPokemon.length !== ownedInstances.length) {
+    section.append(el('p', { className: 'muted', text: getResolutionMessage(ownedInstances.map(instance => instance.id)) }));
+    return section;
+  }
+  for (const opponent of opponentPokemon) {
+    const counter = getBestCounter(opponent, ownedPokemon);
+    if (counter) section.append(createCounterMatchup(opponent, counter));
+  }
+  return section;
+}
+
 async function loadTeamPokemon(team, render) {
   const versionGroup = state.settings.gameVersionGroup;
-  const unresolved = team.memberIds.filter(instanceId => getPokemonInstanceView(instanceId)?.status === 'idle');
-  if (!unresolved.length) return;
-  await Promise.allSettled(unresolved.map(resolvePokemonInstance));
+  const relevantIds = [...team.memberIds];
+  if (activeTeamDetailMode === 'advantage' && team.isOpponent) {
+    relevantIds.push(...getEligibleMyPokemon().map(instance => instance.id));
+  }
+  const pending = [...new Set(relevantIds)].filter(instanceId => {
+    const status = getPokemonInstanceView(instanceId)?.status;
+    return status === 'idle' || status === 'loading';
+  });
+  if (!pending.length) return;
+  await Promise.allSettled(pending.map(resolvePokemonInstance));
   if (state.route === 'team'
     && state.routeParams.teamId === team.id
     && state.settings.gameVersionGroup === versionGroup
@@ -266,7 +391,12 @@ export function renderTeamDetail(container, render) {
   heading.append(el('h2', { className: `team-detail-title${team.isOpponent ? ' team-detail-title-opponent' : ''}`, text: team.title }));
   heading.append(createTeamActionsButton(team, heading, render, { onDelete: () => { location.hash = 'teams'; } }));
   page.append(heading, createTeamDetailTabs(render));
-  if (activeTeamDetailMode === 'members') page.append(createRoster(team, render)); else if (activeTeamDetailMode === 'matchups') page.append(createAnalysis(team, render)); else page.append(createOverallMatchupMatrix(team));
+  if (activeTeamDetailMode === 'members') page.append(createRoster(team, render));
+  else if (activeTeamDetailMode === 'matchups') page.append(createAnalysis(team, render));
+  else {
+    page.append(createOverallMatchupMatrix(team));
+    if (team.isOpponent) page.append(createCounterRecommendations(team));
+  }
   container.replaceChildren(page);
   if (activeTeamDetailMode !== 'members') void loadTeamPokemon(team, render);
 }

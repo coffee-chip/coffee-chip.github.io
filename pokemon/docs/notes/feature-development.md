@@ -24,6 +24,7 @@
 - Offense/Defense remain mutually exclusive, but the two relationship filters within the active mode can be selected independently and displayed together. Cells use one success/danger dot because the relationship predicates are mutually exclusive per cell.
 - Team detail has top-level Members / Matchups / Advantage tabs so the roster, raw matchup matrix, and overall advantage matrix are shown separately.
 - Overall advantage matrix uses the combined advantage score. Ordinary teams show positive-score green dots; opponent teams show negative-score red dots. Dot intensity buckets are magnitude 1, 2, and 3+.
+- Opponent teams extend the Advantage tab with one recommended My Pokémon matchup per opponent. Recommendations use the same game-aware Pokémon advantage score, then level from high to low, then manual My Pokémon order. Only My Pokémon available in the selected game are eligible, and recommendation links open that owned entry's detail page.
 - Offensive analysis intentionally assumes same-type attack coverage but does not apply STAB.
 - Team and My Pokémon views resolve their shared instances through the existing Pokémon repository, so game-aware species data and type logic are not duplicated in instance storage.
 - Matchup matrices are intentionally compact: the type column is icon-only, Pokémon names are vertical, images shrink to fit, and horizontal scrolling remains available only as overflow fallback.

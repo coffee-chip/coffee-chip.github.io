@@ -6,6 +6,8 @@ const DATABASE_VERSION = 2;
 function seededAppState() {
   const instanceId = 'ci-owned-bulbasaur';
   const secondInstanceId = 'ci-owned-squirtle';
+  const fireOpponentId = 'ci-opponent-charmander';
+  const rockOpponentId = 'ci-opponent-geodude';
   return {
     version: 14,
     settings: {
@@ -19,13 +21,15 @@ function seededAppState() {
     starredMoves: [],
     recentPokemonIds: [],
     pokemonInstances: {
-      [instanceId]: { id: instanceId, speciesId: 1, nickname: 'Sprout', level: 12, currentMoves: ['tackle'] },
-      [secondInstanceId]: { id: secondInstanceId, speciesId: 7, nickname: 'Shell', level: 30, currentMoves: ['tackle'] }
+      [instanceId]: { id: instanceId, speciesId: 1, nickname: 'Sprout', level: 50, currentMoves: ['tackle'] },
+      [secondInstanceId]: { id: secondInstanceId, speciesId: 7, nickname: 'Shell', level: 30, currentMoves: ['tackle'] },
+      [fireOpponentId]: { id: fireOpponentId, speciesId: 4, nickname: 'Blaze', level: 20, currentMoves: [] },
+      [rockOpponentId]: { id: rockOpponentId, speciesId: 74, nickname: 'Pebble', level: 20, currentMoves: [] }
     },
     myPokemonIds: [instanceId, secondInstanceId],
     teams: [
       { id: 'my-team', title: 'My team', isOpponent: false, rivalTeamId: null, memberIds: [instanceId] },
-      { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, memberIds: [] }
+      { id: 'opponents', title: 'Opponents', isOpponent: true, rivalTeamId: null, memberIds: [fireOpponentId, rockOpponentId] }
     ]
   };
 }
@@ -39,7 +43,9 @@ function seededPokemon() {
   });
   return [
     record({ id: 1, name: 'bulbasaur', displayName: 'Bulbasaur', types: ['grass', 'poison'] }),
-    record({ id: 7, name: 'squirtle', displayName: 'Squirtle', types: ['water'] })
+    record({ id: 4, name: 'charmander', displayName: 'Charmander', types: ['fire'] }),
+    record({ id: 7, name: 'squirtle', displayName: 'Squirtle', types: ['water'] }),
+    record({ id: 74, name: 'geodude', displayName: 'Geodude', types: ['rock', 'ground'] })
   ];
 }
 
@@ -93,8 +99,8 @@ async function expectOwnedPokemon(page) {
 async function expectTeams(page) {
   await expect(page).toHaveURL(/#teams$/);
   await expect(page.locator('.teams-page')).toBeVisible();
-  await expect(page.locator('.team-pokemon-slot img')).toHaveCount(1);
-  await expect(page.locator('.team-pokemon-slot')).toHaveAttribute('aria-label', 'Sprout');
+  await expect(page.locator('.team-pokemon-slot img')).toHaveCount(3);
+  await expect(page.locator('.team-pokemon-slot').first()).toHaveAttribute('aria-label', 'Sprout');
 }
 
 test('a populated team remains navigable and hydrated across repeated route changes', async ({ page }) => {
@@ -131,17 +137,17 @@ test('a populated team remains navigable and hydrated across repeated route chan
 
   const sort = page.getByRole('combobox', { name: 'Sort' });
   await sort.selectOption('level-descending');
-  await expect(page.locator('.owned-pokemon-name')).toHaveText(['Shell', 'Sprout']);
+  await expect(page.locator('.owned-pokemon-name')).toHaveText(['Sprout', 'Shell']);
   await expect(page.locator('.owned-pokemon-drag-handle').first()).toHaveAttribute('aria-disabled', 'true');
   await sort.selectOption('level-ascending');
-  await expect(page.locator('.owned-pokemon-name')).toHaveText(['Sprout', 'Shell']);
+  await expect(page.locator('.owned-pokemon-name')).toHaveText(['Shell', 'Sprout']);
   await sort.selectOption('advantage');
   const firstType = page.getByRole('combobox', { name: 'First type' });
   const secondType = page.getByRole('combobox', { name: 'Second type (optional)' });
   await expect(firstType).toBeVisible();
   await expect(secondType).toBeDisabled();
   await firstType.selectOption('normal');
-  await expect(page.locator('.owned-pokemon-name')).toHaveText(['Shell', 'Sprout']);
+  await expect(page.locator('.owned-pokemon-name')).toHaveText(['Sprout', 'Shell']);
   await firstType.selectOption('fire');
   await expect(page.locator('.owned-pokemon-name')).toHaveText(['Shell', 'Sprout']);
   await expect(secondType).toBeEnabled();
@@ -167,6 +173,18 @@ test('a populated team remains navigable and hydrated across repeated route chan
   await page.getByRole('link', { name: 'Open My team' }).click();
   await expect(page).toHaveURL(/#team\/my-team$/);
   await expect(page.locator('.team-detail-member-name')).toHaveText('Sprout');
+
+  await page.locator('.team-detail-back').click();
+  await expectTeams(page);
+  await page.getByRole('link', { name: 'Open Opponents' }).click();
+  await expect(page).toHaveURL(/#team\/opponents$/);
+  await page.getByRole('tab', { name: 'Advantage' }).click();
+  await expect(page.locator('.team-counter-opponent-name')).toHaveText(['Blaze', 'Pebble']);
+  await expect(page.locator('.team-counter-recommendation-name')).toHaveText(['Shell', 'Sprout']);
+  await expect(page.locator('.team-counter-result')).toHaveText([
+    'Type advantage +2 · Lv. 30',
+    'Type advantage +2 · Lv. 50'
+  ]);
 
   await page.getByRole('link', { name: 'Progress' }).click();
   await expect(page).toHaveURL(/#progress$/);
