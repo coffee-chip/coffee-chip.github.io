@@ -9,3 +9,6 @@ form>.form-grid+button{margin-top:var(--form-field-gap)}
 #category-form>.allocation-preview{margin-top:var(--form-field-gap)}
 #category-form>.allocation-preview+button{margin-top:var(--form-field-gap)}
 .transaction-edit-form{row-gap:var(--form-field-gap)}
+
+.manage-categories-link{display:inline-block;margin-top:24px;font-weight:700;text-decoration:none}
+.manage-categories-link:hover{text-decoration:underline}
