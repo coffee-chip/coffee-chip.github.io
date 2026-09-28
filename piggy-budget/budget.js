@@ -1,14 +1,21 @@
 export const STORAGE_KEY = 'piggy-budget-v1';
-export const emptyBudget = () => ({ categories: [], supercategories: [], purchases: [], dayOffset: 0 });
+export const emptyBudget = () => ({ categories: [], supercategories: [], purchases: [], transfers: [], dayOffset: 0 });
 
 export function withSupercategories(saved) {
-  if (Array.isArray(saved.supercategories)) return saved;
-  if (!saved.categories.length) return { ...saved, supercategories: [] };
+  const normalized = {
+    ...saved,
+    categories: Array.isArray(saved.categories) ? saved.categories : [],
+    purchases: Array.isArray(saved.purchases) ? saved.purchases : [],
+    transfers: Array.isArray(saved.transfers) ? saved.transfers : [],
+    dayOffset: Number.isSafeInteger(saved.dayOffset) && saved.dayOffset >= 0 ? saved.dayOffset : 0
+  };
+  if (Array.isArray(saved.supercategories)) return normalized;
+  if (!normalized.categories.length) return { ...normalized, supercategories: [] };
   const id = 'general';
   return {
-    ...saved,
-    supercategories: [{ id, name: 'General', monthlyCents: saved.categories.reduce((sum, category) => sum + currentMonthly(category), 0) }],
-    categories: saved.categories.map((category) => ({ ...category, supercategoryId: id }))
+    ...normalized,
+    supercategories: [{ id, name: 'General', monthlyCents: normalized.categories.reduce((sum, category) => sum + currentMonthly(category), 0) }],
+    categories: normalized.categories.map((category) => ({ ...category, supercategoryId: id }))
   };
 }
 
@@ -43,7 +50,7 @@ export function currentMonthly(category) {
   return category.changes[category.changes.length - 1].monthlyCents;
 }
 
-export function balanceFor(category, purchases, today = localDay()) {
+export function balanceFor(category, purchases, today = localDay(), transfers = []) {
   let balance = category.startingCents;
   let changeIndex = 0;
   let purchaseIndex = 0;
@@ -64,6 +71,11 @@ export function balanceFor(category, purchases, today = localDay()) {
     while (purchaseIndex < purchasesByDay.length && purchasesByDay[purchaseIndex].day === date) {
       balance -= purchasesByDay[purchaseIndex++].amountCents;
     }
+    for (const transfer of transfers) {
+      if (transfer.day !== date) continue;
+      if (transfer.fromCategoryId === category.id) balance -= transfer.amountCents;
+      if (transfer.toCategoryId === category.id) balance += transfer.amountCents;
+    }
   }
   return balance;
 }
@@ -71,6 +83,15 @@ export function balanceFor(category, purchases, today = localDay()) {
 export function netSpentFor(category, purchases, today = localDay()) {
   return purchases.reduce((total, purchase) =>
     total + (purchase.categoryId === category.id && purchase.day <= today ? purchase.amountCents : 0), 0);
+}
+
+export function netTransfersFor(category, transfers, today = localDay()) {
+  return transfers.reduce((total, transfer) => {
+    if (transfer.day > today) return total;
+    if (transfer.fromCategoryId === category.id) return total - transfer.amountCents;
+    if (transfer.toCategoryId === category.id) return total + transfer.amountCents;
+    return total;
+  }, 0);
 }
 
 export const dollars = (amountCents) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountCents / 100);
