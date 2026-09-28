@@ -42,7 +42,7 @@
         <h2>Add group</h2>
         <form id="group-form"><div class="form-grid">
           <label>Name<input name="name" maxlength="40" placeholder="Hobbies" required></label>
-          <label>Total allocation ($)<input name="total" type="number" min="0" step="0.01" placeholder="100.00" required></label>
+          <label>Total allocation per interval ($)<input name="total" type="number" min="0" step="0.01" placeholder="100.00" required></label>
         </div><button type="submit">Save group</button><p id="group-message" class="form-message" role="status"></p></form>
       </section>
       <section class="panel add-category-panel" id="add-category-panel" hidden>
@@ -51,7 +51,7 @@
           <div class="name-icon-row"><label>Name<input name="name" maxlength="40" placeholder="Clothes, games, crafts…" required></label><label>Emoji icon<input name="icon" type="text" maxlength="64" value="🐷" required></label></div>
           <div class="form-grid">
             <label>Group<select name="groupId" required></select></label>
-            <label>Allocation ($)<input name="allocation" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="50.00" required></label>
+            <label>Allocation per interval ($)<input name="allocation" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="50.00" required></label>
             <label>Starting funds<select name="startingMultiplier"></select></label>
           </div>
           <p id="new-category-preview" class="allocation-preview" role="status"></p>
