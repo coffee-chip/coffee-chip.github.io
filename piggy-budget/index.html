@@ -15,15 +15,15 @@
   <div class="app-shell">
     <header class="site-header">
       <a class="brand" href="./?v=21" aria-label="Piggy Budget home"><span class="brand-mark" aria-hidden="true">●</span> Piggy Budget</a>
-      <nav aria-label="Main navigation"><a href="./?v=21" aria-current="page">Home</a><a href="./settings.html?v=21">Settings</a></nav>
+      <nav aria-label="Main navigation"><a href="./?v=21" aria-current="page">Home</a><a class="nav-icon" href="./settings.html?v=21" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.25A3.75 3.75 0 1 0 12 15.75 3.75 3.75 0 0 0 12 8.25Zm8.1 3.75c0-.46-.04-.91-.12-1.35l2-1.56-2-3.46-2.47 1a8.2 8.2 0 0 0-2.34-1.35L14.8 2.6h-4l-.37 2.68a8.2 8.2 0 0 0-2.34 1.35l-2.47-1-2 3.46 2 1.56A7.8 7.8 0 0 0 5.5 12c0 .46.04.91.12 1.35l-2 1.56 2 3.46 2.47-1a8.2 8.2 0 0 0 2.34 1.35l.37 2.68h4l.37-2.68a8.2 8.2 0 0 0 2.34-1.35l2.47 1 2-3.46-2-1.56c.08-.44.12-.89.12-1.35Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></a></nav>
     </header>
     <main>
-      <section class="page-heading compact-heading"><h1>Your categories</h1></section>
+      <section class="page-heading compact-heading"><h1>Categories</h1></section>
       <section aria-label="Category balances">
         <div id="category-list" class="category-list"></div>
         <div class="home-actions">
-          <a class="add-category-link" href="./settings.html?v=21#add-category">+ Add category</a>
-          <button type="button" id="transfer-toggle" class="text-button" aria-expanded="false" aria-controls="transfer-panel">Transfer between categories</button>
+          <a class="button-link add-category-link" href="./settings.html?v=21#add-category">+ Add category</a>
+          <button type="button" id="transfer-toggle" class="secondary-button" aria-expanded="false" aria-controls="transfer-panel">Transfer between categories</button>
         </div>
         <section class="panel transfer-panel" id="transfer-panel" aria-labelledby="transfer-title" hidden>
           <h2 id="transfer-title">Transfer between categories</h2>
