@@ -151,6 +151,16 @@ function supercategoryOptions(select, selected = '') {
   select.value = selected || budget.supercategories[0]?.id || '';
 }
 
+function categoryOptions(select, selected = '') {
+  select.replaceChildren();
+  for (const category of budget.categories) {
+    const option = element('option', '', `${category.icon || DEFAULT_ICON} ${category.name}`);
+    option.value = category.id;
+    select.append(option);
+  }
+  if (selected && budget.categories.some((category) => category.id === selected)) select.value = selected;
+}
+
 function renderHome() {
   const list = document.querySelector('#category-list');
   if (!list) return;
@@ -414,38 +424,147 @@ function renderTransactions() {
     document.title = 'Transactions · Piggy Budget';
     return;
   }
+
   heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   document.title = `${category.name} transactions · Piggy Budget`;
   const remaining = balanceFor(category, budget.purchases, budgetDay(), budget.transfers);
   const spent = netSpentFor(category, budget.purchases, budgetDay());
+  const transferEffect = netTransfersFor(category, budget.transfers, budgetDay());
+  const accumulated = remaining + spent - transferEffect;
   summary.replaceChildren();
   for (const [term, value] of [
     ['Budgeting since', formatDay(category.createdDay)],
-    ['Total accumulated', dollars(remaining + spent)],
+    ['Total accumulated', dollars(accumulated)],
     ['Total spent', dollars(spent)],
     ['Remaining', dollars(remaining)]
   ]) {
-    const row = element('div');
-    row.append(element('dt', '', term), element('dd', '', value));
-    summary.append(row);
+    const stat = element('div');
+    stat.append(element('dt', '', term), element('dd', '', value));
+    summary.append(stat);
   }
-  const transactions = budget.purchases.filter((entry) => entry.categoryId === id)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  if (!transactions.length) list.append(element('p', 'muted', 'No transactions in this category yet.'));
-  for (const transaction of transactions) {
+
+  const entries = [
+    ...budget.purchases.filter((entry) => entry.categoryId === id).map((item) => ({ kind: 'purchase', item })),
+    ...budget.transfers.filter((entry) => entry.fromCategoryId === id || entry.toCategoryId === id).map((item) => ({ kind: 'transfer', item }))
+  ].sort((a, b) => (b.item.createdAt || b.item.day).localeCompare(a.item.createdAt || a.item.day));
+
+  if (!entries.length) list.append(element('p', 'muted', 'No transactions in this category yet.'));
+
+  for (const entry of entries) {
+    if (entry.kind === 'transfer') {
+      const transfer = entry.item;
+      const outgoing = transfer.fromCategoryId === id;
+      const otherId = outgoing ? transfer.toCategoryId : transfer.fromCategoryId;
+      const other = budget.categories.find((candidate) => candidate.id === otherId);
+      const row = element('div', 'purchase-row transfer-row');
+      const details = element('div');
+      details.append(element('strong', '', transfer.note || `Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'deleted category'}`));
+      details.append(element('small', '', `${formatDay(transfer.day)} · Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'category'}`));
+      row.append(details, element('span', `purchase-amount${outgoing ? '' : ' refund-amount'}`, `${outgoing ? '−' : '+'}${dollars(transfer.amountCents)}`));
+      const actions = element('div', 'transaction-actions');
+      const remove = element('button', 'text-button', 'Remove');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', `Remove transfer of ${dollars(transfer.amountCents)}`);
+      remove.addEventListener('click', () => {
+        const message = document.querySelector('#transaction-message');
+        if (save({ ...budget, transfers: budget.transfers.filter((candidate) => candidate.id !== transfer.id) }, message)) renderTransactions();
+      });
+      actions.append(remove);
+      row.append(actions);
+      list.append(row);
+      continue;
+    }
+
+    const transaction = entry.item;
     const row = element('div', 'purchase-row');
     const details = element('div');
     const refund = transaction.amountCents < 0;
     details.append(element('strong', '', transaction.note || (refund ? 'Refund' : 'Purchase')));
     details.append(element('small', '', `${formatDay(transaction.day)} · ${refund ? 'Refund' : 'Purchase'}`));
     row.append(details, element('span', `purchase-amount${refund ? ' refund-amount' : ''}`, `${refund ? '+' : '−'}${dollars(Math.abs(transaction.amountCents))}`));
+
+    const actions = element('div', 'transaction-actions');
+    const edit = element('button', 'text-button', 'Edit');
+    edit.type = 'button';
     const remove = element('button', 'text-button', 'Remove');
     remove.type = 'button';
     remove.setAttribute('aria-label', `Remove ${refund ? 'refund' : 'purchase'} of ${dollars(Math.abs(transaction.amountCents))}`);
     remove.addEventListener('click', () => {
-      if (save({ ...budget, purchases: budget.purchases.filter((entry) => entry.id !== transaction.id) }, document.querySelector('#transaction-message'))) renderTransactions();
+      if (save({ ...budget, purchases: budget.purchases.filter((candidate) => candidate.id !== transaction.id) }, document.querySelector('#transaction-message'))) renderTransactions();
     });
-    row.append(remove);
+    actions.append(edit, remove);
+    row.append(actions);
+
+    const form = element('form', 'transaction-edit-form');
+    form.hidden = true;
+    const amountLabel = inputLabel('Amount ($)', 'amount', { type: 'number', min: '0.01', step: '0.01', inputMode: 'decimal', required: true });
+    amountLabel.querySelector('input').value = (Math.abs(transaction.amountCents) / 100).toFixed(2);
+    const noteLabel = inputLabel('Description (optional)', 'note', { maxLength: 100 });
+    noteLabel.querySelector('input').value = transaction.note || '';
+    const dayLabel = inputLabel('Date', 'day', { type: 'date', required: true });
+    const dayInput = dayLabel.querySelector('input');
+    dayInput.value = transaction.day;
+    dayInput.max = budgetDay();
+    const categoryLabel = element('label', '', 'Category');
+    const categorySelect = element('select');
+    categorySelect.name = 'categoryId';
+    categoryOptions(categorySelect, transaction.categoryId);
+    categoryLabel.append(categorySelect);
+    const refundLabel = element('label', 'checkbox-label');
+    const refundInput = element('input');
+    refundInput.type = 'checkbox';
+    refundInput.name = 'refund';
+    refundInput.checked = refund;
+    refundLabel.append(refundInput, document.createTextNode('Refund'));
+    const editMessage = element('p', 'form-message');
+    editMessage.setAttribute('role', 'status');
+    const buttons = element('div', 'edit-buttons');
+    const saveButton = element('button', '', 'Save changes');
+    saveButton.type = 'submit';
+    const cancelButton = element('button', 'secondary-button', 'Cancel');
+    cancelButton.type = 'button';
+    buttons.append(saveButton, cancelButton);
+    form.append(amountLabel, noteLabel, dayLabel, categoryLabel, refundLabel, buttons, editMessage);
+    row.append(form);
+
+    const updateDateMinimum = () => {
+      const selected = budget.categories.find((candidate) => candidate.id === categorySelect.value);
+      dayInput.min = selected?.createdDay || '';
+    };
+    categorySelect.addEventListener('change', updateDateMinimum);
+    updateDateMinimum();
+
+    edit.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+      edit.setAttribute('aria-expanded', String(!form.hidden));
+      if (!form.hidden) amountLabel.querySelector('input').focus();
+    });
+    cancelButton.addEventListener('click', () => {
+      form.hidden = true;
+      edit.setAttribute('aria-expanded', 'false');
+      edit.focus();
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const amountCents = cents(amountLabel.querySelector('input').value);
+      const categoryId = categorySelect.value;
+      const targetCategory = budget.categories.find((candidate) => candidate.id === categoryId);
+      const day = dayInput.value;
+      if (amountCents === null || !targetCategory || !validDay(day) || day < targetCategory.createdDay || day > budgetDay()) {
+        editMessage.textContent = 'Enter a valid amount, category, and date within that category’s budget history.';
+        return;
+      }
+      const updated = {
+        ...transaction,
+        categoryId,
+        amountCents: refundInput.checked ? -amountCents : amountCents,
+        note: noteLabel.querySelector('input').value.trim(),
+        day
+      };
+      const next = { ...budget, purchases: budget.purchases.map((candidate) => candidate.id === transaction.id ? updated : candidate) };
+      if (save(next, editMessage)) renderTransactions();
+    });
+
     list.append(row);
   }
 }
