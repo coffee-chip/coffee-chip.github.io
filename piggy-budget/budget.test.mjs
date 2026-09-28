@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allocatedFor, balanceFor, netSpentFor, withSupercategories } from './budget.js';
+import { allocatedFor, balanceFor, netSpentFor, netTransfersFor, withSupercategories } from './budget.js';
 
 const category = (id, monthlyCents, supercategoryId) => ({ id, supercategoryId, changes: [{ day: '2026-09-28', monthlyCents }] });
 
@@ -32,4 +32,22 @@ test('accumulated equals remaining plus spending net of refunds', () => {
   const spent = netSpentFor(bucket, purchases, '2026-09-29');
   assert.equal(spent, 900);
   assert.equal(remaining + spent, 3100);
+});
+
+
+test('old budgets gain an empty transfer list', () => {
+  const upgraded = withSupercategories({ categories: [], supercategories: [], purchases: [], dayOffset: 0 });
+  assert.deepEqual(upgraded.transfers, []);
+});
+
+test('transfers move balance without changing spending', () => {
+  const clothes = { ...category('clothes', 3000, 'general'), createdDay: '2026-09-28', startingCents: 3000 };
+  const games = { ...category('games', 3000, 'general'), createdDay: '2026-09-28', startingCents: 1000 };
+  const transfers = [{ id: 't1', fromCategoryId: 'clothes', toCategoryId: 'games', amountCents: 750, day: '2026-09-28', createdAt: '2026-09-28T12:00:00.000Z' }];
+  assert.equal(balanceFor(clothes, [], '2026-09-28', transfers), 2250);
+  assert.equal(balanceFor(games, [], '2026-09-28', transfers), 1750);
+  assert.equal(netTransfersFor(clothes, transfers, '2026-09-28'), -750);
+  assert.equal(netTransfersFor(games, transfers, '2026-09-28'), 750);
+  assert.equal(netSpentFor(clothes, [], '2026-09-28'), 0);
+  assert.equal(netSpentFor(games, [], '2026-09-28'), 0);
 });
