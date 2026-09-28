@@ -1,7 +1,7 @@
 import {
   STORAGE_KEY, INTERVALS, emptyBudget, normalizeBudget, allocatedForGroup, localDay, addDays,
   cents, balanceFor, netSpentFor, netTransfersFor, currentAllocation, currentInterval, dailyAccrual, dollars
-} from './budget.js?v=18';
+} from './budget.js?v=19';
 
 const DEFAULT_ICON = '🐷';
 const EDIT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.8 6.2 4 4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
@@ -134,7 +134,7 @@ function renderHome() {
     top.append(heading, element('p', `balance${categoryBalance < 0 ? ' negative' : ''}`, dollars(categoryBalance))); card.append(top);
     const actions = element('div', 'category-actions');
     const shake = element('button', 'secondary-button', 'Shake this piggy'); shake.type = 'button'; shake.ariaExpanded = 'false';
-    const history = element('a', 'history-link', 'View transactions'); history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=18`;
+    const history = element('a', 'history-link', 'View transactions'); history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=19`;
     actions.append(shake, history); card.append(actions);
     const form = element('form', 'spend-form'); form.hidden = true; form.id = `record-${category.id}`; shake.setAttribute('aria-controls', form.id);
     shake.addEventListener('click', () => { form.hidden = !form.hidden; shake.ariaExpanded = String(!form.hidden); if (!form.hidden) form.elements.namedItem('amount').focus(); });
