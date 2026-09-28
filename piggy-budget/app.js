@@ -104,7 +104,7 @@ function intervalLabel() {
 }
 
 function allocationDifference(allocated, target) {
-  const difference = allocated - target;
+  const difference = Math.round(allocated - target);
   return difference > 0
     ? `${dollars(difference)} over`
     : difference < 0
