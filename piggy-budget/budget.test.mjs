@@ -1,68 +1,89 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  INTERVALS, normalizeBudget, allocatedForGroup, balanceFor, netSpentFor,
-  netTransfersFor, currentInterval, dailyAccrual
+  INTERVALS, emptyBudget, allocatedForGroup, balanceFor, netSpentFor,
+  netTransfersFor, currentDaily, currentAllocation, groupAllocation,
+  dailyCentsFromInterval
 } from './budget.js';
 
-const category = (id, intervalCents, groupId = 'general') => ({
-  id, name: id, groupId, createdDay: '2026-09-28', startingCents: 0,
-  changes: [{ day: '2026-09-28', intervalCents }]
+const category = (id, dailyCents, groupId = 'general') => ({
+  id,
+  name: id,
+  groupId,
+  createdDay: '2026-09-28',
+  startingCents: 0,
+  changes: [{ day: '2026-09-28', dailyCents }]
 });
 
-test('legacy supercategories and monthly allocations migrate to groups and 30 days', () => {
-  const legacy = {
-    categories: [{ id: 'clothes', name: 'Clothes', supercategoryId: 'fun', createdDay: '2026-09-28', startingCents: 5000, changes: [{ day: '2026-09-28', monthlyCents: 5000 }] }],
-    supercategories: [{ id: 'fun', name: 'Fun', monthlyCents: 5000 }],
-    purchases: []
-  };
-  const upgraded = normalizeBudget(legacy);
-  assert.equal(upgraded.groups[0].intervalCents, 5000);
-  assert.equal(upgraded.categories[0].groupId, 'fun');
-  assert.equal(upgraded.categories[0].changes[0].intervalCents, 5000);
-  assert.equal(currentInterval(upgraded), '30-days');
+test('new budgets use the clean v2 shape and 30-day interval', () => {
+  const budget = emptyBudget();
+  assert.deepEqual(budget.groups, []);
+  assert.deepEqual(budget.categories, []);
+  assert.deepEqual(budget.purchases, []);
+  assert.deepEqual(budget.transfers, []);
+  assert.equal(budget.interval, '30-days');
+  assert.equal(budget.dayOffset, 0);
+});
+
+test('interval allocations derive from a constant daily rate', () => {
+  const item = category('games', 100);
+  assert.equal(currentDaily(item), 100);
+  assert.equal(currentAllocation(item, '2-weeks'), 1400);
+  assert.equal(currentAllocation(item, '4-weeks'), 2800);
+  assert.equal(currentAllocation(item, '30-days'), 3000);
+  assert.ok(Math.abs(currentAllocation(item, '1-month') - 100 * 365 / 12) < 1e-9);
+});
+
+test('entering equivalent interval budgets produces the same daily accrual', () => {
+  assert.equal(dailyCentsFromInterval(1400, '2-weeks'), 100);
+  assert.equal(dailyCentsFromInterval(2800, '4-weeks'), 100);
+  assert.equal(dailyCentsFromInterval(3000, '30-days'), 100);
+  assert.ok(Math.abs(dailyCentsFromInterval(100 * 365 / 12, '1-month') - 100) < 1e-9);
+});
+
+test('group targets change display amount with the interval while daily target stays constant', () => {
+  const group = { id: 'fun', name: 'Fun', dailyCents: 250 };
+  assert.equal(groupAllocation(group, '2-weeks'), 3500);
+  assert.equal(groupAllocation(group, '4-weeks'), 7000);
+  assert.equal(groupAllocation(group, '30-days'), 7500);
+  assert.ok(Math.abs(groupAllocation(group, '1-month') - 250 * 365 / 12) < 1e-9);
 });
 
 test('group allocation previews include changed, moved, and new categories', () => {
-  const categories = [category('clothes', 5000, 'needs'), category('games', 2000, 'fun')];
-  assert.equal(allocatedForGroup(categories, 'needs'), 5000);
-  assert.equal(allocatedForGroup(categories, 'needs', category('crafts', 3000, 'needs')), 8000);
-  assert.equal(allocatedForGroup(categories, 'needs', category('games', 4000, 'needs')), 9000);
-  assert.equal(allocatedForGroup(categories, 'fun', category('games', 4000, 'needs')), 0);
+  const categories = [category('clothes', 100, 'needs'), category('games', 50, 'fun')];
+  assert.equal(allocatedForGroup(categories, 'needs', '30-days'), 3000);
+  assert.equal(allocatedForGroup(categories, 'needs', '30-days', category('crafts', 25, 'needs')), 3750);
+  assert.equal(allocatedForGroup(categories, 'needs', '30-days', category('games', 75, 'needs')), 5250);
+  assert.equal(allocatedForGroup(categories, 'fun', '30-days', category('games', 75, 'needs')), 0);
 });
 
-test('daily accrual uses the selected budget interval', () => {
-  const item = category('games', 14000);
-  assert.equal(dailyAccrual(item, '2-weeks'), 1000);
-  assert.equal(dailyAccrual(item, '4-weeks'), 500);
-  assert.ok(Math.abs(dailyAccrual(item, '30-days') - 14000 / 30) < 1e-9);
-  assert.ok(Math.abs(dailyAccrual(item, '1-month') - 14000 * 12 / 365) < 1e-9);
-});
-
-test('interval changes affect future accrual without rewriting earlier days', () => {
-  const budget = normalizeBudget({
-    groups: [{ id: 'general', name: 'General', intervalCents: 3000 }],
-    categories: [{ ...category('clothes', 3000), startingCents: 0 }],
-    purchases: [], transfers: [],
-    intervalChanges: [{ day: '2026-09-28', interval: '30-days' }, { day: '2026-09-30', interval: '2-weeks' }]
-  });
-  const item = budget.categories[0];
-  assert.ok(Math.abs(balanceFor(item, [], budget, '2026-09-30') - 200) < 1e-9);
-  assert.ok(Math.abs(balanceFor(item, [], budget, '2026-10-01') - (200 + 3000 / 14)) < 1e-9);
+test('balance accrues the stored daily rate regardless of display interval', () => {
+  const item = { ...category('clothes', 100), startingCents: 1000 };
+  const budget30 = { groups: [], categories: [item], purchases: [], transfers: [], interval: '30-days', dayOffset: 0 };
+  const budget2w = { ...budget30, interval: '2-weeks' };
+  assert.equal(balanceFor(item, [], budget30, '2026-09-30'), 1200);
+  assert.equal(balanceFor(item, [], budget2w, '2026-09-30'), 1200);
 });
 
 test('transfers move balance without changing spending', () => {
-  const budget = normalizeBudget({
-    groups: [{ id: 'general', name: 'General', intervalCents: 6000 }],
-    categories: [
-      { ...category('clothes', 3000), startingCents: 3000 },
-      { ...category('games', 3000), startingCents: 1000 }
-    ],
+  const clothes = { ...category('clothes', 100), startingCents: 3000 };
+  const games = { ...category('games', 100), startingCents: 1000 };
+  const transfer = {
+    id: 't1',
+    fromCategoryId: 'clothes',
+    toCategoryId: 'games',
+    amountCents: 750,
+    day: '2026-09-28',
+    createdAt: '2026-09-28T12:00:00.000Z'
+  };
+  const budget = {
+    groups: [],
+    categories: [clothes, games],
     purchases: [],
-    transfers: [{ id: 't1', fromCategoryId: 'clothes', toCategoryId: 'games', amountCents: 750, day: '2026-09-28', createdAt: '2026-09-28T12:00:00.000Z' }],
-    intervalChanges: [{ day: '2026-09-28', interval: '30-days' }]
-  });
-  const clothes = budget.categories[0], games = budget.categories[1];
+    transfers: [transfer],
+    interval: '30-days',
+    dayOffset: 0
+  };
   assert.equal(balanceFor(clothes, [], budget, '2026-09-28'), 2250);
   assert.equal(balanceFor(games, [], budget, '2026-09-28'), 1750);
   assert.equal(netTransfersFor(clothes, budget.transfers, '2026-09-28'), -750);
@@ -70,6 +91,6 @@ test('transfers move balance without changing spending', () => {
   assert.equal(netSpentFor(clothes, [], '2026-09-28'), 0);
 });
 
-test('one month uses 365/12 days', () => {
+test('one month is 365/12 days', () => {
   assert.equal(INTERVALS['1-month'].days, 365 / 12);
 });
