@@ -43,7 +43,18 @@ p { line-height: 1.55; }
 .panel { padding: 28px; }
 .empty-state p { margin-top: 0; }
 .empty-state p { margin-bottom: 0; }
-.add-category-link { display: inline-block; margin-top: 18px; font-weight: 700; }
+.add-category-link { display: inline-block; font-weight: 700; }
+.home-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
+.home-actions .text-button { margin: 0; }
+.transfer-panel { max-width: 700px; margin-top: 18px; }
+.data-tools { max-width: 700px; margin-top: 30px; }
+.data-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.file-button { cursor: pointer; }
+.transaction-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.transaction-edit-form { flex-basis: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; margin-top: 12px; padding: 16px; border-radius: 10px; background: #fff; border: 1px solid #eadbd9; }
+.transaction-edit-form .checkbox-label, .transaction-edit-form .form-message, .transaction-edit-form .edit-buttons { grid-column: 1 / -1; }
+.edit-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.transfer-row .purchase-amount { color: #654f58; }
 .add-category-button { margin-top: 18px; }
 .add-category-panel { max-width: 700px; margin-top: 18px; }
 .name-icon-row { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 16px; }
@@ -112,7 +123,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .supercategory-summary, .setting-card { padding-left: 18px; padding-right: 18px; }
   .name-icon-row { grid-template-columns: minmax(0, 1fr) 120px; gap: 10px; }
   .form-grid { grid-template-columns: 1fr; gap: 0; }
-  .spend-form { grid-template-columns: 1fr; }
+  .spend-form, .transaction-edit-form { grid-template-columns: 1fr; }
   .bucket-top { align-items: start; }
   .bucket-top .balance { font-size: 1.5rem; }
   .purchase-row { gap: 8px; }
