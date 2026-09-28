@@ -51,8 +51,15 @@
       </section>
       <section class="rules" aria-labelledby="rules-title">
         <h2 id="rules-title">How the buckets work</h2>
-        <p>Each new day adds 1/30 of the monthly allocation. A bucket can hold up to three months of its current allocation. Purchases subtract from its balance; you can record a purchase even if it takes the balance below zero. Future daily additions bring it back up.</p>
-        <p>Starting funds can be 0, 1, 2, or 3 months. Changing an allocation affects future daily additions; it does not rewrite earlier spending or additions. The new three-month cap applies right away.</p>
+        <p>Each new day adds 1/30 of the monthly allocation. There is no limit on how much can accumulate over time. Purchases subtract from the balance; you can record a purchase even if it takes the balance below zero. Future daily additions bring it back up.</p>
+        <p>Starting funds can be 0, 1, 2, or 3 months of the initial allocation. Changing an allocation affects future daily additions; it does not rewrite earlier spending or additions.</p>
+      </section>
+      <section class="panel developer-tools" aria-labelledby="developer-title">
+        <h2 id="developer-title">Developer tools</h2>
+        <p>Advance the budget date by one day to see each bucket receive one daily addition. This advances all categories and is saved in this browser.</p>
+        <p id="simulation-status" class="muted"></p>
+        <button type="button" id="advance-day">Advance day</button>
+        <p id="advance-message" class="form-message" role="status"></p>
       </section>
       <p class="storage-note">Data stays in this browser on this device. Clearing site data removes it.</p>
     </main>

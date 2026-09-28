@@ -61,6 +61,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .secondary-button:hover { color: #fff; }
 .rules { max-width: 700px; margin: 48px 0 0; }
 .rules p { color: #685962; }
+.developer-tools { max-width: 700px; margin-top: 30px; }
+.developer-tools p { margin-top: 0; color: #685962; }
+.developer-tools .form-message { margin-top: 12px; color: #803750; }
 .storage-note { margin-top: 44px; color: #766b70; font-size: .82rem; }
 @media (max-width: 600px) {
   .app-shell { padding: 0 18px 36px; }

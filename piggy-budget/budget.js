@@ -1,5 +1,5 @@
 export const STORAGE_KEY = 'piggy-budget-v1';
-export const emptyBudget = () => ({ categories: [], purchases: [] });
+export const emptyBudget = () => ({ categories: [], purchases: [], dayOffset: 0 });
 
 export function localDay(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -10,9 +10,13 @@ function dayNumber(day) {
   return Math.floor(Date.UTC(year, month - 1, date) / 86400000);
 }
 
+export function addDays(day, count) {
+  return new Date((dayNumber(day) + count) * 86400000).toISOString().slice(0, 10);
+}
+
 export function cents(value) {
   const amount = Number(value);
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000 || !Number.isInteger(Math.round(amount * 100))) return null;
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000) return null;
   const rounded = Math.round(amount * 100);
   return Math.abs(amount * 100 - rounded) < 0.000001 ? rounded : null;
 }
@@ -30,7 +34,7 @@ export function balanceFor(category, purchases, today = localDay()) {
     .sort((a, b) => a.day.localeCompare(b.day));
   const start = dayNumber(category.createdDay);
   const end = dayNumber(today);
-  if (end < start) return Math.min(balance, monthly * 3);
+  if (end < start) return balance;
 
   for (let day = start; day <= end; day++) {
     // Yesterday's allocation funds today; a change today affects tomorrow's addition.
@@ -38,7 +42,6 @@ export function balanceFor(category, purchases, today = localDay()) {
     while (changeIndex + 1 < category.changes.length && dayNumber(category.changes[changeIndex + 1].day) <= day) {
       monthly = category.changes[++changeIndex].monthlyCents;
     }
-    balance = Math.min(balance, monthly * 3);
     const date = new Date(day * 86400000).toISOString().slice(0, 10);
     while (purchaseIndex < purchasesByDay.length && purchasesByDay[purchaseIndex].day === date) {
       balance -= purchasesByDay[purchaseIndex++].amountCents;

@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, localDay, cents, balanceFor, currentMonthly, dollars } from './budget.js';
+import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js';
 
 function load() {
   try {
@@ -11,12 +11,17 @@ function load() {
 }
 
 let budget = load();
+function budgetDay() {
+  return addDays(localDay(), Number.isSafeInteger(budget.dayOffset) && budget.dayOffset >= 0 ? budget.dayOffset : 0);
+}
+
 const dateElement = document.querySelector('#current-date');
 function updateDate() {
   if (!dateElement) return;
-  const now = new Date();
-  dateElement.dateTime = localDay(now);
-  dateElement.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(now);
+  const day = budgetDay();
+  dateElement.dateTime = day;
+  dateElement.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(new Date(`${day}T12:00:00`));
+  document.querySelector('#advance-indicator').textContent = budget.dayOffset ? ` · ${budget.dayOffset} day${budget.dayOffset === 1 ? '' : 's'} advanced` : '';
 }
 updateDate();
 
@@ -56,11 +61,11 @@ function renderHome() {
     grid.append(empty);
   }
   for (const category of categories) {
-    const balance = balanceFor(category, budget.purchases, localDay());
+    const balance = balanceFor(category, budget.purchases, budgetDay());
     const card = element('article', 'bucket-card');
     card.append(element('h3', '', category.name));
     card.append(element('p', `balance${balance < 0 ? ' negative' : ''}`, dollars(balance)));
-    card.append(element('p', 'bucket-detail', `${dollars(currentMonthly(category))}/month · cap ${dollars(currentMonthly(category) * 3)}`));
+    card.append(element('p', 'bucket-detail', `${dollars(currentMonthly(category))}/month · ${dollars(currentMonthly(category) / 30)}/day`));
     grid.append(card);
     const option = element('option', '', category.name);
     option.value = category.id;
@@ -102,7 +107,7 @@ function renderSettings() {
   for (const category of budget.categories) {
     const card = element('div', 'panel setting-card');
     const heading = element('h3', '', category.name);
-    const balance = element('p', 'muted', `Available now: ${dollars(balanceFor(category, budget.purchases, localDay()))}`);
+    const balance = element('p', 'muted', `Available on budget date: ${dollars(balanceFor(category, budget.purchases, budgetDay()))}`);
     const form = element('form', 'edit-form');
     const label = element('label', '', 'Monthly allocation ($)');
     const input = element('input');
@@ -120,8 +125,8 @@ function renderSettings() {
       if (monthlyCents === null) { message.textContent = 'Enter an amount above $0, with at most two decimal places.'; return; }
       if (monthlyCents === currentMonthly(category)) { message.textContent = 'Allocation is already set to that amount.'; return; }
       const changes = [...category.changes];
-      if (changes.at(-1).day === localDay()) changes[changes.length - 1] = { day: localDay(), monthlyCents };
-      else changes.push({ day: localDay(), monthlyCents });
+      if (changes.at(-1).day === budgetDay()) changes[changes.length - 1] = { day: budgetDay(), monthlyCents };
+      else changes.push({ day: budgetDay(), monthlyCents });
       const next = { ...budget, categories: budget.categories.map((item) => item.id === category.id ? { ...item, changes } : item) };
       if (save(next, message)) { renderSettings(); }
     });
@@ -148,9 +153,9 @@ if (categoryForm) {
       return;
     }
     const category = {
-      id: crypto.randomUUID(), name, createdDay: localDay(),
+      id: crypto.randomUUID(), name, createdDay: budgetDay(),
       startingCents: startingMonths * monthlyCents,
-      changes: [{ day: localDay(), monthlyCents }]
+      changes: [{ day: budgetDay(), monthlyCents }]
     };
     if (save({ ...budget, categories: [...budget.categories, category] }, message)) {
       categoryForm.reset();
@@ -175,7 +180,7 @@ if (purchaseForm) {
     }
     const purchase = {
       id: crypto.randomUUID(), categoryId, amountCents,
-      note: String(data.get('note')).trim(), day: localDay(), createdAt: new Date().toISOString()
+      note: String(data.get('note')).trim(), day: budgetDay(), createdAt: new Date().toISOString()
     };
     if (save({ ...budget, purchases: [...budget.purchases, purchase] }, message)) {
       purchaseForm.reset();
@@ -187,11 +192,30 @@ if (purchaseForm) {
   renderHome();
 }
 
+const advanceButton = document.querySelector('#advance-day');
+function renderSimulation() {
+  const status = document.querySelector('#simulation-status');
+  if (!status) return;
+  const advanced = budget.dayOffset || 0;
+  status.textContent = `Budget date: ${budgetDay()} · ${advanced} day${advanced === 1 ? '' : 's'} advanced`;
+}
+if (advanceButton) {
+  advanceButton.addEventListener('click', () => {
+    const message = document.querySelector('#advance-message');
+    if (save({ ...budget, dayOffset: (budget.dayOffset || 0) + 1 }, message)) {
+      renderSettings();
+      renderSimulation();
+      message.textContent = 'All buckets advanced by one day.';
+    }
+  });
+  renderSimulation();
+}
+
 window.addEventListener('storage', (event) => {
-  if (event.key === STORAGE_KEY) { budget = load(); renderHome(); renderSettings(); }
+  if (event.key === STORAGE_KEY) { budget = load(); updateDate(); renderHome(); renderSettings(); renderSimulation(); }
 });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { updateDate(); renderHome(); renderSettings(); }
+  if (!document.hidden) { updateDate(); renderHome(); renderSettings(); renderSimulation(); }
 });
 
 if ('serviceWorker' in navigator) {

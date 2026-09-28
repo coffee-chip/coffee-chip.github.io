@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piggy-budget-v2';
+const CACHE_NAME = 'piggy-budget-v3';
 const CACHE_PREFIX = 'piggy-budget-';
 const APP_FILES = [
   './',
