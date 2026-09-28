@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#a54e68">
-  <meta name="description" content="Settings for Piggy Budget.">
+  <meta name="description" content="Manage Piggy Budget categories and allocations.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
-  <script src="./app.js" defer></script>
+  <script src="./app.js" type="module"></script>
   <title>Settings · Piggy Budget</title>
 </head>
 <body>
@@ -20,10 +20,41 @@
         <a href="./settings.html" aria-current="page">Settings</a>
       </nav>
     </header>
-    <main class="content">
-      <p class="eyebrow">Make it yours</p>
-      <h1>Settings</h1>
-      <p class="intro">Settings will go here.</p>
+    <main>
+      <section class="page-heading">
+        <p class="eyebrow">Make it yours</p>
+        <h1>Settings</h1>
+        <p class="intro">Give each kind of spending its own bucket.</p>
+      </section>
+      <section class="panel" aria-labelledby="new-category-title">
+        <h2 id="new-category-title">New category</h2>
+        <form id="category-form">
+          <label>Name<input name="name" maxlength="40" placeholder="Clothes, games, crafts…" required></label>
+          <div class="form-grid">
+            <label>Monthly allocation ($)<input name="monthly" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="50.00" required></label>
+            <label>Starting balance
+              <select name="startingMonths">
+                <option value="0">Empty ($0)</option>
+                <option value="1">1 month of funds</option>
+                <option value="2">2 months of funds</option>
+                <option value="3">3 months of funds</option>
+              </select>
+            </label>
+          </div>
+          <button type="submit">Add category</button>
+          <p id="category-message" class="form-message" role="status"></p>
+        </form>
+      </section>
+      <section aria-labelledby="your-categories-title" class="settings-list-section">
+        <h2 id="your-categories-title">Your categories</h2>
+        <div id="settings-categories" class="settings-list"></div>
+      </section>
+      <section class="rules" aria-labelledby="rules-title">
+        <h2 id="rules-title">How the buckets work</h2>
+        <p>Each new day adds 1/30 of the monthly allocation. A bucket can hold up to three months of its current allocation. Purchases subtract from its balance; you can record a purchase even if it takes the balance below zero. Future daily additions bring it back up.</p>
+        <p>Starting funds can be 0, 1, 2, or 3 months. Changing an allocation affects future daily additions; it does not rewrite earlier spending or additions. The new three-month cap applies right away.</p>
+      </section>
+      <p class="storage-note">Data stays in this browser on this device. Clearing site data removes it.</p>
     </main>
   </div>
 </body>

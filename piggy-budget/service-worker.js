@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piggy-budget-v1';
+const CACHE_NAME = 'piggy-budget-v2';
 const CACHE_PREFIX = 'piggy-budget-';
 const APP_FILES = [
   './',
@@ -6,6 +6,7 @@ const APP_FILES = [
   './settings.html',
   './styles.css',
   './app.js',
+  './budget.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -13,7 +14,7 @@ const APP_FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

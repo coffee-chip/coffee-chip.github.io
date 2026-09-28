@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#a54e68">
-  <meta name="description" content="Piggy Budget, a simple place to plan your money.">
+  <meta name="description" content="A flexible budget for discretionary spending.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
-  <script src="./app.js" defer></script>
+  <script src="./app.js" type="module"></script>
   <title>Piggy Budget</title>
 </head>
 <body>
@@ -20,11 +20,33 @@
         <a href="./settings.html">Settings</a>
       </nav>
     </header>
-    <main class="content">
-      <p class="eyebrow">A little room to grow</p>
-      <h1>Welcome to Piggy Budget.</h1>
-      <p class="intro">Your budget will live here.</p>
-      <p class="date-line">Today is <time id="current-date">…</time></p>
+    <main>
+      <section class="page-heading">
+        <p class="eyebrow">Your spending buckets</p>
+        <h1>Good to see you.</h1>
+        <p class="date-line">Today is <time id="current-date"></time></p>
+      </section>
+      <section aria-labelledby="balances-title">
+        <div class="section-heading"><h2 id="balances-title">Available to spend</h2><a href="./settings.html">Manage categories</a></div>
+        <div id="category-list" class="category-grid"></div>
+      </section>
+      <section class="panel purchase-section" aria-labelledby="purchase-title">
+        <h2 id="purchase-title">Record a purchase</h2>
+        <form id="purchase-form">
+          <div class="form-grid">
+            <label>Category<select name="categoryId" id="purchase-category" required></select></label>
+            <label>Amount ($)<input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+          </div>
+          <label>Description <span class="optional">(optional)</span><input name="note" maxlength="100" placeholder="What did you buy?"></label>
+          <button type="submit">Save purchase</button>
+          <p id="purchase-message" class="form-message" role="status"></p>
+        </form>
+      </section>
+      <section aria-labelledby="history-title" class="history-section">
+        <h2 id="history-title">Recent purchases</h2>
+        <div id="purchase-list"></div>
+      </section>
+      <p class="storage-note">Your categories and purchases are stored in this browser on this device.</p>
     </main>
   </div>
 </body>
