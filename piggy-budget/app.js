@@ -1,10 +1,15 @@
 import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js';
 
+let storageWarning = '';
 function load() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === null) return emptyBudget();
+    const saved = JSON.parse(raw);
     if (saved && Array.isArray(saved.categories) && Array.isArray(saved.purchases)) return saved;
+    storageWarning = 'Saved budget data could not be read. Your existing data has not been changed.';
   } catch (error) {
+    storageWarning = 'Saved budget data could not be read. Your existing data has not been changed.';
     console.warn('Could not load saved budget:', error);
   }
   return emptyBudget();
@@ -15,87 +20,135 @@ function budgetDay() {
   return addDays(localDay(), Number.isSafeInteger(budget.dayOffset) && budget.dayOffset >= 0 ? budget.dayOffset : 0);
 }
 
-const dateElement = document.querySelector('#current-date');
+function showStorageWarning() {
+  const main = document.querySelector('main');
+  if (!main || !storageWarning || document.querySelector('#storage-warning')) return;
+  const warning = element('p', 'storage-warning', storageWarning);
+  warning.id = 'storage-warning';
+  warning.setAttribute('role', 'alert');
+  main.prepend(warning);
+}
+
 function updateDate() {
-  if (!dateElement) return;
+  const date = document.querySelector('#current-date');
+  if (!date) return;
   const day = budgetDay();
-  dateElement.dateTime = day;
-  dateElement.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(new Date(`${day}T12:00:00`));
+  date.dateTime = day;
+  date.textContent = formatDay(day, 'full');
   document.querySelector('#advance-indicator').textContent = budget.dayOffset ? ` · ${budget.dayOffset} day${budget.dayOffset === 1 ? '' : 's'} advanced` : '';
 }
-updateDate();
 
-function save(next, messageElement) {
+function formatDay(day, dateStyle = 'medium') {
+  return new Intl.DateTimeFormat(undefined, { dateStyle }).format(new Date(`${day}T12:00:00`));
+}
+
+function save(next, message) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     budget = next;
+    storageWarning = '';
+    document.querySelector('#storage-warning')?.remove();
     return true;
   } catch (error) {
-    messageElement.textContent = 'Could not save. Check that this browser allows site storage.';
+    message.textContent = 'Could not save. Check that this browser allows site storage.';
     console.error('Could not save budget:', error);
     return false;
   }
 }
 
-function element(tag, className, content) {
+function element(tag, className = '', content = null) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (content != null) node.textContent = content;
   return node;
 }
 
+function inputLabel(text, name, attributes = {}) {
+  const label = element('label', '', text);
+  const input = element('input');
+  input.name = name;
+  for (const [key, value] of Object.entries(attributes)) input[key] = value;
+  label.append(input);
+  return label;
+}
+
 function renderHome() {
-  const grid = document.querySelector('#category-list');
-  if (!grid) return;
-  grid.replaceChildren();
-  const selector = document.querySelector('#purchase-category');
-  const previous = selector.value;
-  selector.replaceChildren();
-  const categories = budget.categories;
-  if (!categories.length) {
+  const list = document.querySelector('#category-list');
+  if (!list) return;
+  list.replaceChildren();
+  if (!budget.categories.length) {
     const empty = element('div', 'panel empty-state');
-    empty.append(element('p', '', 'No buckets yet. Add your first category to start setting money aside.'));
+    empty.append(element('p', '', 'No categories yet. Create a spending bucket to get started.'));
     const link = element('a', 'button-link', 'Create a category');
     link.href = './settings.html';
     empty.append(link);
-    grid.append(empty);
+    list.append(empty);
+    return;
   }
-  for (const category of categories) {
+  for (const category of budget.categories) {
     const balance = balanceFor(category, budget.purchases, budgetDay());
     const card = element('article', 'bucket-card');
-    card.append(element('h3', '', category.name));
-    card.append(element('p', `balance${balance < 0 ? ' negative' : ''}`, dollars(balance)));
-    card.append(element('p', 'bucket-detail', `${dollars(currentMonthly(category))}/month · ${dollars(currentMonthly(category) / 30)}/day`));
-    grid.append(card);
-    const option = element('option', '', category.name);
-    option.value = category.id;
-    selector.append(option);
-  }
-  if (previous && categories.some((category) => category.id === previous)) selector.value = previous;
-  document.querySelector('#purchase-form button').disabled = !categories.length;
+    const top = element('div', 'bucket-top');
+    top.append(element('h3', '', category.name), element('p', `balance${balance < 0 ? ' negative' : ''}`, dollars(balance)));
+    card.append(top);
 
-  const list = document.querySelector('#purchase-list');
-  list.replaceChildren();
-  const recent = [...budget.purchases].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20);
-  if (!recent.length) {
-    list.append(element('p', 'muted', 'No purchases recorded yet.'));
-  }
-  for (const purchase of recent) {
-    const row = element('div', 'purchase-row');
-    const details = element('div');
-    const category = categories.find((item) => item.id === purchase.categoryId);
-    details.append(element('strong', '', purchase.note || category?.name || 'Purchase'));
-    details.append(element('small', '', `${category?.name || 'Category'} · ${purchase.day}`));
-    row.append(details, element('span', 'purchase-amount', `−${dollars(purchase.amountCents)}`));
-    const remove = element('button', 'text-button', 'Remove');
-    remove.type = 'button';
-    remove.setAttribute('aria-label', `Remove purchase of ${dollars(purchase.amountCents)} from ${category?.name || 'category'}`);
-    remove.addEventListener('click', () => {
-      const next = { ...budget, purchases: budget.purchases.filter((item) => item.id !== purchase.id) };
-      if (save(next, document.querySelector('#purchase-message'))) renderHome();
+    const actions = element('div', 'bucket-actions');
+    const shake = element('button', 'secondary-button', 'Shake this piggy');
+    shake.type = 'button';
+    shake.setAttribute('aria-expanded', 'false');
+    const form = element('form', 'spend-form');
+    form.hidden = true;
+    const formId = `record-${category.id}`;
+    form.id = formId;
+    shake.setAttribute('aria-controls', formId);
+    shake.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+      shake.setAttribute('aria-expanded', String(!form.hidden));
+      if (!form.hidden) form.elements.namedItem('amount').focus();
     });
-    row.append(remove);
-    list.append(row);
+    const history = element('a', 'history-link', 'View transactions');
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}`;
+    actions.append(shake, history);
+    card.append(actions);
+
+    form.append(inputLabel('Amount ($)', 'amount', { type: 'number', min: '0.01', step: '0.01', inputMode: 'decimal', placeholder: '0.00', required: true }));
+    form.append(inputLabel('Description (optional)', 'note', { maxLength: 100, placeholder: 'What was it for?' }));
+    const refundLabel = element('label', 'checkbox-label');
+    const refund = element('input');
+    refund.type = 'checkbox'; refund.name = 'refund';
+    refundLabel.append(refund, document.createTextNode('Refund (add this amount back)'));
+    form.append(refundLabel);
+    const submit = element('button', '', 'Record transaction');
+    submit.type = 'submit';
+    const message = element('p', 'form-message');
+    message.setAttribute('role', 'status');
+    form.append(submit, message);
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const amountCents = cents(data.get('amount'));
+      if (amountCents === null) {
+        message.textContent = 'Enter an amount above $0 with at most two decimal places.';
+        return;
+      }
+      const transaction = {
+        id: crypto.randomUUID(), categoryId: category.id,
+        amountCents: refund.checked ? -amountCents : amountCents,
+        note: String(data.get('note')).trim(), day: budgetDay(), createdAt: new Date().toISOString()
+      };
+      if (save({ ...budget, purchases: [...budget.purchases, transaction] }, message)) {
+        renderHome();
+        const updatedCard = [...list.children].find((item) => item.querySelector('h3')?.textContent === category.name);
+        const updatedForm = updatedCard?.querySelector('form');
+        if (updatedForm) {
+          updatedForm.hidden = false;
+          updatedCard.querySelector('.bucket-actions button').setAttribute('aria-expanded', 'true');
+          updatedForm.querySelector('.form-message').textContent = refund.checked ? 'Refund recorded.' : 'Purchase recorded.';
+        }
+      }
+    });
+    card.append(form);
+    list.append(card);
   }
 }
 
@@ -103,35 +156,91 @@ function renderSettings() {
   const list = document.querySelector('#settings-categories');
   if (!list) return;
   list.replaceChildren();
-  if (!budget.categories.length) list.append(element('p', 'muted', 'No categories yet.'));
+  if (!budget.categories.length) list.append(element('li', 'muted', 'No categories yet. Add one above.'));
   for (const category of budget.categories) {
-    const card = element('div', 'panel setting-card');
-    const heading = element('h3', '', category.name);
-    const balance = element('p', 'muted', `Available on budget date: ${dollars(balanceFor(category, budget.purchases, budgetDay()))}`);
+    const item = element('li', 'panel setting-card');
+    item.append(element('h3', '', category.name));
+    const facts = element('dl', 'category-facts');
+    for (const [term, value] of [
+      ['Monthly allocation', dollars(currentMonthly(category))],
+      ['Accrual per day', dollars(currentMonthly(category) / 30)],
+      ['Budgeting since', formatDay(category.createdDay)]
+    ]) {
+      const fact = element('div');
+      fact.append(element('dt', '', term), element('dd', '', value));
+      facts.append(fact);
+    }
+    item.append(facts);
+    const changeButton = element('button', 'text-button', 'Change allocation');
+    changeButton.type = 'button';
+    changeButton.setAttribute('aria-expanded', 'false');
     const form = element('form', 'edit-form');
-    const label = element('label', '', 'Monthly allocation ($)');
-    const input = element('input');
-    input.type = 'number'; input.min = '0.01'; input.step = '0.01'; input.required = true;
-    input.value = (currentMonthly(category) / 100).toFixed(2);
-    label.append(input);
-    const button = element('button', 'secondary-button', 'Update');
-    button.type = 'submit';
+    form.hidden = true;
+    const formId = `allocation-${category.id}`;
+    form.id = formId;
+    changeButton.setAttribute('aria-controls', formId);
+    changeButton.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+      changeButton.setAttribute('aria-expanded', String(!form.hidden));
+    });
+    const label = inputLabel('New monthly allocation ($)', 'monthly', { type: 'number', min: '0.01', step: '0.01', required: true });
+    label.querySelector('input').value = (currentMonthly(category) / 100).toFixed(2);
+    const submit = element('button', 'secondary-button', 'Update');
+    submit.type = 'submit';
     const message = element('p', 'form-message');
     message.setAttribute('role', 'status');
-    form.append(label, button, message);
+    form.append(label, submit, message);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      const monthlyCents = cents(input.value);
-      if (monthlyCents === null) { message.textContent = 'Enter an amount above $0, with at most two decimal places.'; return; }
+      const monthlyCents = cents(label.querySelector('input').value);
+      if (monthlyCents === null) { message.textContent = 'Enter an amount above $0 with at most two decimal places.'; return; }
       if (monthlyCents === currentMonthly(category)) { message.textContent = 'Allocation is already set to that amount.'; return; }
       const changes = [...category.changes];
       if (changes.at(-1).day === budgetDay()) changes[changes.length - 1] = { day: budgetDay(), monthlyCents };
       else changes.push({ day: budgetDay(), monthlyCents });
-      const next = { ...budget, categories: budget.categories.map((item) => item.id === category.id ? { ...item, changes } : item) };
-      if (save(next, message)) { renderSettings(); }
+      const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, changes } : entry) };
+      if (save(next, message)) renderSettings();
     });
-    card.append(heading, balance, form);
-    list.append(card);
+    item.append(changeButton, form);
+    list.append(item);
+  }
+}
+
+function renderTransactions() {
+  const list = document.querySelector('#transaction-list');
+  if (!list) return;
+  list.replaceChildren();
+  const id = new URLSearchParams(location.search).get('category');
+  const category = budget.categories.find((entry) => entry.id === id);
+  const heading = document.querySelector('#transaction-heading');
+  const summary = document.querySelector('#transaction-summary');
+  if (!category) {
+    heading.textContent = 'Category not found';
+    summary.textContent = 'Choose a category from the home page.';
+    document.title = 'Transactions · Piggy Budget';
+    return;
+  }
+  heading.textContent = category.name;
+  document.title = `${category.name} transactions · Piggy Budget`;
+  summary.textContent = `${dollars(balanceFor(category, budget.purchases, budgetDay()))} accumulated · ${dollars(currentMonthly(category) / 30)} per day`;
+  const transactions = budget.purchases.filter((entry) => entry.categoryId === id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (!transactions.length) list.append(element('p', 'muted', 'No transactions in this category yet.'));
+  for (const transaction of transactions) {
+    const row = element('div', 'purchase-row');
+    const details = element('div');
+    const refund = transaction.amountCents < 0;
+    details.append(element('strong', '', transaction.note || (refund ? 'Refund' : 'Purchase')));
+    details.append(element('small', '', `${formatDay(transaction.day)} · ${refund ? 'Refund' : 'Purchase'}`));
+    row.append(details, element('span', `purchase-amount${refund ? ' refund-amount' : ''}`, `${refund ? '+' : '−'}${dollars(Math.abs(transaction.amountCents))}`));
+    const remove = element('button', 'text-button', 'Remove');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `Remove ${refund ? 'refund' : 'purchase'} of ${dollars(Math.abs(transaction.amountCents))}`);
+    remove.addEventListener('click', () => {
+      if (save({ ...budget, purchases: budget.purchases.filter((entry) => entry.id !== transaction.id) }, document.querySelector('#transaction-message'))) renderTransactions();
+    });
+    row.append(remove);
+    list.append(row);
   }
 }
 
@@ -148,7 +257,7 @@ if (categoryForm) {
       message.textContent = 'Enter a name, an amount above $0 (up to two decimal places), and starting funds.';
       return;
     }
-    if (budget.categories.some((item) => item.name.toLowerCase() === name.toLowerCase())) {
+    if (budget.categories.some((entry) => entry.name.toLowerCase() === name.toLowerCase())) {
       message.textContent = 'A category with that name already exists.';
       return;
     }
@@ -163,33 +272,6 @@ if (categoryForm) {
       renderSettings();
     }
   });
-  renderSettings();
-}
-
-const purchaseForm = document.querySelector('#purchase-form');
-if (purchaseForm) {
-  purchaseForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const data = new FormData(purchaseForm);
-    const categoryId = String(data.get('categoryId'));
-    const amountCents = cents(data.get('amount'));
-    const message = document.querySelector('#purchase-message');
-    if (!budget.categories.some((item) => item.id === categoryId) || amountCents === null) {
-      message.textContent = 'Select a category and enter an amount above $0 (up to two decimal places).';
-      return;
-    }
-    const purchase = {
-      id: crypto.randomUUID(), categoryId, amountCents,
-      note: String(data.get('note')).trim(), day: budgetDay(), createdAt: new Date().toISOString()
-    };
-    if (save({ ...budget, purchases: [...budget.purchases, purchase] }, message)) {
-      purchaseForm.reset();
-      renderHome();
-      document.querySelector('#purchase-category').value = categoryId;
-      message.textContent = 'Purchase saved.';
-    }
-  });
-  renderHome();
 }
 
 const advanceButton = document.querySelector('#advance-day');
@@ -208,14 +290,22 @@ if (advanceButton) {
       message.textContent = 'All buckets advanced by one day.';
     }
   });
-  renderSimulation();
 }
 
+function renderAll() {
+  updateDate();
+  renderHome();
+  renderSettings();
+  renderTransactions();
+  renderSimulation();
+  showStorageWarning();
+}
+renderAll();
 window.addEventListener('storage', (event) => {
-  if (event.key === STORAGE_KEY) { budget = load(); updateDate(); renderHome(); renderSettings(); renderSimulation(); }
+  if (event.key === STORAGE_KEY) { budget = load(); renderAll(); }
 });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { updateDate(); renderHome(); renderSettings(); renderSimulation(); }
+  if (!document.hidden) renderAll();
 });
 
 if ('serviceWorker' in navigator) {

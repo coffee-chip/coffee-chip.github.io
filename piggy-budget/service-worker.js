@@ -1,9 +1,10 @@
-const CACHE_NAME = 'piggy-budget-v3';
+const CACHE_NAME = 'piggy-budget-v4';
 const CACHE_PREFIX = 'piggy-budget-';
 const APP_FILES = [
   './',
   './index.html',
   './settings.html',
+  './transactions.html',
   './styles.css',
   './app.js',
   './budget.js',
@@ -30,13 +31,8 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
-
-  if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(async () =>
-      (await caches.match(request)) || (await caches.match('./index.html'))
-    ));
-    return;
-  }
-
-  event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
+  event.respondWith(fetch(request).catch(async () =>
+    (await caches.match(request, { ignoreSearch: true })) ||
+    (request.mode === 'navigate' ? caches.match('./index.html') : Response.error())
+  ));
 });
