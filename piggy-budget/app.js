@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=10';
+import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=11';
 
 const DEFAULT_ICON = '🐷';
 
@@ -117,7 +117,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=10`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=11`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -180,7 +180,7 @@ function renderSettings() {
     picker.value = category.icon || DEFAULT_ICON;
     picker.setAttribute('aria-label', `Emoji icon for ${category.name}`);
     picker.setAttribute('title', 'Type or paste one emoji');
-    picker.addEventListener('change', () => {
+    picker.addEventListener('input', () => {
       const status = document.querySelector('#category-status');
       const selectedIcon = singleEmoji(picker.value);
       if (!selectedIcon) {
