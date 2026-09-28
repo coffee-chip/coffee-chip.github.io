@@ -1,4 +1,13 @@
-import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=8';
+import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=9';
+
+const ICON_OPTIONS = [
+  ['🐷', 'Piggy'], ['👕', 'Clothes'], ['🎮', 'Games'], ['🧵', 'Sewing'],
+  ['🎨', 'Art'], ['📚', 'Books'], ['🍽️', 'Dining'], ['☕', 'Coffee'],
+  ['🎬', 'Movies'], ['🎵', 'Music'], ['✈️', 'Travel'], ['🎁', 'Gifts'],
+  ['🏠', 'Home'], ['🌿', 'Garden'], ['🐾', 'Pets'], ['💻', 'Tech'],
+  ['💄', 'Beauty'], ['⚽', 'Sports'], ['❤️', 'Wellness'], ['⭐', 'Other']
+];
+const DEFAULT_ICON = '🐷';
 
 let storageWarning = '';
 function load() {
@@ -72,6 +81,21 @@ function inputLabel(text, name, attributes = {}) {
   return label;
 }
 
+function populateIconSelect(select, current = DEFAULT_ICON) {
+  select.replaceChildren();
+  if (!ICON_OPTIONS.some(([icon]) => icon === current)) {
+    const existing = element('option', '', `${current} Current`);
+    existing.value = current;
+    select.append(existing);
+  }
+  for (const [icon, label] of ICON_OPTIONS) {
+    const option = element('option', '', `${icon} ${label}`);
+    option.value = icon;
+    select.append(option);
+  }
+  select.value = current;
+}
+
 function renderHome() {
   const list = document.querySelector('#category-list');
   if (!list) return;
@@ -85,8 +109,13 @@ function renderHome() {
   for (const category of budget.categories) {
     const balance = balanceFor(category, budget.purchases, budgetDay());
     const card = element('article', 'bucket-card');
+    card.dataset.categoryId = category.id;
     const top = element('div', 'bucket-top');
-    top.append(element('h3', '', category.name), element('p', `balance${balance < 0 ? ' negative' : ''}`, dollars(balance)));
+    const heading = element('h3', 'category-heading');
+    const icon = element('span', 'category-emoji', category.icon || DEFAULT_ICON);
+    icon.setAttribute('aria-hidden', 'true');
+    heading.append(icon, document.createTextNode(category.name));
+    top.append(heading, element('p', `balance${balance < 0 ? ' negative' : ''}`, dollars(balance)));
     card.append(top);
 
     const actions = element('div', 'bucket-actions');
@@ -104,7 +133,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=8`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=9`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -135,7 +164,7 @@ function renderHome() {
       };
       if (save({ ...budget, purchases: [...budget.purchases, transaction] }, message)) {
         renderHome();
-        const updatedCard = [...list.children].find((item) => item.querySelector('h3')?.textContent === category.name);
+        const updatedCard = [...list.children].find((item) => item.dataset.categoryId === category.id);
         const updatedForm = updatedCard?.querySelector('form');
         if (updatedForm) {
           updatedForm.hidden = false;
@@ -156,7 +185,24 @@ function renderSettings() {
   if (!budget.categories.length) list.append(element('li', 'muted', 'No categories yet.'));
   for (const category of budget.categories) {
     const item = element('li', 'panel setting-card');
-    item.append(element('h3', '', category.name));
+    const header = element('div', 'setting-header');
+    const heading = element('h3', 'category-heading');
+    const icon = element('span', 'category-emoji', category.icon || DEFAULT_ICON);
+    icon.setAttribute('aria-hidden', 'true');
+    heading.append(icon, document.createTextNode(category.name));
+    const picker = element('select', 'icon-picker');
+    picker.setAttribute('aria-label', `Icon for ${category.name}`);
+    populateIconSelect(picker, category.icon || DEFAULT_ICON);
+    picker.addEventListener('change', () => {
+      const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, icon: picker.value } : entry) };
+      const status = document.querySelector('#category-status');
+      if (save(next, status)) {
+        icon.textContent = picker.value;
+        status.textContent = `${category.name} icon updated.`;
+      }
+    });
+    header.append(heading, picker);
+    item.append(header);
     const facts = element('dl', 'category-facts');
     for (const [term, value] of [
       ['Monthly allocation', dollars(currentMonthly(category))],
@@ -217,7 +263,7 @@ function renderTransactions() {
     document.title = 'Transactions · Piggy Budget';
     return;
   }
-  heading.textContent = category.name;
+  heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   document.title = `${category.name} transactions · Piggy Budget`;
   summary.textContent = `${dollars(balanceFor(category, budget.purchases, budgetDay()))} accumulated · ${dollars(currentMonthly(category) / 30)} per day`;
   const transactions = budget.purchases.filter((entry) => entry.categoryId === id)
@@ -255,6 +301,7 @@ function setCategoryFormOpen(open) {
   }
 }
 if (categoryForm) {
+  populateIconSelect(document.querySelector('#new-category-icon'));
   addCategoryButton.addEventListener('click', () => setCategoryFormOpen(addCategoryPanel.hidden));
   if (location.hash === '#add-category') setCategoryFormOpen(true);
   window.addEventListener('hashchange', () => {
@@ -264,10 +311,11 @@ if (categoryForm) {
     event.preventDefault();
     const data = new FormData(categoryForm);
     const name = String(data.get('name')).trim();
+    const icon = String(data.get('icon'));
     const monthlyCents = cents(data.get('monthly'));
     const startingMonths = Number(data.get('startingMonths'));
     const message = document.querySelector('#category-message');
-    if (!name || monthlyCents === null || ![0, 1, 2, 3].includes(startingMonths)) {
+    if (!name || monthlyCents === null || ![0, 1, 2, 3].includes(startingMonths) || !ICON_OPTIONS.some(([choice]) => choice === icon)) {
       message.textContent = 'Enter a name, an amount above $0 (up to two decimal places), and starting funds.';
       return;
     }
@@ -276,7 +324,7 @@ if (categoryForm) {
       return;
     }
     const category = {
-      id: crypto.randomUUID(), name, createdDay: budgetDay(),
+      id: crypto.randomUUID(), name, icon, createdDay: budgetDay(),
       startingCents: startingMonths * monthlyCents,
       changes: [{ day: budgetDay(), monthlyCents }]
     };
