@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=12';
+import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=13';
 
 const DEFAULT_ICON = '🐷';
 
@@ -142,7 +142,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=12`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=13`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -193,8 +193,8 @@ function renderSettings() {
   list.replaceChildren();
   if (!budget.supercategories.length) list.append(element('li', 'muted', 'Add a supercategory to start.'));
   for (const supercategory of budget.supercategories) {
-    const group = element('li', 'supercategory-group');
-    const summary = element('div', 'panel supercategory-summary');
+    const group = element('li', 'panel supercategory-group');
+    const summary = element('div', 'supercategory-summary');
     const header = element('div', 'setting-header');
     header.append(element('h3', '', supercategory.name), element('strong', '', `${dollars(supercategory.monthlyCents)} / month`));
     summary.append(header);
@@ -241,7 +241,7 @@ function renderSettings() {
     const categories = budget.categories.filter((category) => category.supercategoryId === supercategory.id);
     if (!categories.length) members.append(element('li', 'muted', 'No categories in this group.'));
     for (const category of categories) {
-    const item = element('li', 'panel setting-card');
+    const item = element('li', 'setting-card');
     const header = element('div', 'setting-header');
     const heading = element('h3', 'category-heading');
     const icon = element('span', 'category-emoji', category.icon || DEFAULT_ICON);
