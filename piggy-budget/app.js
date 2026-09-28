@@ -280,7 +280,7 @@ function renderHome() {
     card.append(top);
 
     const actions = element('div', 'category-actions');
-    const shake = element('button', 'secondary-button', 'Shake this piggy');
+    const shake = element('button', '', 'Shake this piggy');
     shake.type = 'button';
     shake.ariaExpanded = 'false';
     const history = element('a', 'history-link', 'View history');
