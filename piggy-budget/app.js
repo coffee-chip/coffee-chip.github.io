@@ -664,6 +664,73 @@ if (categoryForm) {
   });
 }
 
+const transferToggle = document.querySelector('#transfer-toggle');
+const transferPanel = document.querySelector('#transfer-panel');
+const transferForm = document.querySelector('#transfer-form');
+
+function refreshTransferForm() {
+  if (!transferForm || !transferToggle || !transferPanel) return;
+  const from = transferForm.elements.namedItem('fromCategoryId');
+  const to = transferForm.elements.namedItem('toCategoryId');
+  const previousFrom = from.value;
+  const previousTo = to.value;
+  categoryOptions(from, previousFrom);
+  categoryOptions(to, previousTo);
+  if (budget.categories.length >= 2) {
+    transferToggle.disabled = false;
+    if (!to.value || to.value === from.value) {
+      const alternative = budget.categories.find((category) => category.id !== from.value);
+      if (alternative) to.value = alternative.id;
+    }
+  } else {
+    transferToggle.disabled = true;
+    transferPanel.hidden = true;
+    transferToggle.setAttribute('aria-expanded', 'false');
+  }
+}
+
+if (transferToggle && transferPanel && transferForm) {
+  transferToggle.addEventListener('click', () => {
+    transferPanel.hidden = !transferPanel.hidden;
+    transferToggle.setAttribute('aria-expanded', String(!transferPanel.hidden));
+    if (!transferPanel.hidden) transferForm.elements.namedItem('fromCategoryId').focus();
+  });
+  transferForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(transferForm);
+    const fromCategoryId = String(data.get('fromCategoryId'));
+    const toCategoryId = String(data.get('toCategoryId'));
+    const amountCents = cents(data.get('amount'));
+    const message = document.querySelector('#transfer-message');
+    if (fromCategoryId === toCategoryId) {
+      message.textContent = 'Choose two different categories.';
+      return;
+    }
+    if (amountCents === null || !budget.categories.some((category) => category.id === fromCategoryId) || !budget.categories.some((category) => category.id === toCategoryId)) {
+      message.textContent = 'Choose two categories and enter an amount above $0.';
+      return;
+    }
+    const transfer = {
+      id: crypto.randomUUID(),
+      fromCategoryId,
+      toCategoryId,
+      amountCents,
+      note: String(data.get('note')).trim(),
+      day: budgetDay(),
+      createdAt: new Date().toISOString()
+    };
+    if (save({ ...budget, transfers: [...budget.transfers, transfer] }, message)) {
+      const fromName = budget.categories.find((category) => category.id === fromCategoryId)?.name || 'category';
+      const toName = budget.categories.find((category) => category.id === toCategoryId)?.name || 'category';
+      transferForm.elements.namedItem('amount').value = '';
+      transferForm.elements.namedItem('note').value = '';
+      renderHome();
+      refreshTransferForm();
+      message.textContent = `${dollars(amountCents)} transferred from ${fromName} to ${toName}.`;
+    }
+  });
+}
+
 const backupButton = document.querySelector('#download-backup');
 const restoreInput = document.querySelector('#restore-backup');
 if (backupButton) {
@@ -715,6 +782,7 @@ function renderAll() {
   renderHome();
   renderSettings();
   renderTransactions();
+  refreshTransferForm();
   renderSimulation();
   showStorageWarning();
 }
