@@ -1,12 +1,5 @@
-import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=9';
+import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=10';
 
-const ICON_OPTIONS = [
-  ['🐷', 'Piggy'], ['👕', 'Clothes'], ['🎮', 'Games'], ['🧵', 'Sewing'],
-  ['🎨', 'Art'], ['📚', 'Books'], ['🍽️', 'Dining'], ['☕', 'Coffee'],
-  ['🎬', 'Movies'], ['🎵', 'Music'], ['✈️', 'Travel'], ['🎁', 'Gifts'],
-  ['🏠', 'Home'], ['🌿', 'Garden'], ['🐾', 'Pets'], ['💻', 'Tech'],
-  ['💄', 'Beauty'], ['⚽', 'Sports'], ['❤️', 'Wellness'], ['⭐', 'Other']
-];
 const DEFAULT_ICON = '🐷';
 
 let storageWarning = '';
@@ -81,19 +74,10 @@ function inputLabel(text, name, attributes = {}) {
   return label;
 }
 
-function populateIconSelect(select, current = DEFAULT_ICON) {
-  select.replaceChildren();
-  if (!ICON_OPTIONS.some(([icon]) => icon === current)) {
-    const existing = element('option', '', `${current} Current`);
-    existing.value = current;
-    select.append(existing);
-  }
-  for (const [icon, label] of ICON_OPTIONS) {
-    const option = element('option', '', `${icon} ${label}`);
-    option.value = icon;
-    select.append(option);
-  }
-  select.value = current;
+function singleEmoji(value) {
+  const icon = String(value).trim();
+  const graphemes = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(icon)];
+  return graphemes.length === 1 && /[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Presentation}\uFE0F\u20E3]/u.test(icon) ? icon : null;
 }
 
 function renderHome() {
@@ -133,7 +117,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=9`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=10`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -190,14 +174,23 @@ function renderSettings() {
     const icon = element('span', 'category-emoji', category.icon || DEFAULT_ICON);
     icon.setAttribute('aria-hidden', 'true');
     heading.append(icon, document.createTextNode(category.name));
-    const picker = element('select', 'icon-picker');
-    picker.setAttribute('aria-label', `Icon for ${category.name}`);
-    populateIconSelect(picker, category.icon || DEFAULT_ICON);
+    const picker = element('input', 'icon-picker');
+    picker.type = 'text';
+    picker.maxLength = 64;
+    picker.value = category.icon || DEFAULT_ICON;
+    picker.setAttribute('aria-label', `Emoji icon for ${category.name}`);
+    picker.setAttribute('title', 'Type or paste one emoji');
     picker.addEventListener('change', () => {
-      const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, icon: picker.value } : entry) };
       const status = document.querySelector('#category-status');
+      const selectedIcon = singleEmoji(picker.value);
+      if (!selectedIcon) {
+        status.textContent = 'Enter one emoji for the icon.';
+        return;
+      }
+      const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, icon: selectedIcon } : entry) };
       if (save(next, status)) {
-        icon.textContent = picker.value;
+        picker.value = selectedIcon;
+        icon.textContent = selectedIcon;
         status.textContent = `${category.name} icon updated.`;
       }
     });
@@ -301,7 +294,6 @@ function setCategoryFormOpen(open) {
   }
 }
 if (categoryForm) {
-  populateIconSelect(document.querySelector('#new-category-icon'));
   addCategoryButton.addEventListener('click', () => setCategoryFormOpen(addCategoryPanel.hidden));
   if (location.hash === '#add-category') setCategoryFormOpen(true);
   window.addEventListener('hashchange', () => {
@@ -311,12 +303,12 @@ if (categoryForm) {
     event.preventDefault();
     const data = new FormData(categoryForm);
     const name = String(data.get('name')).trim();
-    const icon = String(data.get('icon'));
+    const icon = singleEmoji(data.get('icon'));
     const monthlyCents = cents(data.get('monthly'));
     const startingMonths = Number(data.get('startingMonths'));
     const message = document.querySelector('#category-message');
-    if (!name || monthlyCents === null || ![0, 1, 2, 3].includes(startingMonths) || !ICON_OPTIONS.some(([choice]) => choice === icon)) {
-      message.textContent = 'Enter a name, an amount above $0 (up to two decimal places), and starting funds.';
+    if (!name || !icon || monthlyCents === null || ![0, 1, 2, 3].includes(startingMonths)) {
+      message.textContent = 'Enter a name, one emoji, an amount above $0 (up to two decimal places), and starting funds.';
       return;
     }
     if (budget.categories.some((entry) => entry.name.toLowerCase() === name.toLowerCase())) {

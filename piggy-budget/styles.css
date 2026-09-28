@@ -48,6 +48,7 @@ p { line-height: 1.55; }
 .add-category-button { margin-top: 18px; }
 .add-category-panel { max-width: 700px; margin-top: 18px; }
 .name-icon-row { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 16px; }
+.field-hint { margin: -10px 0 18px; color: #685962; font-size: .85rem; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 label { display: block; margin-bottom: 18px; font-size: .9rem; font-weight: 650; }
 input, select { display: block; width: 100%; min-height: 44px; margin-top: 7px; padding: 10px 12px; background: #fff; border: 1px solid #d7c5c9; border-radius: 9px; color: #342b32; font-family: inherit; font-size: 16px; }
@@ -67,7 +68,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .setting-card { padding: 18px 24px; }
 .setting-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .setting-header h3 { overflow-wrap: anywhere; }
-.icon-picker { width: 155px; margin: 0; }
+.icon-picker { width: 72px; margin: 0; text-align: center; }
 .setting-card .muted { margin: 0 0 16px; }
 .category-facts { display: grid; gap: 5px; margin: 10px 0 6px; }
 .category-facts div { display: flex; align-items: baseline; gap: 8px; }
@@ -98,6 +99,5 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .spend-form { grid-template-columns: 1fr; }
   .bucket-top { align-items: start; }
   .bucket-top .balance { font-size: 1.5rem; }
-  .icon-picker { width: 118px; }
   .purchase-row { gap: 8px; }
 }
