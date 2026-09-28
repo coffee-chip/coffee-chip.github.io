@@ -26,7 +26,23 @@
       </section>
       <section aria-label="Category balances">
         <div id="category-list" class="category-list"></div>
-        <a class="add-category-link" href="./settings.html?v=15#add-category">+ Add category</a>
+        <div class="home-actions">
+          <a class="add-category-link" href="./settings.html?v=15#add-category">+ Add category</a>
+          <button type="button" id="transfer-toggle" class="text-button" aria-expanded="false" aria-controls="transfer-panel">Transfer between piggies</button>
+        </div>
+        <section class="panel transfer-panel" id="transfer-panel" aria-labelledby="transfer-title" hidden>
+          <h2 id="transfer-title">Transfer between piggies</h2>
+          <form id="transfer-form">
+            <div class="form-grid">
+              <label>From<select name="fromCategoryId" required></select></label>
+              <label>To<select name="toCategoryId" required></select></label>
+              <label>Amount ($)<input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+              <label>Description (optional)<input name="note" maxlength="100" placeholder="Move budget"></label>
+            </div>
+            <button type="submit">Transfer</button>
+            <p id="transfer-message" class="form-message" role="status"></p>
+          </form>
+        </section>
       </section>
     </main>
   </div>
