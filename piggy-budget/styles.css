@@ -65,6 +65,14 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .text-button { min-height: 36px; padding: 6px 9px; border: 0; background: transparent; color: #803750; font-weight: 500; }
 .text-button:hover { background: #f5e4e7; color: #803750; }
 .settings-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.supercategory-group { min-width: 0; }
+.supercategory-summary { padding: 18px 24px; background: #fbf0f0; }
+.supercategory-summary .setting-header { flex-wrap: wrap; }
+.supercategory-summary .text-button { margin-left: -9px; }
+.allocation-summary { margin: 7px 0 4px; color: #685962; font-size: .9rem; }
+.allocation-preview { flex-basis: 100%; margin: 0 0 12px; color: #803750; font-size: .9rem; font-weight: 600; }
+.group-members { margin: 10px 0 0 14px; }
+.group-members > .muted { padding: 6px 12px; }
 .setting-card { padding: 18px 24px; }
 .setting-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .setting-header h3 { overflow-wrap: anywhere; }
@@ -75,10 +83,13 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .category-facts dt { color: #766b70; font-size: .85rem; }
 .category-facts dt::after { content: ':'; }
 .category-facts dd { margin: 0; font-size: .9rem; font-weight: 650; }
-.setting-card > .text-button { margin-left: -9px; }
+.setting-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: -9px; }
+.delete-button { color: #a2334a; }
+.delete-button:hover { color: #a2334a; }
 .edit-form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
 .edit-form label { flex: 1 1 180px; max-width: 260px; margin: 0; }
 .edit-form .form-message { flex-basis: 100%; margin: 0; }
+.edit-form .allocation-preview { margin: 0; }
 .secondary-button { background: #fff; border-color: #a54e68; color: #803750; }
 .secondary-button:hover { color: #fff; }
 .developer-tools { max-width: 700px; margin-top: 30px; }
@@ -94,6 +105,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .page-heading { margin: 48px 0 40px; }
   .compact-heading { margin: 32px 0 24px; }
   .panel { padding: 20px; }
+  .group-members { margin-left: 8px; }
   .name-icon-row { grid-template-columns: minmax(0, 1fr) 120px; gap: 10px; }
   .form-grid { grid-template-columns: 1fr; gap: 0; }
   .spend-form { grid-template-columns: 1fr; }

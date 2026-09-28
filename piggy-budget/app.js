@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=11';
+import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=12';
 
 const DEFAULT_ICON = '🐷';
 
@@ -8,7 +8,7 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) return emptyBudget();
     const saved = JSON.parse(raw);
-    if (saved && Array.isArray(saved.categories) && Array.isArray(saved.purchases)) return saved;
+    if (saved && Array.isArray(saved.categories) && Array.isArray(saved.purchases)) return withSupercategories(saved);
     storageWarning = 'Saved budget data could not be read. Your existing data has not been changed.';
   } catch (error) {
     storageWarning = 'Saved budget data could not be read. Your existing data has not been changed.';
@@ -80,6 +80,31 @@ function singleEmoji(value) {
   return graphemes.length === 1 && /[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Presentation}\uFE0F\u20E3]/u.test(icon) ? icon : null;
 }
 
+function allocationDifference(allocated, target) {
+  const difference = allocated - target;
+  return difference > 0 ? `${dollars(difference)} over` : difference < 0 ? `${dollars(-difference)} under` : 'On target';
+}
+
+function nonnegativeCents(value) {
+  if (String(value).trim() === '' || Number(value) < 0) return null;
+  return Number(value) === 0 ? 0 : cents(value);
+}
+
+function allocationPreview(node, supercategoryId, replacement) {
+  const supercategory = budget.supercategories.find((entry) => entry.id === supercategoryId);
+  node.textContent = supercategory ? `${supercategory.name}: ${allocationDifference(allocatedFor(budget.categories, supercategoryId, replacement), supercategory.monthlyCents)}` : '';
+}
+
+function supercategoryOptions(select, selected = '') {
+  select.replaceChildren();
+  for (const supercategory of budget.supercategories) {
+    const option = element('option', '', supercategory.name);
+    option.value = supercategory.id;
+    select.append(option);
+  }
+  select.value = selected || budget.supercategories[0]?.id || '';
+}
+
 function renderHome() {
   const list = document.querySelector('#category-list');
   if (!list) return;
@@ -117,7 +142,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=11`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=12`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -166,8 +191,56 @@ function renderSettings() {
   const list = document.querySelector('#settings-categories');
   if (!list) return;
   list.replaceChildren();
-  if (!budget.categories.length) list.append(element('li', 'muted', 'No categories yet.'));
-  for (const category of budget.categories) {
+  if (!budget.supercategories.length) list.append(element('li', 'muted', 'Add a supercategory to start.'));
+  for (const supercategory of budget.supercategories) {
+    const group = element('li', 'supercategory-group');
+    const summary = element('div', 'panel supercategory-summary');
+    const header = element('div', 'setting-header');
+    header.append(element('h3', '', supercategory.name), element('strong', '', `${dollars(supercategory.monthlyCents)} / month`));
+    summary.append(header);
+    const allocated = allocatedFor(budget.categories, supercategory.id);
+    summary.append(element('p', 'allocation-summary', `${dollars(allocated)} allocated · ${allocationDifference(allocated, supercategory.monthlyCents)}`));
+    const changeTarget = element('button', 'text-button', 'Change total allocation');
+    changeTarget.type = 'button';
+    const targetForm = element('form', 'edit-form');
+    targetForm.hidden = true;
+    targetForm.id = `total-${supercategory.id}`;
+    changeTarget.setAttribute('aria-controls', targetForm.id);
+    changeTarget.setAttribute('aria-expanded', 'false');
+    changeTarget.addEventListener('click', () => {
+      targetForm.hidden = !targetForm.hidden;
+      changeTarget.setAttribute('aria-expanded', String(!targetForm.hidden));
+    });
+    const targetLabel = inputLabel('Total monthly allocation ($)', 'total', { type: 'number', min: '0', step: '0.01', required: true });
+    targetLabel.querySelector('input').value = (supercategory.monthlyCents / 100).toFixed(2);
+    const targetPreview = element('p', 'allocation-preview');
+    targetPreview.setAttribute('role', 'status');
+    const updateTargetPreview = () => {
+      const target = nonnegativeCents(targetLabel.querySelector('input').value);
+      targetPreview.textContent = target === null ? 'Enter a valid amount.' : `${allocationDifference(allocated, target)} after change`;
+    };
+    targetLabel.querySelector('input').addEventListener('input', updateTargetPreview);
+    updateTargetPreview();
+    const targetSubmit = element('button', 'secondary-button', 'Update total');
+    targetSubmit.type = 'submit';
+    const targetMessage = element('p', 'form-message');
+    targetMessage.setAttribute('role', 'status');
+    targetForm.append(targetLabel, targetSubmit, targetPreview, targetMessage);
+    targetForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const monthlyCents = nonnegativeCents(targetLabel.querySelector('input').value);
+      if (monthlyCents === null) { targetMessage.textContent = 'Enter a valid total with at most two decimal places.'; return; }
+      const next = { ...budget, supercategories: budget.supercategories.map((entry) => entry.id === supercategory.id ? { ...entry, monthlyCents } : entry) };
+      if (save(next, targetMessage)) renderSettings();
+    });
+    summary.append(changeTarget, targetForm);
+    group.append(summary);
+    const members = element('ul', 'settings-list group-members');
+    group.append(members);
+    list.append(group);
+    const categories = budget.categories.filter((category) => category.supercategoryId === supercategory.id);
+    if (!categories.length) members.append(element('li', 'muted', 'No categories in this group.'));
+    for (const category of categories) {
     const item = element('li', 'panel setting-card');
     const header = element('div', 'setting-header');
     const heading = element('h3', 'category-heading');
@@ -221,24 +294,55 @@ function renderSettings() {
     });
     const label = inputLabel('New monthly allocation ($)', 'monthly', { type: 'number', min: '0.01', step: '0.01', required: true });
     label.querySelector('input').value = (currentMonthly(category) / 100).toFixed(2);
+    const groupLabel = element('label', '', 'Supercategory');
+    const groupSelect = element('select');
+    groupSelect.name = 'supercategoryId';
+    supercategoryOptions(groupSelect, category.supercategoryId);
+    groupLabel.append(groupSelect);
+    const preview = element('p', 'allocation-preview');
+    preview.setAttribute('role', 'status');
+    const updatePreview = () => {
+      const monthlyCents = cents(label.querySelector('input').value);
+      if (monthlyCents === null) { preview.textContent = 'Enter a valid monthly allocation.'; return; }
+      allocationPreview(preview, groupSelect.value, { ...category, supercategoryId: groupSelect.value, changes: [{ day: budgetDay(), monthlyCents }] });
+    };
+    label.querySelector('input').addEventListener('input', updatePreview);
+    groupSelect.addEventListener('change', updatePreview);
+    updatePreview();
     const submit = element('button', 'secondary-button', 'Update');
     submit.type = 'submit';
     const message = element('p', 'form-message');
     message.setAttribute('role', 'status');
-    form.append(label, submit, message);
+    form.append(label, groupLabel, preview, submit, message);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       const monthlyCents = cents(label.querySelector('input').value);
       if (monthlyCents === null) { message.textContent = 'Enter an amount above $0 with at most two decimal places.'; return; }
-      if (monthlyCents === currentMonthly(category)) { message.textContent = 'Allocation is already set to that amount.'; return; }
+      if (monthlyCents === currentMonthly(category) && groupSelect.value === category.supercategoryId) { message.textContent = 'No changes to save.'; return; }
       const changes = [...category.changes];
       if (changes.at(-1).day === budgetDay()) changes[changes.length - 1] = { day: budgetDay(), monthlyCents };
       else changes.push({ day: budgetDay(), monthlyCents });
-      const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, changes } : entry) };
+      const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, changes, supercategoryId: groupSelect.value } : entry) };
       if (save(next, message)) renderSettings();
     });
-    item.append(changeButton, form);
-    list.append(item);
+    const remove = element('button', 'text-button delete-button', 'Delete category');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `Delete ${category.name}`);
+    remove.addEventListener('click', () => {
+      const transactionCount = budget.purchases.filter((purchase) => purchase.categoryId === category.id).length;
+      if (!window.confirm(`Delete ${category.name} and its ${transactionCount} transaction${transactionCount === 1 ? '' : 's'}? This cannot be undone.`)) return;
+      const status = document.querySelector('#category-status');
+      const next = { ...budget, categories: budget.categories.filter((entry) => entry.id !== category.id), purchases: budget.purchases.filter((purchase) => purchase.categoryId !== category.id) };
+      if (save(next, status)) {
+        renderSettings();
+        status.textContent = `${category.name} and its transactions deleted.`;
+      }
+    });
+    const actions = element('div', 'setting-actions');
+    actions.append(changeButton, remove);
+    item.append(actions, form);
+    members.append(item);
+    }
   }
 }
 
@@ -283,6 +387,38 @@ function renderTransactions() {
 const categoryForm = document.querySelector('#category-form');
 const addCategoryButton = document.querySelector('#add-category');
 const addCategoryPanel = document.querySelector('#add-category-panel');
+const supercategoryForm = document.querySelector('#supercategory-form');
+if (supercategoryForm) {
+  const panel = document.querySelector('#add-supercategory-panel');
+  const button = document.querySelector('#add-supercategory');
+  button.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    button.setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) supercategoryForm.elements.namedItem('name').focus();
+  });
+  supercategoryForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(supercategoryForm);
+    const name = String(data.get('name')).trim();
+    const monthlyCents = nonnegativeCents(data.get('total'));
+    const message = document.querySelector('#supercategory-message');
+    if (!name || monthlyCents === null) { message.textContent = 'Enter a name and a nonnegative total with at most two decimal places.'; return; }
+    if (budget.supercategories.some((entry) => entry.name.toLowerCase() === name.toLowerCase())) { message.textContent = 'That supercategory already exists.'; return; }
+    const next = { ...budget, supercategories: [...budget.supercategories, { id: crypto.randomUUID(), name, monthlyCents }] };
+    if (save(next, message)) {
+      supercategoryForm.reset();
+      panel.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      renderSettings();
+      if (categoryForm && !addCategoryPanel.hidden) {
+        supercategoryOptions(categoryForm.elements.namedItem('supercategoryId'), next.supercategories.at(-1).id);
+        updateNewCategoryPreview();
+      }
+      document.querySelector('#supercategory-status').textContent = `${name} added.`;
+      button.focus();
+    }
+  });
+}
 function setCategoryFormOpen(open) {
   if (!addCategoryButton || !addCategoryPanel) return;
   addCategoryPanel.hidden = !open;
@@ -290,11 +426,23 @@ function setCategoryFormOpen(open) {
   if (open) {
     document.querySelector('#category-status').textContent = '';
     document.querySelector('#category-message').textContent = '';
+    supercategoryOptions(categoryForm.elements.namedItem('supercategoryId'));
+    updateNewCategoryPreview();
     categoryForm.elements.namedItem('name').focus();
   }
 }
+function updateNewCategoryPreview() {
+  if (!categoryForm) return;
+  const preview = document.querySelector('#new-category-preview');
+  const groupId = categoryForm.elements.namedItem('supercategoryId').value;
+  const monthlyCents = cents(categoryForm.elements.namedItem('monthly').value);
+  if (monthlyCents === null) { preview.textContent = 'Enter a monthly allocation to see the group total.'; return; }
+  allocationPreview(preview, groupId, { id: 'preview-category', supercategoryId: groupId, changes: [{ day: budgetDay(), monthlyCents }] });
+}
 if (categoryForm) {
   addCategoryButton.addEventListener('click', () => setCategoryFormOpen(addCategoryPanel.hidden));
+  categoryForm.elements.namedItem('monthly').addEventListener('input', updateNewCategoryPreview);
+  categoryForm.elements.namedItem('supercategoryId').addEventListener('change', updateNewCategoryPreview);
   if (location.hash === '#add-category') setCategoryFormOpen(true);
   window.addEventListener('hashchange', () => {
     if (location.hash === '#add-category') setCategoryFormOpen(true);
@@ -305,9 +453,10 @@ if (categoryForm) {
     const name = String(data.get('name')).trim();
     const icon = singleEmoji(data.get('icon'));
     const monthlyCents = cents(data.get('monthly'));
+    const supercategoryId = String(data.get('supercategoryId'));
     const startingMonths = Number(data.get('startingMonths'));
     const message = document.querySelector('#category-message');
-    if (!name || !icon || monthlyCents === null || ![0, 1, 2, 3].includes(startingMonths)) {
+    if (!name || !icon || monthlyCents === null || !budget.supercategories.some((entry) => entry.id === supercategoryId) || ![0, 1, 2, 3].includes(startingMonths)) {
       message.textContent = 'Enter a name, one emoji, an amount above $0 (up to two decimal places), and starting funds.';
       return;
     }
@@ -316,7 +465,7 @@ if (categoryForm) {
       return;
     }
     const category = {
-      id: crypto.randomUUID(), name, icon, createdDay: budgetDay(),
+      id: crypto.randomUUID(), name, icon, supercategoryId, createdDay: budgetDay(),
       startingCents: startingMonths * monthlyCents,
       changes: [{ day: budgetDay(), monthlyCents }]
     };

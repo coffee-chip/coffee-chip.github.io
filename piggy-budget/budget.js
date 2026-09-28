@@ -1,5 +1,23 @@
 export const STORAGE_KEY = 'piggy-budget-v1';
-export const emptyBudget = () => ({ categories: [], purchases: [], dayOffset: 0 });
+export const emptyBudget = () => ({ categories: [], supercategories: [], purchases: [], dayOffset: 0 });
+
+export function withSupercategories(saved) {
+  if (Array.isArray(saved.supercategories)) return saved;
+  if (!saved.categories.length) return { ...saved, supercategories: [] };
+  const id = 'general';
+  return {
+    ...saved,
+    supercategories: [{ id, name: 'General', monthlyCents: saved.categories.reduce((sum, category) => sum + currentMonthly(category), 0) }],
+    categories: saved.categories.map((category) => ({ ...category, supercategoryId: id }))
+  };
+}
+
+export function allocatedFor(categories, supercategoryId, replacement = null) {
+  return categories.reduce((sum, category) => {
+    const entry = replacement?.id === category.id ? replacement : category;
+    return sum + (entry.supercategoryId === supercategoryId ? currentMonthly(entry) : 0);
+  }, 0) + (replacement && !categories.some((category) => category.id === replacement.id) && replacement.supercategoryId === supercategoryId ? currentMonthly(replacement) : 0);
+}
 
 export function localDay(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
