@@ -4,84 +4,62 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#a54e68">
-  <meta name="description" content="Manage Piggy Budget categories and allocations.">
+  <meta name="description" content="Manage Piggy Budget groups, categories, and allocations.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=16">
-  <script src="./app.js?v=16" type="module"></script>
+  <link rel="stylesheet" href="./styles.css?v=17">
+  <script src="./app.js?v=17" type="module"></script>
   <title>Settings · Piggy Budget</title>
 </head>
 <body>
   <div class="app-shell">
     <header class="site-header">
-      <a class="brand" href="./?v=16" aria-label="Piggy Budget home"><span class="brand-mark" aria-hidden="true">●</span> Piggy Budget</a>
-      <nav aria-label="Main navigation">
-        <a href="./?v=16">Home</a>
-        <a href="./settings.html?v=16" aria-current="page">Settings</a>
-      </nav>
+      <a class="brand" href="./?v=17" aria-label="Piggy Budget home"><span class="brand-mark" aria-hidden="true">●</span> Piggy Budget</a>
+      <nav aria-label="Main navigation"><a href="./?v=17">Home</a><a href="./settings.html?v=17" aria-current="page">Settings</a></nav>
     </header>
     <main>
-      <section class="page-heading compact-heading">
-        <h1>Settings</h1>
+      <section class="page-heading compact-heading"><h1>Settings</h1></section>
+      <section class="panel interval-setting" aria-labelledby="interval-title">
+        <h2 id="interval-title">Budget interval</h2>
+        <label>Interval
+          <select id="budget-interval">
+            <option value="2-weeks">2 weeks</option>
+            <option value="4-weeks">4 weeks</option>
+            <option value="30-days">30 days</option>
+            <option value="1-month">1 month</option>
+          </select>
+        </label>
+        <p id="interval-description" class="muted"></p><p id="interval-message" class="form-message" role="status"></p>
       </section>
-      <section aria-labelledby="your-categories-title" class="settings-list-section">
-        <h2 id="your-categories-title">Supercategories &amp; categories</h2>
+      <section aria-labelledby="groups-title" class="settings-list-section">
+        <h2 id="groups-title">Groups &amp; categories</h2>
         <ul id="settings-categories" class="settings-list"></ul>
-        <button type="button" id="add-supercategory" class="add-category-button" aria-expanded="false" aria-controls="add-supercategory-panel">+ Add supercategory</button>
-        <button type="button" id="add-category" class="add-category-button" aria-expanded="false" aria-controls="add-category-panel">+ Add category</button>
-        <p id="supercategory-status" class="form-message" role="status"></p>
+        <button type="button" id="add-group" class="add-category-button">+ Add group</button>
+        <button type="button" id="add-category" class="add-category-button">+ Add category</button>
         <p id="category-status" class="form-message" role="status"></p>
       </section>
-      <section class="panel add-category-panel" id="add-supercategory-panel" aria-labelledby="new-supercategory-title" hidden>
-        <h2 id="new-supercategory-title">Add supercategory</h2>
-        <form id="supercategory-form">
-          <div class="form-grid">
-            <label>Name<input name="name" maxlength="40" placeholder="Hobbies" required></label>
-            <label>Total monthly allocation ($)<input name="total" type="number" min="0" step="0.01" placeholder="100.00" required></label>
-          </div>
-          <button type="submit">Save supercategory</button>
-          <p id="supercategory-message" class="form-message" role="status"></p>
-        </form>
+      <section class="panel add-category-panel" id="add-group-panel" hidden>
+        <h2>Add group</h2>
+        <form id="group-form"><div class="form-grid">
+          <label>Name<input name="name" maxlength="40" placeholder="Hobbies" required></label>
+          <label>Total allocation ($)<input name="total" type="number" min="0" step="0.01" placeholder="100.00" required></label>
+        </div><button type="submit">Save group</button><p id="group-message" class="form-message" role="status"></p></form>
       </section>
-      <section class="panel add-category-panel" id="add-category-panel" aria-labelledby="new-category-title" hidden>
-        <h2 id="new-category-title">Add category</h2>
+      <section class="panel add-category-panel" id="add-category-panel" hidden>
+        <h2>Add category</h2>
         <form id="category-form">
-          <div class="name-icon-row">
-            <label>Name<input name="name" maxlength="40" placeholder="Clothes, games, crafts…" required></label>
-            <label>Emoji icon<input name="icon" id="new-category-icon" type="text" maxlength="64" value="🐷" aria-describedby="emoji-hint" required></label>
-          </div>
-          <p id="emoji-hint" class="field-hint">Use your emoji keyboard or paste any emoji.</p>
+          <div class="name-icon-row"><label>Name<input name="name" maxlength="40" placeholder="Clothes, games, crafts…" required></label><label>Emoji icon<input name="icon" type="text" maxlength="64" value="🐷" required></label></div>
           <div class="form-grid">
-            <label>Supercategory<select name="supercategoryId" required></select></label>
-            <label>Monthly allocation ($)<input name="monthly" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="50.00" required></label>
-            <label>Starting balance
-              <select name="startingMonths">
-                <option value="0">Empty ($0)</option>
-                <option value="1">1 month of funds</option>
-                <option value="2">2 months of funds</option>
-                <option value="3">3 months of funds</option>
-              </select>
-            </label>
+            <label>Group<select name="groupId" required></select></label>
+            <label>Allocation ($)<input name="allocation" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="50.00" required></label>
+            <label>Starting funds<select name="startingMultiplier"></select></label>
           </div>
           <p id="new-category-preview" class="allocation-preview" role="status"></p>
-          <button type="submit">Save category</button>
-          <p id="category-message" class="form-message" role="status"></p>
+          <button type="submit">Save category</button><p id="category-message" class="form-message" role="status"></p>
         </form>
       </section>
-      <section class="panel data-tools" aria-labelledby="data-tools-title">
-        <h2 id="data-tools-title">Backup &amp; restore</h2>
-        <div class="data-actions">
-          <button type="button" id="download-backup">Download backup</button>
-          <label class="button-link secondary-button file-button">Restore backup<input id="restore-backup" type="file" accept="application/json,.json" hidden></label>
-        </div>
-        <p id="backup-message" class="form-message" role="status"></p>
-      </section>
-      <section class="panel developer-tools" aria-labelledby="developer-title">
-        <h2 id="developer-title">Developer tools</h2>
-        <p id="simulation-status" class="muted"></p>
-        <button type="button" id="advance-day">Advance day</button>
-        <p id="advance-message" class="form-message" role="status"></p>
-      </section>
+      <section class="panel data-tools"><h2>Backup &amp; restore</h2><div class="data-actions"><button type="button" id="download-backup">Download backup</button><label class="button-link secondary-button file-button">Restore backup<input id="restore-backup" type="file" accept="application/json,.json" hidden></label></div><p id="backup-message" class="form-message" role="status"></p></section>
+      <section class="panel developer-tools"><h2>Developer tools</h2><p id="simulation-status" class="muted"></p><button type="button" id="advance-day">Advance day</button><p id="advance-message" class="form-message" role="status"></p></section>
     </main>
   </div>
 </body>
