@@ -7,30 +7,28 @@
   <meta name="description" content="A flexible budget for discretionary spending.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=5">
-  <script src="./app.js?v=5" type="module"></script>
+  <link rel="stylesheet" href="./styles.css?v=8">
+  <script src="./app.js?v=8" type="module"></script>
   <title>Piggy Budget</title>
 </head>
 <body>
   <div class="app-shell">
     <header class="site-header">
-      <a class="brand" href="./?v=7" aria-label="Piggy Budget home"><span class="brand-mark" aria-hidden="true">●</span> Piggy Budget</a>
+      <a class="brand" href="./?v=8" aria-label="Piggy Budget home"><span class="brand-mark" aria-hidden="true">●</span> Piggy Budget</a>
       <nav aria-label="Main navigation">
-        <a href="./?v=7" aria-current="page">Home</a>
-        <a href="./settings.html?v=7">Settings</a>
+        <a href="./?v=8" aria-current="page">Home</a>
+        <a href="./settings.html?v=8">Settings</a>
       </nav>
     </header>
     <main>
-      <section class="page-heading">
-        <p class="eyebrow">Your spending buckets</p>
-        <h1>Good to see you.</h1>
+      <section class="page-heading compact-heading">
+        <h1>Your piggies</h1>
         <p class="date-line">Budget date: <time id="current-date"></time><span id="advance-indicator"></span></p>
       </section>
-      <section aria-labelledby="balances-title">
-        <div class="section-heading"><h2 id="balances-title">Your piggies</h2><a href="./settings.html?v=7">Manage categories</a></div>
+      <section aria-label="Category balances">
         <div id="category-list" class="category-list"></div>
+        <a class="add-category-link" href="./settings.html?v=8#add-category">+ Add category</a>
       </section>
-      <p class="storage-note">Your categories and transactions are stored in this browser on this device.</p>
     </main>
   </div>
 </body>

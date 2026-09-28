@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=5';
+import { STORAGE_KEY, emptyBudget, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=8';
 
 let storageWarning = '';
 function load() {
@@ -78,10 +78,7 @@ function renderHome() {
   list.replaceChildren();
   if (!budget.categories.length) {
     const empty = element('div', 'panel empty-state');
-    empty.append(element('p', '', 'No categories yet. Create a spending bucket to get started.'));
-    const link = element('a', 'button-link', 'Create a category');
-    link.href = './settings.html';
-    empty.append(link);
+    empty.append(element('p', '', 'No categories yet.'));
     list.append(empty);
     return;
   }
@@ -107,7 +104,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=8`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -156,7 +153,7 @@ function renderSettings() {
   const list = document.querySelector('#settings-categories');
   if (!list) return;
   list.replaceChildren();
-  if (!budget.categories.length) list.append(element('li', 'muted', 'No categories yet. Add one above.'));
+  if (!budget.categories.length) list.append(element('li', 'muted', 'No categories yet.'));
   for (const category of budget.categories) {
     const item = element('li', 'panel setting-card');
     item.append(element('h3', '', category.name));
@@ -245,7 +242,24 @@ function renderTransactions() {
 }
 
 const categoryForm = document.querySelector('#category-form');
+const addCategoryButton = document.querySelector('#add-category');
+const addCategoryPanel = document.querySelector('#add-category-panel');
+function setCategoryFormOpen(open) {
+  if (!addCategoryButton || !addCategoryPanel) return;
+  addCategoryPanel.hidden = !open;
+  addCategoryButton.setAttribute('aria-expanded', String(open));
+  if (open) {
+    document.querySelector('#category-status').textContent = '';
+    document.querySelector('#category-message').textContent = '';
+    categoryForm.elements.namedItem('name').focus();
+  }
+}
 if (categoryForm) {
+  addCategoryButton.addEventListener('click', () => setCategoryFormOpen(addCategoryPanel.hidden));
+  if (location.hash === '#add-category') setCategoryFormOpen(true);
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#add-category') setCategoryFormOpen(true);
+  });
   categoryForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const data = new FormData(categoryForm);
@@ -268,8 +282,10 @@ if (categoryForm) {
     };
     if (save({ ...budget, categories: [...budget.categories, category] }, message)) {
       categoryForm.reset();
-      message.textContent = `${name} added.`;
       renderSettings();
+      setCategoryFormOpen(false);
+      document.querySelector('#category-status').textContent = `${name} added.`;
+      addCategoryButton.focus();
     }
   });
 }
