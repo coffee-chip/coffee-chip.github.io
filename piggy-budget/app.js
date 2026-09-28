@@ -154,8 +154,9 @@ function renderHome() {
 
 function renderIntervalSetting() {
   const select = document.querySelector('#budget-interval'); if (!select) return; select.value = currentInterval(budget);
-  const days = INTERVALS[currentInterval(budget)].days;
-  document.querySelector('#interval-description').textContent = `Each category accrues daily at 1/${days === 365 / 12 ? '30.4167' : days} of its interval allocation.`;
+  const interval = currentInterval(budget);
+  const fraction = interval === '1-month' ? '12/365' : `1/${INTERVALS[interval].days}`;
+  document.querySelector('#interval-description').textContent = `Each category accrues daily at ${fraction} of its interval allocation.`;
 }
 
 function renderSettings() {
