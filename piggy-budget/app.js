@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, netSpentFor, netTransfersFor, currentMonthly, dollars } from './budget.js?v=15';
+import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, netSpentFor, netTransfersFor, currentMonthly, dollars } from './budget.js?v=16';
 
 const DEFAULT_ICON = '🐷';
 
@@ -198,7 +198,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=15`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=16`;
     actions.append(shake, history);
     card.append(actions);
 
