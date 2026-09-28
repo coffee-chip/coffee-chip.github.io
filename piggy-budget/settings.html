@@ -68,6 +68,14 @@
           <p id="category-message" class="form-message" role="status"></p>
         </form>
       </section>
+      <section class="panel data-tools" aria-labelledby="data-tools-title">
+        <h2 id="data-tools-title">Backup &amp; restore</h2>
+        <div class="data-actions">
+          <button type="button" id="download-backup">Download backup</button>
+          <label class="button-link secondary-button file-button">Restore backup<input id="restore-backup" type="file" accept="application/json,.json" hidden></label>
+        </div>
+        <p id="backup-message" class="form-message" role="status"></p>
+      </section>
       <section class="panel developer-tools" aria-labelledby="developer-title">
         <h2 id="developer-title">Developer tools</h2>
         <p id="simulation-status" class="muted"></p>
