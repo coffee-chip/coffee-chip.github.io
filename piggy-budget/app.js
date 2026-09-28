@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, netSpentFor, currentMonthly, dollars } from './budget.js?v=15';
+import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, netSpentFor, netTransfersFor, currentMonthly, dollars } from './budget.js?v=15';
 
 const DEFAULT_ICON = '🐷';
 
@@ -107,7 +107,7 @@ function renderHome() {
     return;
   }
   for (const category of budget.categories) {
-    const balance = balanceFor(category, budget.purchases, budgetDay());
+    const balance = balanceFor(category, budget.purchases, budgetDay(), budget.transfers);
     const card = element('article', 'bucket-card');
     card.dataset.categoryId = category.id;
     const top = element('div', 'bucket-top');
@@ -261,9 +261,19 @@ function renderSettings() {
     remove.setAttribute('title', `Delete ${category.name}`);
     remove.addEventListener('click', () => {
       const transactionCount = budget.purchases.filter((purchase) => purchase.categoryId === category.id).length;
-      if (!window.confirm(`Delete ${category.name} and its ${transactionCount} transaction${transactionCount === 1 ? '' : 's'}? This cannot be undone.`)) return;
+      const transferCount = budget.transfers.filter((transfer) => transfer.fromCategoryId === category.id || transfer.toCategoryId === category.id).length;
+      const related = [
+        `${transactionCount} transaction${transactionCount === 1 ? '' : 's'}`,
+        `${transferCount} transfer${transferCount === 1 ? '' : 's'}`
+      ].join(' and ');
+      if (!window.confirm(`Delete ${category.name}, its ${related}? This cannot be undone.`)) return;
       const status = document.querySelector('#category-status');
-      const next = { ...budget, categories: budget.categories.filter((entry) => entry.id !== category.id), purchases: budget.purchases.filter((purchase) => purchase.categoryId !== category.id) };
+      const next = {
+        ...budget,
+        categories: budget.categories.filter((entry) => entry.id !== category.id),
+        purchases: budget.purchases.filter((purchase) => purchase.categoryId !== category.id),
+        transfers: budget.transfers.filter((transfer) => transfer.fromCategoryId !== category.id && transfer.toCategoryId !== category.id)
+      };
       if (save(next, status)) {
         renderSettings();
         status.textContent = `${category.name} and its transactions deleted.`;
@@ -351,7 +361,7 @@ function renderTransactions() {
   }
   heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   document.title = `${category.name} transactions · Piggy Budget`;
-  const remaining = balanceFor(category, budget.purchases, budgetDay());
+  const remaining = balanceFor(category, budget.purchases, budgetDay(), budget.transfers);
   const spent = netSpentFor(category, budget.purchases, budgetDay());
   summary.replaceChildren();
   for (const [term, value] of [
