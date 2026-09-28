@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, currentMonthly, dollars } from './budget.js?v=13';
+import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, netSpentFor, currentMonthly, dollars } from './budget.js?v=14';
 
 const DEFAULT_ICON = '🐷';
 
@@ -142,7 +142,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=13`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=14`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -244,9 +244,6 @@ function renderSettings() {
     const item = element('li', 'setting-card');
     const header = element('div', 'setting-header');
     const heading = element('h3', 'category-heading');
-    const icon = element('span', 'category-emoji', category.icon || DEFAULT_ICON);
-    icon.setAttribute('aria-hidden', 'true');
-    heading.append(icon, document.createTextNode(category.name));
     const picker = element('input', 'icon-picker');
     picker.type = 'text';
     picker.maxLength = 64;
@@ -263,11 +260,25 @@ function renderSettings() {
       const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, icon: selectedIcon } : entry) };
       if (save(next, status)) {
         picker.value = selectedIcon;
-        icon.textContent = selectedIcon;
         status.textContent = `${category.name} icon updated.`;
       }
     });
-    header.append(heading, picker);
+    heading.append(picker, document.createTextNode(category.name));
+    const remove = element('button', 'delete-icon', '×');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `Delete ${category.name}`);
+    remove.setAttribute('title', `Delete ${category.name}`);
+    remove.addEventListener('click', () => {
+      const transactionCount = budget.purchases.filter((purchase) => purchase.categoryId === category.id).length;
+      if (!window.confirm(`Delete ${category.name} and its ${transactionCount} transaction${transactionCount === 1 ? '' : 's'}? This cannot be undone.`)) return;
+      const status = document.querySelector('#category-status');
+      const next = { ...budget, categories: budget.categories.filter((entry) => entry.id !== category.id), purchases: budget.purchases.filter((purchase) => purchase.categoryId !== category.id) };
+      if (save(next, status)) {
+        renderSettings();
+        status.textContent = `${category.name} and its transactions deleted.`;
+      }
+    });
+    header.append(heading, remove);
     item.append(header);
     const facts = element('dl', 'category-facts');
     for (const [term, value] of [
@@ -325,21 +336,8 @@ function renderSettings() {
       const next = { ...budget, categories: budget.categories.map((entry) => entry.id === category.id ? { ...entry, changes, supercategoryId: groupSelect.value } : entry) };
       if (save(next, message)) renderSettings();
     });
-    const remove = element('button', 'text-button delete-button', 'Delete category');
-    remove.type = 'button';
-    remove.setAttribute('aria-label', `Delete ${category.name}`);
-    remove.addEventListener('click', () => {
-      const transactionCount = budget.purchases.filter((purchase) => purchase.categoryId === category.id).length;
-      if (!window.confirm(`Delete ${category.name} and its ${transactionCount} transaction${transactionCount === 1 ? '' : 's'}? This cannot be undone.`)) return;
-      const status = document.querySelector('#category-status');
-      const next = { ...budget, categories: budget.categories.filter((entry) => entry.id !== category.id), purchases: budget.purchases.filter((purchase) => purchase.categoryId !== category.id) };
-      if (save(next, status)) {
-        renderSettings();
-        status.textContent = `${category.name} and its transactions deleted.`;
-      }
-    });
     const actions = element('div', 'setting-actions');
-    actions.append(changeButton, remove);
+    actions.append(changeButton);
     item.append(actions, form);
     members.append(item);
     }
@@ -356,13 +354,25 @@ function renderTransactions() {
   const summary = document.querySelector('#transaction-summary');
   if (!category) {
     heading.textContent = 'Category not found';
-    summary.textContent = 'Choose a category from the home page.';
+    summary.replaceChildren(element('p', 'muted', 'Choose a category from the home page.'));
     document.title = 'Transactions · Piggy Budget';
     return;
   }
   heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   document.title = `${category.name} transactions · Piggy Budget`;
-  summary.textContent = `${dollars(balanceFor(category, budget.purchases, budgetDay()))} accumulated · ${dollars(currentMonthly(category) / 30)} per day`;
+  const remaining = balanceFor(category, budget.purchases, budgetDay());
+  const spent = netSpentFor(category, budget.purchases, budgetDay());
+  summary.replaceChildren();
+  for (const [term, value] of [
+    ['Budgeting since', formatDay(category.createdDay)],
+    ['Total accumulated', dollars(remaining + spent)],
+    ['Total spent', dollars(spent)],
+    ['Remaining', dollars(remaining)]
+  ]) {
+    const row = element('div');
+    row.append(element('dt', '', term), element('dd', '', value));
+    summary.append(row);
+  }
   const transactions = budget.purchases.filter((entry) => entry.categoryId === id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   if (!transactions.length) list.append(element('p', 'muted', 'No transactions in this category yet.'));

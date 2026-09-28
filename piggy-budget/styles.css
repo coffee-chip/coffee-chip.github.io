@@ -30,7 +30,7 @@ p { line-height: 1.55; }
 .bucket-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .bucket-top h3 { overflow-wrap: anywhere; }
 .bucket-top .balance { margin: 0; text-align: right; white-space: nowrap; }
-.category-heading { display: inline-flex; align-items: center; gap: 10px; }
+.category-heading { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
 .category-emoji { flex: none; font-size: 1.5rem; line-height: 1; }
 .bucket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 8px; }
 .history-link { font-size: .95rem; }
@@ -76,7 +76,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .setting-card { padding: 18px 24px; border-top: 1px solid #eadbd9; }
 .setting-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .setting-header h3 { overflow-wrap: anywhere; }
-.icon-picker { width: 72px; margin: 0; text-align: center; }
+.icon-picker { flex: none; width: 44px; min-height: 44px; margin: 0; padding: 5px; border-color: transparent; background: transparent; text-align: center; font-size: 1.5rem; }
+.icon-picker:hover { border-color: #d7c5c9; }
+.delete-icon { flex: none; display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: #a2334a; font-size: 1.5rem; font-weight: 400; }
+.delete-icon:hover { background: #f5e4e7; border-color: transparent; color: #a2334a; }
 .setting-card .muted { margin: 0 0 16px; }
 .category-facts { display: grid; gap: 5px; margin: 10px 0 6px; }
 .category-facts div { display: flex; align-items: baseline; gap: 8px; }
@@ -84,8 +87,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .category-facts dt::after { content: ':'; }
 .category-facts dd { margin: 0; font-size: .9rem; font-weight: 650; }
 .setting-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: -9px; }
-.delete-button { color: #a2334a; }
-.delete-button:hover { color: #a2334a; }
+.transaction-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 26px; max-width: 600px; margin: 26px 0 0; }
+.transaction-stats > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding-bottom: 8px; border-bottom: 1px solid #eadbd9; }
+.transaction-stats dt { color: #685962; }
+.transaction-stats dd { margin: 0; font-weight: 700; }
 .edit-form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
 .edit-form label { flex: 1 1 180px; max-width: 260px; margin: 0; }
 .edit-form .form-message { flex-basis: 100%; margin: 0; }
@@ -111,4 +116,5 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .bucket-top { align-items: start; }
   .bucket-top .balance { font-size: 1.5rem; }
   .purchase-row { gap: 8px; }
+  .transaction-stats { grid-template-columns: 1fr; }
 }

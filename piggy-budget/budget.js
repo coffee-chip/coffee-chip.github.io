@@ -68,4 +68,9 @@ export function balanceFor(category, purchases, today = localDay()) {
   return balance;
 }
 
+export function netSpentFor(category, purchases, today = localDay()) {
+  return purchases.reduce((total, purchase) =>
+    total + (purchase.categoryId === category.id && purchase.day <= today ? purchase.amountCents : 0), 0);
+}
+
 export const dollars = (amountCents) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountCents / 100);
