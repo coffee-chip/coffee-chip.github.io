@@ -49,6 +49,61 @@ function save(next, message) {
   }
 }
 
+function validDay(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return false;
+  const parsed = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function validatedBackup(value) {
+  const raw = value?.format === 'piggy-budget' && value.data ? value.data : value;
+  if (!raw || !Array.isArray(raw.categories) || !Array.isArray(raw.purchases)) throw new Error('This is not a Piggy Budget backup.');
+  const data = withSupercategories(raw);
+  if (!Array.isArray(data.supercategories) || !Array.isArray(data.transfers)) throw new Error('Backup data is incomplete.');
+  if (!Number.isSafeInteger(data.dayOffset) || data.dayOffset < 0) throw new Error('Backup has an invalid day offset.');
+
+  const supercategoryIds = new Set();
+  for (const group of data.supercategories) {
+    if (!group || typeof group.id !== 'string' || !group.id || supercategoryIds.has(group.id) || typeof group.name !== 'string' || !group.name.trim() || !Number.isSafeInteger(group.monthlyCents) || group.monthlyCents < 0) throw new Error('Backup has an invalid supercategory.');
+    supercategoryIds.add(group.id);
+  }
+
+  const categoryIds = new Set();
+  for (const category of data.categories) {
+    if (!category || typeof category.id !== 'string' || !category.id || categoryIds.has(category.id) || typeof category.name !== 'string' || !category.name.trim() || !validDay(category.createdDay) || !Number.isSafeInteger(category.startingCents) || category.startingCents < 0 || !Array.isArray(category.changes) || !category.changes.length || !supercategoryIds.has(category.supercategoryId)) throw new Error('Backup has an invalid category.');
+    for (const change of category.changes) {
+      if (!validDay(change.day) || !Number.isSafeInteger(change.monthlyCents) || change.monthlyCents <= 0) throw new Error('Backup has an invalid allocation history.');
+    }
+    categoryIds.add(category.id);
+  }
+
+  for (const purchase of data.purchases) {
+    if (!purchase || typeof purchase.id !== 'string' || !purchase.id || !categoryIds.has(purchase.categoryId) || !validDay(purchase.day) || !Number.isSafeInteger(purchase.amountCents) || purchase.amountCents === 0) throw new Error('Backup has an invalid transaction.');
+  }
+  for (const transfer of data.transfers) {
+    if (!transfer || typeof transfer.id !== 'string' || !transfer.id || !categoryIds.has(transfer.fromCategoryId) || !categoryIds.has(transfer.toCategoryId) || transfer.fromCategoryId === transfer.toCategoryId || !validDay(transfer.day) || !Number.isSafeInteger(transfer.amountCents) || transfer.amountCents <= 0) throw new Error('Backup has an invalid transfer.');
+  }
+  return data;
+}
+
+function downloadBackup() {
+  const payload = {
+    format: 'piggy-budget',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: budget
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `piggy-budget-backup-${localDay()}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function element(tag, className = '', content = null) {
   const node = document.createElement(tag);
   if (className) node.className = className;
