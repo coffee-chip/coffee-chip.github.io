@@ -264,12 +264,7 @@ function renderHome() {
   if (!list) return;
   list.replaceChildren();
 
-  if (!budget.categories.length) {
-    const empty = element('div', 'panel empty-state');
-    empty.append(element('p', '', 'No categories yet.'));
-    list.append(empty);
-    return;
-  }
+  if (!budget.categories.length) return;
 
   for (const category of budget.categories) {
     const categoryBalance = balanceFor(category, budget.purchases, budget, budgetDay());
@@ -359,8 +354,6 @@ function renderSettings() {
   const list = document.querySelector('#settings-categories');
   if (!list) return;
   list.replaceChildren();
-
-  if (!budget.groups.length) list.append(element('li', 'muted', 'Add a group to start.'));
 
   for (const budgetGroup of budget.groups) {
     const groupCard = element('li', 'panel group-card');
@@ -787,12 +780,8 @@ const intervalSelect = document.querySelector('#budget-interval');
 if (intervalSelect) {
   intervalSelect.addEventListener('change', () => {
     const interval = intervalSelect.value;
-    const message = document.querySelector('#interval-message');
     if (!INTERVALS[interval]) return;
-    if (save({ ...budget, interval }, message)) {
-      renderAll();
-      message.textContent = 'Budget interval updated. Daily accruals are unchanged.';
-    }
+    if (save({ ...budget, interval })) renderAll();
   });
 }
 
