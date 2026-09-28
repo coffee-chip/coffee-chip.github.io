@@ -22,8 +22,7 @@ h1 { margin: 0 0 12px; font-size: clamp(2.25rem, 7vw, 4rem); line-height: 1.1; l
 h2 { margin: 0 0 20px; font-size: 1.4rem; letter-spacing: -.025em; }
 h3 { margin: 0; font-size: 1.08rem; }
 p { line-height: 1.55; }
-.intro, .date-line, .muted { color: #685962; }
-.date-line { margin: 0; }
+.muted { color: #685962; }
 .bucket-card, .panel { background: #fff; border: 1px solid #eedcdb; border-radius: 18px; box-shadow: 0 7px 22px #56313d0a; }
 .bucket-card { padding: 20px 24px; }
 .category-list { display: grid; gap: 16px; }
@@ -65,7 +64,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .text-button { min-height: 36px; padding: 6px 9px; border: 0; background: transparent; color: #803750; font-weight: 500; }
 .text-button:hover { background: #f5e4e7; color: #803750; }
 .settings-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.supercategory-group { min-width: 0; padding: 0; overflow: hidden; }
+.panel.supercategory-group { min-width: 0; padding: 0; overflow: hidden; }
 .supercategory-summary { padding: 18px 24px; background: #fbf0f0; }
 .supercategory-summary .setting-header { flex-wrap: wrap; }
 .supercategory-summary .text-button { margin-left: -9px; }
@@ -110,6 +109,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .page-heading { margin: 48px 0 40px; }
   .compact-heading { margin: 32px 0 24px; }
   .panel { padding: 20px; }
+  .supercategory-summary, .setting-card { padding-left: 18px; padding-right: 18px; }
   .name-icon-row { grid-template-columns: minmax(0, 1fr) 120px; gap: 10px; }
   .form-grid { grid-template-columns: 1fr; gap: 0; }
   .spend-form { grid-template-columns: 1fr; }

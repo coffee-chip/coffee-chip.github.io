@@ -1,4 +1,4 @@
-import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, netSpentFor, currentMonthly, dollars } from './budget.js?v=14';
+import { STORAGE_KEY, emptyBudget, withSupercategories, allocatedFor, localDay, addDays, cents, balanceFor, netSpentFor, currentMonthly, dollars } from './budget.js?v=15';
 
 const DEFAULT_ICON = '🐷';
 
@@ -29,15 +29,6 @@ function showStorageWarning() {
   warning.id = 'storage-warning';
   warning.setAttribute('role', 'alert');
   main.prepend(warning);
-}
-
-function updateDate() {
-  const date = document.querySelector('#current-date');
-  if (!date) return;
-  const day = budgetDay();
-  date.dateTime = day;
-  date.textContent = formatDay(day, 'full');
-  document.querySelector('#advance-indicator').textContent = budget.dayOffset ? ` · ${budget.dayOffset} day${budget.dayOffset === 1 ? '' : 's'} advanced` : '';
 }
 
 function formatDay(day, dateStyle = 'medium') {
@@ -142,7 +133,7 @@ function renderHome() {
       if (!form.hidden) form.elements.namedItem('amount').focus();
     });
     const history = element('a', 'history-link', 'View transactions');
-    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=14`;
+    history.href = `./transactions.html?category=${encodeURIComponent(category.id)}&v=15`;
     actions.append(shake, history);
     card.append(actions);
 
@@ -508,7 +499,6 @@ if (advanceButton) {
 }
 
 function renderAll() {
-  updateDate();
   renderHome();
   renderSettings();
   renderTransactions();
