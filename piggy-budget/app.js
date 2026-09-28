@@ -545,6 +545,35 @@ if (categoryForm) {
   });
 }
 
+const backupButton = document.querySelector('#download-backup');
+const restoreInput = document.querySelector('#restore-backup');
+if (backupButton) {
+  backupButton.addEventListener('click', () => {
+    downloadBackup();
+    document.querySelector('#backup-message').textContent = 'Backup downloaded.';
+  });
+}
+if (restoreInput) {
+  restoreInput.addEventListener('change', async () => {
+    const message = document.querySelector('#backup-message');
+    const file = restoreInput.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const restored = validatedBackup(parsed);
+      if (!window.confirm('Restore this backup? This will replace the budget data currently stored in this browser.')) return;
+      if (save(restored, message)) {
+        renderAll();
+        message.textContent = 'Backup restored.';
+      }
+    } catch (error) {
+      message.textContent = error instanceof Error ? error.message : 'Could not restore this backup.';
+    } finally {
+      restoreInput.value = '';
+    }
+  });
+}
+
 const advanceButton = document.querySelector('#advance-day');
 function renderSimulation() {
   const status = document.querySelector('#simulation-status');
