@@ -31,33 +31,6 @@
         </label>
         <p id="interval-description" class="muted"></p>
       </section>
-      <section aria-labelledby="groups-title" class="settings-list-section">
-        <h2 id="groups-title">Groups &amp; categories</h2>
-        <ul id="settings-categories" class="settings-list"></ul>
-        <button type="button" id="add-group" class="add-category-button">+ Add group</button>
-        <button type="button" id="add-category" class="add-category-button">+ Add category</button>
-        <p id="category-status" class="form-message" role="status"></p>
-      </section>
-      <section class="panel add-category-panel" id="add-group-panel" hidden>
-        <h2>Add group</h2>
-        <form id="group-form"><div class="form-grid">
-          <label>Name<input name="name" maxlength="40" placeholder="Hobbies" required></label>
-          <label>Total allocation per interval ($)<input name="total" type="number" min="0" step="0.01" placeholder="100.00" required></label>
-        </div><button type="submit">Save group</button><p id="group-message" class="form-message" role="status"></p></form>
-      </section>
-      <section class="panel add-category-panel" id="add-category-panel" hidden>
-        <h2>Add category</h2>
-        <form id="category-form">
-          <div class="name-icon-row"><label>Name<input name="name" maxlength="40" placeholder="Clothes, games, crafts…" required></label><label>Emoji icon<input name="icon" type="text" maxlength="64" value="🐷" required></label></div>
-          <div class="form-grid">
-            <label>Group<select name="groupId" required></select></label>
-            <label>Allocation per interval ($)<input name="allocation" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="50.00" required></label>
-            <label>Starting funds<select name="startingMultiplier"></select></label>
-          </div>
-          <p id="new-category-preview" class="allocation-preview" role="status"></p>
-          <button type="submit">Save category</button><p id="category-message" class="form-message" role="status"></p>
-        </form>
-      </section>
       <section class="panel data-tools"><h2>Backup &amp; restore</h2><div class="data-actions"><button type="button" id="download-backup">Download backup</button><label class="button-link secondary-button file-button">Restore backup<input id="restore-backup" type="file" accept="application/json,.json" hidden></label></div><p id="backup-message" class="form-message" role="status"></p></section>
       <section class="panel developer-tools"><h2>Developer tools</h2><p id="simulation-status" class="muted"></p><button type="button" id="advance-day">Advance day</button><p id="advance-message" class="form-message" role="status"></p></section>
     </main>
