@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   INTERVALS, emptyBudget, allocatedForGroup, balanceFor, goalBalanceFor,
-  netSpentFor, netTransfersFor, bucketRef, currentDaily, currentAllocation,
+  bucketBalanceFor, canTransferFrom, netSpentFor, netTransfersFor, bucketRef, currentDaily, currentAllocation,
   groupAllocation, dailyCentsFromInterval
 } from './budget.js';
 
@@ -123,4 +123,48 @@ test('money can transfer back out of a goal', () => {
 
 test('one month is 365/12 days', () => {
   assert.equal(INTERVALS['1-month'].days, 365 / 12);
+});
+
+
+test('transfer can use the full source balance but not exceed it', () => {
+  const clothes = { ...category('clothes', 100), startingCents: 3000 };
+  const vacation = goal('vacation', 10000);
+  const budget = {
+    groups: [],
+    categories: [clothes],
+    goals: [vacation],
+    purchases: [],
+    transfers: [],
+    interval: '30-days',
+    dayOffset: 0
+  };
+  const source = bucketRef('category', 'clothes');
+  assert.equal(bucketBalanceFor(source, budget, '2026-09-28'), 3000);
+  assert.equal(canTransferFrom(source, 3000, budget, '2026-09-28'), true);
+  assert.equal(canTransferFrom(source, 3001, budget, '2026-09-28'), false);
+});
+
+test('goal source transfers also cannot make the goal negative', () => {
+  const clothes = { ...category('clothes', 100), startingCents: 3000 };
+  const vacation = goal('vacation', 10000);
+  const transfer = {
+    id: 'fund-goal',
+    fromBucketId: bucketRef('category', 'clothes'),
+    toBucketId: bucketRef('goal', 'vacation'),
+    amountCents: 1200,
+    day: '2026-09-28'
+  };
+  const budget = {
+    groups: [],
+    categories: [clothes],
+    goals: [vacation],
+    purchases: [],
+    transfers: [transfer],
+    interval: '30-days',
+    dayOffset: 0
+  };
+  const source = bucketRef('goal', 'vacation');
+  assert.equal(bucketBalanceFor(source, budget, '2026-09-28'), 1200);
+  assert.equal(canTransferFrom(source, 1200, budget, '2026-09-28'), true);
+  assert.equal(canTransferFrom(source, 1201, budget, '2026-09-28'), false);
 });
