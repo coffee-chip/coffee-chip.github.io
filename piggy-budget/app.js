@@ -1,7 +1,7 @@
 import {
   STORAGE_KEY, INTERVALS, emptyBudget, allocatedForGroup, localDay, addDays, cents,
-  balanceFor, netSpentFor, netTransfersFor, currentDaily, currentAllocation,
-  groupAllocation, dailyCentsFromInterval, dollars
+  balanceFor, goalBalanceFor, netSpentFor, netTransfersFor, bucketRef,
+  currentDaily, currentAllocation, groupAllocation, dailyCentsFromInterval, dollars
 } from './budget.js?v=24';
 
 const DEFAULT_ICON = '🐷';
@@ -18,6 +18,7 @@ function load() {
       saved &&
       Array.isArray(saved.groups) &&
       Array.isArray(saved.categories) &&
+      Array.isArray(saved.goals) &&
       Array.isArray(saved.purchases) &&
       Array.isArray(saved.transfers) &&
       INTERVALS[saved.interval]
@@ -143,6 +144,50 @@ function categoryOptions(select, selected = '') {
   if (selected && budget.categories.some(category => category.id === selected)) select.value = selected;
 }
 
+function allBuckets() {
+  return [
+    ...budget.categories.map(category => ({
+      ref: bucketRef('category', category.id),
+      type: 'category',
+      id: category.id,
+      name: category.name,
+      icon: category.icon || DEFAULT_ICON
+    })),
+    ...budget.goals.map(goal => ({
+      ref: bucketRef('goal', goal.id),
+      type: 'goal',
+      id: goal.id,
+      name: goal.name,
+      icon: goal.icon || '🎯'
+    }))
+  ];
+}
+
+function bucketOptions(select, selected = '') {
+  select.replaceChildren();
+  const categoryGroup = element('optgroup');
+  categoryGroup.label = 'Categories';
+  for (const category of budget.categories) {
+    const option = element('option', '', `${category.icon || DEFAULT_ICON} ${category.name}`);
+    option.value = bucketRef('category', category.id);
+    categoryGroup.append(option);
+  }
+  const goalGroup = element('optgroup');
+  goalGroup.label = 'Goals';
+  for (const goal of budget.goals) {
+    const option = element('option', '', `${goal.icon || '🎯'} ${goal.name}`);
+    option.value = bucketRef('goal', goal.id);
+    goalGroup.append(option);
+  }
+  if (categoryGroup.children.length) select.append(categoryGroup);
+  if (goalGroup.children.length) select.append(goalGroup);
+  if (selected && allBuckets().some(bucket => bucket.ref === selected)) select.value = selected;
+}
+
+function bucketByRef(ref) {
+  return allBuckets().find(bucket => bucket.ref === ref) || null;
+}
+
 function startingOptions(select) {
   const configs = {
     '2-weeks': [[1, '2 weeks'], [2, '4 weeks'], [4, '8 weeks'], [6, '12 weeks']],
@@ -172,13 +217,14 @@ function iconButton(type, label) {
 }
 
 function validatedBackup(value) {
-  if (value?.format !== 'piggy-budget' || value?.version !== 3 || !value.data) {
+  if (value?.format !== 'piggy-budget' || value?.version !== 4 || !value.data) {
     throw new Error('This is not a current Piggy Budget backup.');
   }
   const data = value.data;
   if (
     !Array.isArray(data.groups) ||
     !Array.isArray(data.categories) ||
+    !Array.isArray(data.goals) ||
     !Array.isArray(data.purchases) ||
     !Array.isArray(data.transfers) ||
     !INTERVALS[data.interval] ||
@@ -217,6 +263,26 @@ function validatedBackup(value) {
     categoryIds.add(category.id);
   }
 
+  const goalIds = new Set();
+  for (const goal of data.goals) {
+    if (
+      !goal?.id ||
+      goalIds.has(goal.id) ||
+      !goal.name?.trim() ||
+      !groupIds.has(goal.groupId) ||
+      !Number.isSafeInteger(goal.targetCents) ||
+      goal.targetCents <= 0 ||
+      !Number.isSafeInteger(goal.startingCents) ||
+      goal.startingCents < 0
+    ) throw new Error('Backup has an invalid goal.');
+    goalIds.add(goal.id);
+  }
+
+  const bucketIds = new Set([
+    ...[...categoryIds].map(id => bucketRef('category', id)),
+    ...[...goalIds].map(id => bucketRef('goal', id))
+  ]);
+
   for (const purchase of data.purchases) {
     if (
       !purchase?.id ||
@@ -230,9 +296,9 @@ function validatedBackup(value) {
   for (const transfer of data.transfers) {
     if (
       !transfer?.id ||
-      !categoryIds.has(transfer.fromCategoryId) ||
-      !categoryIds.has(transfer.toCategoryId) ||
-      transfer.fromCategoryId === transfer.toCategoryId ||
+      !bucketIds.has(transfer.fromBucketId) ||
+      !bucketIds.has(transfer.toBucketId) ||
+      transfer.fromBucketId === transfer.toBucketId ||
       !validDay(transfer.day) ||
       !Number.isSafeInteger(transfer.amountCents) ||
       transfer.amountCents <= 0
@@ -245,7 +311,7 @@ function validatedBackup(value) {
 function downloadBackup() {
   const payload = {
     format: 'piggy-budget',
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     data: budget
   };
