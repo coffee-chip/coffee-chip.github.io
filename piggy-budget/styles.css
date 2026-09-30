@@ -30,3 +30,13 @@ form>.form-grid+button{margin-top:var(--form-field-gap)}
 .compact-main{padding-top:16px!important}
 .compact-main>.interval-setting{margin-top:0}
 .compact-main>.manage-list-section{margin-top:0}
+
+.compact-main{padding-top:16px!important}
+.history-main>.page-heading{margin:0 0 20px}
+.settings-list-section{margin-top:0}
+.compact-main>.panel{margin-top:0}
+.compact-main>.panel+.panel{margin-top:16px}
+.data-actions .file-button{margin-bottom:0}
+.transaction-row{align-items:start}
+.transaction-row .transaction-date{font-weight:650}
+.transaction-row .transaction-description{margin-top:4px;color:#685962}
