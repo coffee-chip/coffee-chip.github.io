@@ -483,7 +483,8 @@ function renderIntervalSetting() {
   const select = document.querySelector('#budget-interval');
   if (!select) return;
   select.value = budget.interval;
-  document.querySelector('#interval-description').textContent =
+  const description = document.querySelector('#interval-description');
+  if (description) description.textContent =
     'Changing the interval recalculates displayed allocation amounts while keeping each category’s daily accrual unchanged.';
 }
 
@@ -829,7 +830,6 @@ function renderTransactions() {
   }
 
   heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
-  heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   document.title = `${category.name} history · Piggy Budget`;
 
   const remaining = balanceFor(category, budget.purchases, budget, budgetDay());
@@ -873,9 +873,10 @@ function renderTransactions() {
       const categoryRef = bucketRef('category', id);
       const outgoing = transfer.fromBucketId === categoryRef;
       const other = bucketByRef(outgoing ? transfer.toBucketId : transfer.fromBucketId);
+      const transferLine = `${outgoing ? 'To' : 'From'} ${other?.name || 'bucket'}${transfer.note ? `: ${transfer.note}` : ''}`;
       details.append(
-        element('strong', '', transfer.note || `Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'bucket'}`),
-        element('small', '', `${formatDay(transfer.day)} · Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'bucket'}`)
+        element('strong', 'transaction-date', formatDay(transfer.day)),
+        element('small', 'transaction-description', transferLine)
       );
       row.append(
         details,
@@ -904,8 +905,12 @@ function renderTransactions() {
     const transaction = entry.item;
     const refund = transaction.amountCents < 0;
     details.append(
-      element('strong', '', transaction.note || (refund ? 'Refund' : 'Purchase')),
-      element('small', '', `${formatDay(transaction.day)} · ${refund ? 'Refund' : 'Purchase'}`)
+      element('strong', 'transaction-date', formatDay(transaction.day)),
+      element(
+        'small',
+        'transaction-description',
+        transaction.note ? `${refund ? 'Refund' : 'Purchase'}: ${transaction.note}` : (refund ? 'Refund' : 'Purchase')
+      )
     );
     row.append(
       details,
