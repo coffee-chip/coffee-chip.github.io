@@ -537,7 +537,8 @@ function renderSettings() {
     list.append(groupCard);
 
     const categories = budget.categories.filter(category => category.groupId === budgetGroup.id);
-    if (!categories.length) members.append(element('li', 'muted', 'No categories in this group.'));
+    const goals = budget.goals.filter(goal => goal.groupId === budgetGroup.id);
+    if (!categories.length && !goals.length) members.append(element('li', 'muted', 'No categories or goals in this group.'));
 
     for (const category of categories) {
       const item = element('li', 'setting-card');
@@ -654,8 +655,9 @@ function renderSettings() {
 
       remove.addEventListener('click', () => {
         const tx = budget.purchases.filter(purchase => purchase.categoryId === category.id).length;
+        const ref = bucketRef('category', category.id);
         const tr = budget.transfers.filter(transfer =>
-          transfer.fromCategoryId === category.id || transfer.toCategoryId === category.id
+          transfer.fromBucketId === ref || transfer.toBucketId === ref
         ).length;
         if (!confirm(
           `Delete ${category.name}, its ${tx} transaction${tx === 1 ? '' : 's'} and ${tr} transfer${tr === 1 ? '' : 's'}? This cannot be undone.`
@@ -667,7 +669,109 @@ function renderSettings() {
           categories: budget.categories.filter(entry => entry.id !== category.id),
           purchases: budget.purchases.filter(purchase => purchase.categoryId !== category.id),
           transfers: budget.transfers.filter(transfer =>
-            transfer.fromCategoryId !== category.id && transfer.toCategoryId !== category.id
+            transfer.fromBucketId !== ref && transfer.toBucketId !== ref
+          )
+        }, status)) renderSettings();
+      });
+
+      item.append(form);
+      members.append(item);
+    }
+
+    for (const goal of goals) {
+      const item = element('li', 'setting-card goal-setting-card');
+      const rowHeader = element('div', 'setting-header');
+      const heading = element('h3', 'category-heading');
+      const picker = element('input', 'icon-picker');
+      picker.type = 'text';
+      picker.maxLength = 64;
+      picker.value = goal.icon || '🎯';
+      picker.setAttribute('aria-label', `Emoji icon for ${goal.name}`);
+      picker.addEventListener('input', () => {
+        const status = document.querySelector('#category-status');
+        const icon = singleEmoji(picker.value);
+        if (!icon) {
+          status.textContent = 'Enter one emoji for the icon.';
+          return;
+        }
+        save({
+          ...budget,
+          goals: budget.goals.map(entry => entry.id === goal.id ? { ...entry, icon } : entry)
+        }, status);
+      });
+      heading.append(picker, document.createTextNode(goal.name));
+
+      const edit = iconButton('edit', `Edit ${goal.name}`);
+      const remove = iconButton('remove', `Delete ${goal.name}`);
+      const headerActions = element('div', 'setting-header-actions');
+      headerActions.append(edit, remove);
+      rowHeader.append(heading, headerActions);
+      item.append(rowHeader);
+
+      const facts = element('dl', 'category-facts');
+      for (const [term, value] of [
+        ['Goal target', dollars(goal.targetCents)],
+        ['Saved', dollars(goalBalanceFor(goal, budget.transfers, budgetDay()))]
+      ]) {
+        const fact = element('div');
+        fact.append(element('dt', '', term), element('dd', '', value));
+        facts.append(fact);
+      }
+      item.append(facts);
+
+      const form = element('form', 'edit-form');
+      form.hidden = true;
+      const targetLabel = inputLabel('Target amount ($)', 'target', {
+        type: 'number', min: '0.01', step: '0.01', required: true
+      });
+      targetLabel.querySelector('input').value = (goal.targetCents / 100).toFixed(2);
+
+      const groupLabel = element('label', '', 'Group');
+      const groupSelect = element('select');
+      groupOptions(groupSelect, goal.groupId);
+      groupLabel.append(groupSelect);
+
+      const submit = element('button', 'secondary-button', 'Update');
+      submit.type = 'submit';
+      const message = element('p', 'form-message');
+      form.append(targetLabel, groupLabel, submit, message);
+
+      edit.addEventListener('click', () => {
+        form.hidden = !form.hidden;
+        edit.setAttribute('aria-expanded', String(!form.hidden));
+        if (!form.hidden) targetLabel.querySelector('input').focus();
+      });
+
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        const targetCents = cents(targetLabel.querySelector('input').value);
+        if (targetCents === null) {
+          message.textContent = 'Enter a valid target amount.';
+          return;
+        }
+        const next = {
+          ...budget,
+          goals: budget.goals.map(entry =>
+            entry.id === goal.id ? { ...entry, groupId: groupSelect.value, targetCents } : entry
+          )
+        };
+        if (save(next, message)) renderSettings();
+      });
+
+      remove.addEventListener('click', () => {
+        const ref = bucketRef('goal', goal.id);
+        const tr = budget.transfers.filter(transfer =>
+          transfer.fromBucketId === ref || transfer.toBucketId === ref
+        ).length;
+        if (!confirm(
+          `Delete ${goal.name} and its ${tr} transfer${tr === 1 ? '' : 's'}? This cannot be undone.`
+        )) return;
+        const status = document.querySelector('#category-status');
+        if (save({
+          ...budget,
+          goals: budget.goals.filter(entry => entry.id !== goal.id),
+          transfers: budget.transfers.filter(transfer =>
+            transfer.fromBucketId !== ref && transfer.toBucketId !== ref
           )
         }, status)) renderSettings();
       });
