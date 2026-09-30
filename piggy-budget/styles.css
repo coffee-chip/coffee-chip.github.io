@@ -38,3 +38,7 @@ form>.form-grid+button{margin-top:var(--form-field-gap)}
 .transaction-row{align-items:start}
 .transaction-row .transaction-date{font-weight:650}
 .transaction-row .transaction-description{margin-top:4px;color:#685962}
+
+.history-main{padding-top:0!important}
+.history-main>.history-summary{margin:0 0 20px}
+.history-main .transaction-stats{margin-top:0}
