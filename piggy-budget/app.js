@@ -584,10 +584,7 @@ function renderSettings() {
       picker.addEventListener('input', () => {
         const status = document.querySelector('#category-status');
         const icon = singleEmoji(picker.value);
-        if (!icon) {
-          status.textContent = 'Enter one emoji for the icon.';
-          return;
-        }
+        if (!icon) return;
         save({
           ...budget,
           categories: budget.categories.map(entry =>
@@ -721,10 +718,7 @@ function renderSettings() {
       picker.addEventListener('input', () => {
         const status = document.querySelector('#category-status');
         const icon = singleEmoji(picker.value);
-        if (!icon) {
-          status.textContent = 'Enter one emoji for the icon.';
-          return;
-        }
+        if (!icon) return;
         save({
           ...budget,
           goals: budget.goals.map(entry => entry.id === goal.id ? { ...entry, icon } : entry)
