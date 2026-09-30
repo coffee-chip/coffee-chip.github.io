@@ -1,6 +1,6 @@
 import {
   STORAGE_KEY, INTERVALS, emptyBudget, allocatedForGroup, localDay, addDays, cents,
-  balanceFor, goalBalanceFor, netSpentFor, netTransfersFor, bucketRef,
+  balanceFor, goalBalanceFor, bucketBalanceFor, canTransferFrom, netSpentFor, netTransfersFor, bucketRef,
   currentDaily, currentAllocation, groupAllocation, dailyCentsFromInterval, dollars
 } from './budget.js?v=26';
 
@@ -829,6 +829,8 @@ function renderTransactions() {
   }
 
   heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
+  const headerTitle = document.querySelector('#header-page-title');
+  if (headerTitle) headerTitle.textContent = category.name;
   document.title = `${category.name} history · Piggy Budget`;
 
   const remaining = balanceFor(category, budget.purchases, budget, budgetDay());
@@ -1250,6 +1252,12 @@ if (transferForm) {
       !bucketIds.has(toBucketId)
     ) {
       message.textContent = 'Choose two different categories or goals and a valid amount.';
+      return;
+    }
+
+    const sourceBalance = bucketBalanceFor(fromBucketId, budget, budgetDay());
+    if (!canTransferFrom(fromBucketId, amountCents, budget, budgetDay())) {
+      message.textContent = `Transfer exceeds the source balance${sourceBalance === null ? '.' : ` of ${dollars(sourceBalance)}.`}`;
       return;
     }
 
