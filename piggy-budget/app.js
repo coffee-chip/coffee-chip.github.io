@@ -819,7 +819,7 @@ function renderTransactions() {
 
   const id = new URLSearchParams(location.search).get('category');
   const category = budget.categories.find(entry => entry.id === id);
-  const heading = document.querySelector('#transaction-heading');
+  const heading = document.querySelector('#header-page-title');
   const summary = document.querySelector('#transaction-summary');
 
   if (!category) {
@@ -829,8 +829,7 @@ function renderTransactions() {
   }
 
   heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
-  const headerTitle = document.querySelector('#header-page-title');
-  if (headerTitle) headerTitle.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
+  heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   document.title = `${category.name} history · Piggy Budget`;
 
   const remaining = balanceFor(category, budget.purchases, budget, budgetDay());
