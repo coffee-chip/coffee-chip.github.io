@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piggy-budget-v28';
+const CACHE_NAME = 'piggy-budget-v29';
 const CACHE_PREFIX = 'piggy-budget-';
 const APP_FILES = [
   './',
@@ -6,9 +6,9 @@ const APP_FILES = [
   './settings.html',
   './manage-categories.html',
   './transactions.html',
-  './styles.css?v=28',
-  './app.js?v=28',
-  './budget.js?v=28',
+  './styles.css?v=29',
+  './app.js?v=29',
+  './budget.js?v=29',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
