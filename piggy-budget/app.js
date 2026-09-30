@@ -823,7 +823,10 @@ function renderTransactions() {
       .filter(purchase => purchase.categoryId === id)
       .map(item => ({ kind: 'purchase', item })),
     ...budget.transfers
-      .filter(transfer => transfer.fromCategoryId === id || transfer.toCategoryId === id)
+      .filter(transfer => {
+        const ref = bucketRef('category', id);
+        return transfer.fromBucketId === ref || transfer.toBucketId === ref;
+      })
       .map(item => ({ kind: 'transfer', item }))
   ].sort((a, b) => (b.item.createdAt || b.item.day).localeCompare(a.item.createdAt || a.item.day));
 
@@ -836,13 +839,12 @@ function renderTransactions() {
 
     if (entry.kind === 'transfer') {
       const transfer = entry.item;
-      const outgoing = transfer.fromCategoryId === id;
-      const other = budget.categories.find(candidate =>
-        candidate.id === (outgoing ? transfer.toCategoryId : transfer.fromCategoryId)
-      );
+      const categoryRef = bucketRef('category', id);
+      const outgoing = transfer.fromBucketId === categoryRef;
+      const other = bucketByRef(outgoing ? transfer.toBucketId : transfer.fromBucketId);
       details.append(
-        element('strong', '', transfer.note || `Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'category'}`),
-        element('small', '', `${formatDay(transfer.day)} · Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'category'}`)
+        element('strong', '', transfer.note || `Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'bucket'}`),
+        element('small', '', `${formatDay(transfer.day)} · Transfer ${outgoing ? 'to' : 'from'} ${other?.name || 'bucket'}`)
       );
       row.append(
         details,
@@ -1119,54 +1121,112 @@ if (categoryForm) {
   });
 }
 
+const goalForm = document.querySelector('#goal-form');
+const addGoalButton = document.querySelector('#add-goal');
+const addGoalPanel = document.querySelector('#add-goal-panel');
+
+function refreshGoalForm() {
+  if (!goalForm) return;
+  groupOptions(goalForm.elements.namedItem('groupId'));
+}
+
+if (goalForm) {
+  addGoalButton.addEventListener('click', () => {
+    addGoalPanel.hidden = !addGoalPanel.hidden;
+    if (!addGoalPanel.hidden) {
+      refreshGoalForm();
+      goalForm.elements.namedItem('name').focus();
+    }
+  });
+
+  goalForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const data = new FormData(goalForm);
+    const name = String(data.get('name')).trim();
+    const icon = singleEmoji(data.get('icon'));
+    const groupId = String(data.get('groupId'));
+    const targetCents = cents(data.get('target'));
+    const message = document.querySelector('#goal-message');
+
+    if (
+      !name ||
+      !icon ||
+      targetCents === null ||
+      !budget.groups.some(group => group.id === groupId)
+    ) {
+      message.textContent = 'Enter valid goal details.';
+      return;
+    }
+
+    const goal = {
+      id: crypto.randomUUID(),
+      name,
+      icon,
+      groupId,
+      targetCents,
+      startingCents: 0,
+      createdDay: budgetDay()
+    };
+
+    if (save({ ...budget, goals: [...budget.goals, goal] }, message)) {
+      goalForm.reset();
+      goalForm.elements.namedItem('icon').value = '🎯';
+      addGoalPanel.hidden = true;
+      renderAll();
+    }
+  });
+}
+
 const transferToggle = document.querySelector('#transfer-toggle');
 const transferPanel = document.querySelector('#transfer-panel');
 const transferForm = document.querySelector('#transfer-form');
 
 function refreshTransferForm() {
   if (!transferForm) return;
-  const from = transferForm.elements.namedItem('fromCategoryId');
-  const to = transferForm.elements.namedItem('toCategoryId');
-  categoryOptions(from, from.value);
-  categoryOptions(to, to.value);
-  transferToggle.disabled = budget.categories.length < 2;
-  if (budget.categories.length < 2) {
+  const from = transferForm.elements.namedItem('fromBucketId');
+  const to = transferForm.elements.namedItem('toBucketId');
+  bucketOptions(from, from.value);
+  bucketOptions(to, to.value);
+  const buckets = allBuckets();
+  transferToggle.disabled = buckets.length < 2;
+  if (buckets.length < 2) {
     transferPanel.hidden = true;
     return;
   }
   if (to.value === from.value) {
-    to.value = budget.categories.find(category => category.id !== from.value)?.id || '';
+    to.value = buckets.find(bucket => bucket.ref !== from.value)?.ref || '';
   }
 }
 
 if (transferForm) {
   transferToggle.addEventListener('click', () => {
     transferPanel.hidden = !transferPanel.hidden;
-    if (!transferPanel.hidden) transferForm.elements.namedItem('fromCategoryId').focus();
+    if (!transferPanel.hidden) transferForm.elements.namedItem('fromBucketId').focus();
   });
 
   transferForm.addEventListener('submit', event => {
     event.preventDefault();
     const data = new FormData(transferForm);
-    const fromCategoryId = String(data.get('fromCategoryId'));
-    const toCategoryId = String(data.get('toCategoryId'));
+    const fromBucketId = String(data.get('fromBucketId'));
+    const toBucketId = String(data.get('toBucketId'));
     const amountCents = cents(data.get('amount'));
     const message = document.querySelector('#transfer-message');
+    const bucketIds = new Set(allBuckets().map(bucket => bucket.ref));
 
     if (
-      fromCategoryId === toCategoryId ||
+      fromBucketId === toBucketId ||
       amountCents === null ||
-      !budget.categories.some(category => category.id === fromCategoryId) ||
-      !budget.categories.some(category => category.id === toCategoryId)
+      !bucketIds.has(fromBucketId) ||
+      !bucketIds.has(toBucketId)
     ) {
-      message.textContent = 'Choose two different categories and a valid amount.';
+      message.textContent = 'Choose two different categories or goals and a valid amount.';
       return;
     }
 
     const transfer = {
       id: crypto.randomUUID(),
-      fromCategoryId,
-      toCategoryId,
+      fromBucketId,
+      toBucketId,
       amountCents,
       note: String(data.get('note')).trim(),
       day: budgetDay(),
