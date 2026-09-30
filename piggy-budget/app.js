@@ -830,7 +830,7 @@ function renderTransactions() {
 
   heading.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   const headerTitle = document.querySelector('#header-page-title');
-  if (headerTitle) headerTitle.textContent = category.name;
+  if (headerTitle) headerTitle.textContent = `${category.icon || DEFAULT_ICON} ${category.name}`;
   document.title = `${category.name} history · Piggy Budget`;
 
   const remaining = balanceFor(category, budget.purchases, budget, budgetDay());
