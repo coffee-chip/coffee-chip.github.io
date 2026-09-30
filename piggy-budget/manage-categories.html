@@ -23,12 +23,13 @@
       </nav>
     </header>
     <main>
-      <section class="page-heading compact-heading"><h1>Manage categories</h1></section>
+      <section class="page-heading compact-heading"><h1>Manage categories &amp; goals</h1></section>
       <section aria-labelledby="groups-title" class="settings-list-section">
-        <h2 id="groups-title">Groups &amp; categories</h2>
+        <h2 id="groups-title">Groups, categories &amp; goals</h2>
         <ul id="settings-categories" class="settings-list"></ul>
         <button type="button" id="add-group" class="add-category-button">+ Add group</button>
         <button type="button" id="add-category" class="add-category-button">+ Add category</button>
+        <button type="button" id="add-goal" class="add-category-button">+ Add goal</button>
         <p id="category-status" class="form-message" role="status"></p>
       </section>
       <section class="panel add-category-panel" id="add-group-panel" hidden>
@@ -57,6 +58,21 @@
           <p id="new-category-preview" class="allocation-preview" role="status"></p>
           <button type="submit">Save category</button>
           <p id="category-message" class="form-message" role="status"></p>
+        </form>
+      </section>
+      <section class="panel add-category-panel" id="add-goal-panel" hidden>
+        <h2>Add goal</h2>
+        <form id="goal-form">
+          <div class="name-icon-row">
+            <label>Name<input name="name" maxlength="40" placeholder="Vacation, new laptop…" required></label>
+            <label>Emoji icon<input name="icon" type="text" maxlength="64" value="🎯" required></label>
+          </div>
+          <div class="form-grid">
+            <label>Group<select name="groupId" required></select></label>
+            <label>Target amount ($)<input name="target" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="500.00" required></label>
+          </div>
+          <button type="submit">Save goal</button>
+          <p id="goal-message" class="form-message" role="status"></p>
         </form>
       </section>
     </main>
