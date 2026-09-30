@@ -330,8 +330,6 @@ function renderHome() {
   if (!list) return;
   list.replaceChildren();
 
-  if (!budget.categories.length) return;
-
   for (const category of budget.categories) {
     const categoryBalance = balanceFor(category, budget.purchases, budget, budgetDay());
     const card = element('article', 'category-card');
@@ -405,6 +403,49 @@ function renderHome() {
 
     card.append(form);
     list.append(card);
+  }
+
+  const goalsSection = document.querySelector('#goals-section');
+  const goalList = document.querySelector('#goal-list');
+  if (goalsSection && goalList) {
+    goalList.replaceChildren();
+    goalsSection.hidden = budget.goals.length === 0;
+    for (const goal of budget.goals) {
+      const balance = goalBalanceFor(goal, budget.transfers, budgetDay());
+      const progress = Math.max(0, Math.min(1, balance / goal.targetCents));
+      const remaining = goal.targetCents - balance;
+      const card = element('article', 'category-card goal-card');
+      card.dataset.goalId = goal.id;
+
+      const top = element('div', 'category-top');
+      const heading = element('h3', 'category-heading');
+      const icon = element('span', 'category-emoji', goal.icon || '🎯');
+      icon.ariaHidden = 'true';
+      heading.append(icon, document.createTextNode(goal.name));
+      top.append(heading, element('p', 'balance', dollars(balance)));
+      card.append(top);
+
+      const progressTrack = element('div', 'goal-progress');
+      progressTrack.setAttribute('role', 'progressbar');
+      progressTrack.setAttribute('aria-label', `${goal.name} progress`);
+      progressTrack.setAttribute('aria-valuemin', '0');
+      progressTrack.setAttribute('aria-valuemax', String(goal.targetCents));
+      progressTrack.setAttribute('aria-valuenow', String(Math.max(0, balance)));
+      const progressFill = element('span', 'goal-progress-fill');
+      progressFill.style.width = `${progress * 100}%`;
+      progressTrack.append(progressFill);
+      card.append(progressTrack);
+
+      const meta = element(
+        'p',
+        'goal-meta',
+        balance >= goal.targetCents
+          ? `Goal reached · ${dollars(goal.targetCents)} target`
+          : `${dollars(Math.max(0, remaining))} to go · ${dollars(goal.targetCents)} target`
+      );
+      card.append(meta);
+      goalList.append(card);
+    }
   }
 }
 
