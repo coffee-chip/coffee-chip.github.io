@@ -2,7 +2,7 @@
   "name": "Piggy Budget",
   "short_name": "Piggy",
   "description": "A flexible budget for discretionary spending.",
-  "start_url": "./?v=24",
+  "start_url": "./?v=25",
   "scope": "./",
   "display": "standalone",
   "background_color": "#fff8f5",
