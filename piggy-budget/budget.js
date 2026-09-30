@@ -113,6 +113,25 @@ export function goalBalanceFor(goal, transfers, today = localDay()) {
   return (goal.startingCents || 0) + transferDeltaFor(bucketRef('goal', goal.id), transfers, today);
 }
 
+export function bucketBalanceFor(ref, budget, today = localDay()) {
+  const [type, id] = String(ref).split(':');
+  if (type === 'category') {
+    const category = budget.categories.find(entry => entry.id === id);
+    return category ? balanceFor(category, budget.purchases, budget, today) : null;
+  }
+  if (type === 'goal') {
+    const goal = budget.goals.find(entry => entry.id === id);
+    return goal ? goalBalanceFor(goal, budget.transfers, today) : null;
+  }
+  return null;
+}
+
+export function canTransferFrom(ref, amountCents, budget, today = localDay()) {
+  const balance = bucketBalanceFor(ref, budget, today);
+  return balance !== null && Number.isFinite(amountCents) && amountCents > 0 &&
+    balance - amountCents >= -0.000001;
+}
+
 export function netSpentFor(category, purchases, today = localDay()) {
   return purchases.reduce((total, purchase) =>
     total + (purchase.categoryId === category.id && purchase.day <= today ? purchase.amountCents : 0), 0);
