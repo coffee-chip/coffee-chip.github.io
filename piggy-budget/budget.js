@@ -1,4 +1,4 @@
-export const STORAGE_KEY = 'piggy-budget-v2';
+export const STORAGE_KEY = 'piggy-budget-v3';
 
 export const INTERVALS = {
   '2-weeks': { label: '2 weeks', days: 14 },
@@ -10,6 +10,7 @@ export const INTERVALS = {
 export const emptyBudget = () => ({
   groups: [],
   categories: [],
+  goals: [],
   purchases: [],
   transfers: [],
   interval: '30-days',
@@ -34,6 +35,10 @@ export function cents(value) {
   if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000) return null;
   const rounded = Math.round(amount * 100);
   return Math.abs(amount * 100 - rounded) < 0.000001 ? rounded : null;
+}
+
+export function bucketRef(type, id) {
+  return `${type}:${id}`;
 }
 
 export function currentDaily(category) {
@@ -69,6 +74,15 @@ export function allocatedForGroup(categories, groupId, interval, replacement = n
   );
 }
 
+export function transferDeltaFor(ref, transfers, today = localDay()) {
+  return transfers.reduce((total, transfer) => {
+    if (transfer.day > today) return total;
+    if (transfer.fromBucketId === ref) return total - transfer.amountCents;
+    if (transfer.toBucketId === ref) return total + transfer.amountCents;
+    return total;
+  }, 0);
+}
+
 export function balanceFor(category, purchases, budget, today = localDay()) {
   let balance = category.startingCents;
   let dailyCents = category.changes[0].dailyCents;
@@ -90,13 +104,13 @@ export function balanceFor(category, purchases, budget, today = localDay()) {
     while (purchaseIndex < purchasesByDay.length && purchasesByDay[purchaseIndex].day === date) {
       balance -= purchasesByDay[purchaseIndex++].amountCents;
     }
-    for (const transfer of budget.transfers) {
-      if (transfer.day !== date) continue;
-      if (transfer.fromCategoryId === category.id) balance -= transfer.amountCents;
-      if (transfer.toCategoryId === category.id) balance += transfer.amountCents;
-    }
   }
-  return balance;
+
+  return balance + transferDeltaFor(bucketRef('category', category.id), budget.transfers, today);
+}
+
+export function goalBalanceFor(goal, transfers, today = localDay()) {
+  return (goal.startingCents || 0) + transferDeltaFor(bucketRef('goal', goal.id), transfers, today);
 }
 
 export function netSpentFor(category, purchases, today = localDay()) {
@@ -105,12 +119,7 @@ export function netSpentFor(category, purchases, today = localDay()) {
 }
 
 export function netTransfersFor(category, transfers, today = localDay()) {
-  return transfers.reduce((total, transfer) => {
-    if (transfer.day > today) return total;
-    if (transfer.fromCategoryId === category.id) return total - transfer.amountCents;
-    if (transfer.toCategoryId === category.id) return total + transfer.amountCents;
-    return total;
-  }, 0);
+  return transferDeltaFor(bucketRef('category', category.id), transfers, today);
 }
 
 export const dollars = amountCents =>
