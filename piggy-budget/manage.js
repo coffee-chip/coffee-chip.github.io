@@ -5,7 +5,7 @@ import {
 import {
   budget, budgetDay, element, inputLabel, save, cents, dollars, intervalLabel,
   allocationDifference, allocationPreview, nonnegativeCents, groupOptions,
-  startingOptions, singleEmoji, iconButton, setupPage, actionButton, formActions,
+  startingOptions, singleEmoji, iconButton, setupPage, formActions,
   disclosure, DEFAULT_ICON
 } from './core.js';
 
