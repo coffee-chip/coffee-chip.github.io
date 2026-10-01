@@ -19,10 +19,11 @@ function renderSettings() {
     const summary = element('div', 'group-summary');
     const header = element('div', 'setting-header');
     const target = groupAllocation(budgetGroup, budget.interval);
-    header.append(
-      element('h3', '', budgetGroup.name),
+    const allocationActions = element('div', 'compact-actions');
+    allocationActions.append(
       element('strong', '', `${dollars(target)} / ${intervalLabel()}`)
     );
+    header.append(element('h3', '', budgetGroup.name), allocationActions);
     summary.append(header);
 
     const allocated = allocatedForGroup(budget.categories, budgetGroup.id, budget.interval);
@@ -32,10 +33,8 @@ function renderSettings() {
       `${dollars(allocated)} allocated · ${allocationDifference(allocated, target)}`
     ));
 
-    const changeTarget = actionButton('Change total allocation', {
-      style: 'transparent',
-      compact: true
-    });
+    const changeTarget = iconButton('edit', `Edit total allocation for ${budgetGroup.name}`);
+    allocationActions.append(changeTarget);
     const targetForm = element('form', 'edit-form');
     targetForm.hidden = true;
     targetForm.id = `total-${budgetGroup.id}`;
