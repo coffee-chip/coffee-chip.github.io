@@ -151,11 +151,11 @@ function renderTransactions() {
     const editDisclosure = disclosure(edit, form, {
       focus: () => amount.querySelector('input')
     });
-    const { container: actions, cancel } = formActions('Save changes');
+    const { container: formActionBar, cancel } = formActions('Save changes');
     cancel.addEventListener('click', () => renderTransactions());
 
     const message = element('p', 'form-message');
-    form.append(amount, note, day, categoryLabel, refundLabel, actions, message);
+    form.append(amount, note, day, categoryLabel, refundLabel, formActionBar, message);
     wrapper.append(form);
 
     const setMin = () => {
