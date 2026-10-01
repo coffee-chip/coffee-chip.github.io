@@ -74,6 +74,7 @@ function renderHome() {
       const { container: actions, cancel } = formActions('Record transaction');
       cancel.addEventListener('click', () => {
         form.reset();
+        form.querySelector('.form-message')?.replaceChildren();
         formDisclosure.close();
       });
       const message = element('p', 'form-message');
@@ -170,6 +171,7 @@ const transferDisclosure = transferToggle && transferPanel
 if (transferCancel && transferDisclosure) {
   transferCancel.addEventListener('click', () => {
     transferForm?.reset();
+    document.querySelector('#transfer-message')?.replaceChildren();
     transferDisclosure.close();
     refreshTransferForm();
   });
@@ -230,6 +232,7 @@ if (transferForm) {
 
     if (save({ ...budget, transfers: [...budget.transfers, transfer] }, message)) {
       transferForm.reset();
+      document.querySelector('#transfer-message')?.replaceChildren();
       transferDisclosure?.close();
       renderPage();
     }
