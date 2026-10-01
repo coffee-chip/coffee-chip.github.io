@@ -15,83 +15,134 @@ function renderSettings() {
   list.replaceChildren();
 
   for (const budgetGroup of budget.groups) {
+    const categories = budget.categories.filter(category => category.groupId === budgetGroup.id);
+    const goals = budget.goals.filter(goal => goal.groupId === budgetGroup.id);
+    const unlimited = budgetGroup.unlimited === true;
+    const target = unlimited ? null : groupAllocation(budgetGroup, budget.interval);
+    const allocated = allocatedForGroup(budget.categories, budgetGroup.id, budget.interval);
+
     const groupCard = element('li', 'panel group-card');
     const summary = element('div', 'group-summary');
     const header = element('div', 'setting-header');
-    const target = groupAllocation(budgetGroup, budget.interval);
-    const allocationActions = element('div', 'compact-actions');
-    allocationActions.append(
-      element('strong', '', `${dollars(target)} / ${intervalLabel()}`)
+    const headerActions = element('div', 'compact-actions');
+    const editGroup = iconButton('edit', `Edit ${budgetGroup.name}`);
+    const removeGroup = iconButton('remove', `Delete ${budgetGroup.name}`);
+    headerActions.append(
+      element('strong', '', unlimited ? 'No limit' : `${dollars(target)} / ${intervalLabel()}`),
+      editGroup,
+      removeGroup
     );
-    header.append(element('h3', '', budgetGroup.name), allocationActions);
+    header.append(element('h3', '', budgetGroup.name), headerActions);
     summary.append(header);
 
-    const allocated = allocatedForGroup(budget.categories, budgetGroup.id, budget.interval);
     summary.append(element(
       'p',
       'allocation-summary',
-      `${dollars(allocated)} allocated · ${allocationDifference(allocated, target)}`
+      unlimited
+        ? `${dollars(allocated)} allocated · No limit`
+        : `${dollars(allocated)} allocated · ${allocationDifference(allocated, target)}`
     ));
 
-    const changeTarget = iconButton('edit', `Edit total allocation for ${budgetGroup.name}`);
-    allocationActions.append(changeTarget);
-    const targetForm = element('form', 'edit-form');
-    targetForm.hidden = true;
-    targetForm.id = `total-${budgetGroup.id}`;
-    changeTarget.setAttribute('aria-controls', targetForm.id);
+    const groupEditForm = element('form', 'edit-form');
+    groupEditForm.hidden = true;
+    groupEditForm.id = `group-edit-${budgetGroup.id}`;
 
+    const nameLabel = inputLabel('Name', 'name', { maxLength: 40, required: true });
+    nameLabel.querySelector('input').value = budgetGroup.name;
+    groupEditForm.append(nameLabel);
 
-    const targetLabel = inputLabel(
-      `Total allocation per ${intervalLabel()} ($)`,
-      'total',
-      { type: 'number', min: '0', step: '0.01', required: true }
-    );
-    targetLabel.querySelector('input').value = (target / 100).toFixed(2);
+    let targetLabel = null;
+    let targetPreview = null;
+    if (!unlimited) {
+      targetLabel = inputLabel(
+        `Total allocation per ${intervalLabel()} ($)`,
+        'total',
+        { type: 'number', min: '0', step: '0.01', required: true }
+      );
+      targetLabel.querySelector('input').value = (target / 100).toFixed(2);
+      targetPreview = element('p', 'allocation-preview');
+      const updateTargetPreview = () => {
+        const nextTarget = nonnegativeCents(targetLabel.querySelector('input').value);
+        targetPreview.textContent = nextTarget === null
+          ? 'Enter a valid amount.'
+          : `${allocationDifference(allocated, nextTarget)} after change`;
+      };
+      targetLabel.querySelector('input').addEventListener('input', updateTargetPreview);
+      updateTargetPreview();
+      groupEditForm.append(targetLabel);
+    }
 
-    const targetPreview = element('p', 'allocation-preview');
-    const updateTargetPreview = () => {
-      const nextTarget = nonnegativeCents(targetLabel.querySelector('input').value);
-      targetPreview.textContent = nextTarget === null
-        ? 'Enter a valid amount.'
-        : `${allocationDifference(allocated, nextTarget)} after change`;
-    };
-    targetLabel.querySelector('input').addEventListener('input', updateTargetPreview);
-    updateTargetPreview();
-
-    const targetDisclosure = disclosure(changeTarget, targetForm, {
-      focus: () => targetLabel.querySelector('input')
+    disclosure(editGroup, groupEditForm, {
+      focus: () => nameLabel.querySelector('input')
     });
-    const { container: targetActions, cancel: targetCancel } = formActions('Update total');
-    targetCancel.addEventListener('click', () => renderSettings());
-    const targetMessage = element('p', 'form-message');
-    targetForm.append(targetLabel, targetActions, targetPreview, targetMessage);
+    const { container: groupActions, cancel: groupCancel } = formActions('Update');
+    groupCancel.addEventListener('click', () => renderSettings());
+    const groupMessage = element('p', 'form-message');
+    groupEditForm.append(groupActions);
+    if (targetPreview) groupEditForm.append(targetPreview);
+    groupEditForm.append(groupMessage);
 
-    targetForm.addEventListener('submit', event => {
+    groupEditForm.addEventListener('submit', event => {
       event.preventDefault();
-      const intervalCents = nonnegativeCents(targetLabel.querySelector('input').value);
-      if (intervalCents === null) {
-        targetMessage.textContent = 'Enter a valid total.';
+      const name = nameLabel.querySelector('input').value.trim();
+      if (!name) {
+        groupMessage.textContent = 'Enter a group name.';
         return;
       }
-      const dailyCents = dailyCentsFromInterval(intervalCents, budget.interval);
+
+      let dailyCents = budgetGroup.dailyCents;
+      if (!unlimited) {
+        const intervalCents = nonnegativeCents(targetLabel.querySelector('input').value);
+        if (intervalCents === null) {
+          groupMessage.textContent = 'Enter a valid total.';
+          return;
+        }
+        dailyCents = dailyCentsFromInterval(intervalCents, budget.interval);
+      }
+
       const next = {
         ...budget,
         groups: budget.groups.map(group =>
-          group.id === budgetGroup.id ? { ...group, dailyCents } : group
+          group.id === budgetGroup.id ? { ...group, name, dailyCents } : group
         )
       };
-      if (save(next, targetMessage)) renderSettings();
+      if (save(next, groupMessage)) renderSettings();
     });
 
-    summary.append(changeTarget, targetForm);
+    removeGroup.addEventListener('click', () => {
+      const categoryIds = new Set(categories.map(category => category.id));
+      const refs = new Set([
+        ...categories.map(category => bucketRef('category', category.id)),
+        ...goals.map(goal => bucketRef('goal', goal.id))
+      ]);
+      const tx = budget.purchases.filter(purchase => categoryIds.has(purchase.categoryId)).length;
+      const tr = budget.transfers.filter(transfer =>
+        refs.has(transfer.fromBucketId) || refs.has(transfer.toBucketId)
+      ).length;
+      if (!confirm(
+        `Delete ${budgetGroup.name}, its ${categories.length} categor${categories.length === 1 ? 'y' : 'ies'}, ${goals.length} goal${goals.length === 1 ? '' : 's'}, ${tx} transaction${tx === 1 ? '' : 's'}, and ${tr} transfer${tr === 1 ? '' : 's'}? This cannot be undone.`
+      )) return;
+
+      const status = document.querySelector('#category-status');
+      if (save({
+        ...budget,
+        groups: budget.groups.filter(group => group.id !== budgetGroup.id),
+        categories: budget.categories.filter(category => category.groupId !== budgetGroup.id),
+        goals: budget.goals.filter(goal => goal.groupId !== budgetGroup.id),
+        purchases: budget.purchases.filter(purchase => !categoryIds.has(purchase.categoryId)),
+        transfers: budget.transfers.filter(transfer =>
+          !refs.has(transfer.fromBucketId) && !refs.has(transfer.toBucketId)
+        )
+      }, status)) renderSettings();
+    });
+
+    summary.append(groupEditForm);
     groupCard.append(summary);
 
     const members = element('ul', 'collection-list group-members');
     groupCard.append(members);
     list.append(groupCard);
 
-    const categories = budget.categories.filter(category => category.groupId === budgetGroup.id);
-    const goals = budget.goals.filter(goal => goal.groupId === budgetGroup.id);
     if (!categories.length && !goals.length) members.append(element('li', 'muted', 'No categories or goals in this group.'));
 
     for (const category of categories) {
@@ -137,6 +188,8 @@ function renderSettings() {
 
       const form = element('form', 'edit-form');
       form.hidden = true;
+      const nameLabel = inputLabel('Name', 'name', { maxLength: 40, required: true });
+      nameLabel.querySelector('input').value = category.name;
       const allocationLabel = inputLabel(
         `Allocation per ${intervalLabel()} ($)`,
         'allocation',
@@ -169,18 +222,19 @@ function renderSettings() {
       recalc();
 
       const editDisclosure = disclosure(edit, form, {
-        focus: () => allocationLabel.querySelector('input')
+        focus: () => nameLabel.querySelector('input')
       });
       const { container: actions, cancel } = formActions('Update');
       cancel.addEventListener('click', () => renderSettings());
       const message = element('p', 'form-message');
-      form.append(allocationLabel, groupLabel, preview, actions, message);
+      form.append(nameLabel, allocationLabel, groupLabel, preview, actions, message);
 
       form.addEventListener('submit', event => {
         event.preventDefault();
+        const name = nameLabel.querySelector('input').value.trim();
         const intervalCents = cents(allocationLabel.querySelector('input').value);
-        if (intervalCents === null) {
-          message.textContent = 'Enter a valid allocation.';
+        if (!name || intervalCents === null) {
+          message.textContent = 'Enter a name and valid allocation.';
           return;
         }
         const dailyCents = dailyCentsFromInterval(intervalCents, budget.interval);
@@ -194,7 +248,7 @@ function renderSettings() {
           ...budget,
           categories: budget.categories.map(entry =>
             entry.id === category.id
-              ? { ...entry, groupId: groupSelect.value, changes }
+              ? { ...entry, name, groupId: groupSelect.value, changes }
               : entry
           )
         };
@@ -266,6 +320,8 @@ function renderSettings() {
 
       const form = element('form', 'edit-form');
       form.hidden = true;
+      const nameLabel = inputLabel('Name', 'name', { maxLength: 40, required: true });
+      nameLabel.querySelector('input').value = goal.name;
       const targetLabel = inputLabel('Target amount ($)', 'target', {
         type: 'number', min: '0.01', step: '0.01', required: true
       });
@@ -277,24 +333,25 @@ function renderSettings() {
       groupLabel.append(groupSelect);
 
       const editDisclosure = disclosure(edit, form, {
-        focus: () => targetLabel.querySelector('input')
+        focus: () => nameLabel.querySelector('input')
       });
       const { container: actions, cancel } = formActions('Update');
       cancel.addEventListener('click', () => renderSettings());
       const message = element('p', 'form-message');
-      form.append(targetLabel, groupLabel, actions, message);
+      form.append(nameLabel, targetLabel, groupLabel, actions, message);
 
       form.addEventListener('submit', event => {
         event.preventDefault();
+        const name = nameLabel.querySelector('input').value.trim();
         const targetCents = cents(targetLabel.querySelector('input').value);
-        if (targetCents === null) {
-          message.textContent = 'Enter a valid target amount.';
+        if (!name || targetCents === null) {
+          message.textContent = 'Enter a name and valid target amount.';
           return;
         }
         const next = {
           ...budget,
           goals: budget.goals.map(entry =>
-            entry.id === goal.id ? { ...entry, groupId: groupSelect.value, targetCents } : entry
+            entry.id === goal.id ? { ...entry, name, groupId: groupSelect.value, targetCents } : entry
           )
         };
         if (save(next, message)) renderSettings();
