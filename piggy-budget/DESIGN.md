@@ -46,10 +46,17 @@ Use a small reusable vocabulary:
 - `.card-actions` — actions inside a card.
 - `.compact-actions` — icon/compact controls in a dense row.
 - `.form-actions` — submit/cancel controls.
-- `.form-panel` — panel containing a create/edit form.
+- `.panel--narrow` — reusable width modifier for constrained panels.
 
 Avoid page-specific action classes unless the layout is genuinely unique.
 
+## Page spacing
+
+The app shell owns the standard gap below the header via `main` padding (currently 16px). Top-level page components do not add top spacing. Top-level siblings use bottom spacing so the header gap is deterministic and does not depend on CSS margin-collapsing behavior.
+
+Margin collapsing can still occur naturally inside ordinary block content, but it is not used as the page-spacing contract because padding, borders, flex, and grid contexts change when margins collapse.
+
 ## Design tokens
+
 
 Shared colors, radii, shadows, and spacing live in `:root` as semantic CSS custom properties. General UI should use tokens instead of raw color values. Specialized decorative effects, such as the pearlescent goal backgrounds, may keep local colors when they are not part of the general application palette.
