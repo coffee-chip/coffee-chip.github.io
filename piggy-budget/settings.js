@@ -26,7 +26,8 @@ function validatedBackup(value) {
       groupIds.has(group.id) ||
       !group.name?.trim() ||
       !Number.isFinite(group.dailyCents) ||
-      group.dailyCents < 0
+      group.dailyCents < 0 ||
+      (group.unlimited !== undefined && typeof group.unlimited !== 'boolean')
     ) throw new Error('Backup has an invalid group.');
     groupIds.add(group.id);
   }
