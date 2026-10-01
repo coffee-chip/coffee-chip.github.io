@@ -1,6 +1,6 @@
 import {
   STORAGE_KEY, INTERVALS, emptyBudget, allocatedForGroup, localDay, addDays, cents,
-  bucketRef, currentAllocation, groupAllocation, dailyCentsFromInterval, dollars
+  bucketRef, currentAllocation, groupAllocation, dollars
 } from './budget.js';
 
 export { INTERVALS, cents, bucketRef, dollars };
@@ -38,7 +38,19 @@ export function formatDay(day, dateStyle = 'medium') {
   return new Intl.DateTimeFormat(undefined, { dateStyle }).format(new Date(`${day}T12:00:00`));
 }
 
-export function save(next, message = { textContent: '' }
+export function save(next, message = { textContent: '' }) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    budget = next;
+    storageWarning = '';
+    document.querySelector('#storage-warning')?.remove();
+    return true;
+  } catch (error) {
+    message.textContent = 'Could not save. Check that this browser allows site storage.';
+    console.error('Could not save budget:', error);
+    return false;
+  }
+}
 
 export function showStorageWarning() {
   const main = document.querySelector('main');
@@ -56,7 +68,14 @@ export function element(tag, className = '', content = null) {
   return node;
 }
 
-export function inputLabel(text, name, attributes = {}
+export function inputLabel(text, name, attributes = {}) {
+  const label = element('label', '', text);
+  const input = element('input');
+  input.name = name;
+  for (const [key, value] of Object.entries(attributes)) input[key] = value;
+  label.append(input);
+  return label;
+}
 
 export function validDay(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return false;
