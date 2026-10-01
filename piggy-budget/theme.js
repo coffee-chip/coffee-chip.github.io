@@ -36,6 +36,14 @@
     return colors[colorTheme][appearance];
   }
 
+  function iconPath(colorTheme) {
+    return colorTheme === 'amber'
+      ? './icons/icon-amber.svg'
+      : colorTheme === 'lapis'
+        ? './icons/icon-lapis.svg'
+        : './icons/icon.svg';
+  }
+
   function apply(preferences = read()) {
     const appearance = resolvedAppearance(preferences);
     root.dataset.colorTheme = preferences.colorTheme;
@@ -44,6 +52,10 @@
 
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = themeColor(preferences.colorTheme, appearance);
+
+    const favicon = document.querySelector('link[rel="icon"]');
+    if (favicon) favicon.href = iconPath(preferences.colorTheme);
+
     return { ...preferences, resolvedAppearance: appearance };
   }
 
