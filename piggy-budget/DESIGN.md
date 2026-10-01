@@ -35,6 +35,8 @@ These variants set CSS custom properties consumed by the shared `.button` state 
 - `.button--icon` — square icon action.
 - `.button--danger` — destructive tone without redefining interaction behavior.
 
+Destructive X/icon actions always require an explicit confirmation prompt before data is deleted.
+
 Use `actionButton()`, `formActions()`, and `iconButton()` when creating controls in JavaScript.
 
 ## Action layouts
