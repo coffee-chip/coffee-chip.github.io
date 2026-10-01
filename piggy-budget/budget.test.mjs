@@ -25,9 +25,14 @@ const goal = (id, targetCents, groupId = 'general') => ({
   createdDay: '2026-09-28'
 });
 
-test('new budgets include goals and use the v3 shape', () => {
+test('new budgets seed one unlimited General group and use the v3 shape', () => {
   const budget = emptyBudget();
-  assert.deepEqual(budget.groups, []);
+  assert.deepEqual(budget.groups, [{
+    id: 'general',
+    name: 'General',
+    dailyCents: 0,
+    unlimited: true
+  }]);
   assert.deepEqual(budget.categories, []);
   assert.deepEqual(budget.goals, []);
   assert.deepEqual(budget.purchases, []);
