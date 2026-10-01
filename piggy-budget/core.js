@@ -112,6 +112,7 @@ export function disclosure(trigger, panel, {
   };
 
   trigger.setAttribute('aria-expanded', String(initiallyOpen));
+  if (panel.id) trigger.setAttribute('aria-controls', panel.id);
   panel.hidden = !initiallyOpen;
   trigger.addEventListener('click', () => setOpen(true));
 
