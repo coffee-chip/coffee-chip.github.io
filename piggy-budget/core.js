@@ -172,6 +172,10 @@ export function allocationPreview(node, groupId, replacement) {
     return;
   }
   const allocated = allocatedForGroup(budget.categories, groupId, budget.interval, replacement);
+  if (group.unlimited) {
+    node.textContent = `${group.name}: ${dollars(allocated)} allocated · No limit`;
+    return;
+  }
   const target = groupAllocation(group, budget.interval);
   node.textContent = `${group.name}: ${allocationDifference(allocated, target)}`;
 }
