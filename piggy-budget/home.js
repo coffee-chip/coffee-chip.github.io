@@ -36,7 +36,7 @@ function renderHome() {
       );
       card.append(top);
 
-      const actions = element('div', 'category-actions');
+      const actions = element('div', 'card-actions');
       const shake = actionButton('Shake this piggy', { style: 'primary' });
 
       const history = element('a', 'history-link', 'View history');
@@ -72,7 +72,10 @@ function renderHome() {
       form.append(refundLabel);
 
       const { container: actions, cancel } = formActions('Record transaction');
-      cancel.addEventListener('click', () => formDisclosure.close());
+      cancel.addEventListener('click', () => {
+        form.reset();
+        formDisclosure.close();
+      });
       const message = element('p', 'form-message');
       message.role = 'status';
       form.append(actions, message);
@@ -165,7 +168,11 @@ const transferDisclosure = transferToggle && transferPanel
     })
   : null;
 if (transferCancel && transferDisclosure) {
-  transferCancel.addEventListener('click', () => transferDisclosure.close());
+  transferCancel.addEventListener('click', () => {
+    transferForm?.reset();
+    transferDisclosure.close();
+    refreshTransferForm();
+  });
 }
 
 function refreshTransferForm() {
