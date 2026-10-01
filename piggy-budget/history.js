@@ -1,10 +1,10 @@
 import {
-  balanceFor, netSpentFor, netTransfersFor, bucketRef
+  balanceFor, netSpentFor, netTransfersFor, bucketRef, canTransferFrom
 } from './budget.js';
 import {
   budget, budgetDay, formatDay, element, save, dollars, DEFAULT_ICON,
-  bucketByRef, iconButton, inputLabel, categoryOptions, cents, validDay, setupPage,
-  formActions, disclosure
+  bucketByRef, iconButton, inputLabel, categoryOptions, bucketOptions, allBuckets,
+  cents, validDay, setupPage, formActions, disclosure
 } from './core.js';
 
 function renderTransactions() {
@@ -82,16 +82,114 @@ function renderTransactions() {
       );
 
       const actions = element('div', 'compact-actions');
-      const remove = iconButton('remove', 'Remove transfer');
+      const edit = iconButton('edit', 'Edit transfer');
+      const remove = iconButton('remove', 'Delete transfer');
+      actions.append(edit, remove);
+      row.append(actions);
+      wrapper.append(row);
+
+      const form = element('form', 'transaction-edit-form');
+      form.hidden = true;
+
+      const amount = inputLabel('Amount ($)', 'amount', {
+        type: 'number', min: '0.01', step: '0.01', required: true
+      });
+      amount.querySelector('input').value = (transfer.amountCents / 100).toFixed(2);
+
+      const note = inputLabel('Description (optional)', 'note', { maxLength: 100 });
+      note.querySelector('input').value = transfer.note || '';
+
+      const day = inputLabel('Date', 'day', { type: 'date', required: true });
+      day.querySelector('input').value = transfer.day;
+      day.querySelector('input').max = budgetDay();
+
+      const fromLabel = element('label', '', 'From');
+      const fromSelect = element('select');
+      bucketOptions(fromSelect, transfer.fromBucketId);
+      fromLabel.append(fromSelect);
+
+      const toLabel = element('label', '', 'To');
+      const toSelect = element('select');
+      bucketOptions(toSelect, transfer.toBucketId);
+      toLabel.append(toSelect);
+
+      const editDisclosure = disclosure(edit, form, {
+        focus: () => amount.querySelector('input')
+      });
+      const { container: formActionBar, cancel } = formActions('Save changes');
+      cancel.addEventListener('click', () => renderTransactions());
+
+      const message = element('p', 'form-message');
+      form.append(amount, note, day, fromLabel, toLabel, formActionBar, message);
+      wrapper.append(form);
+
+      const setMin = () => {
+        const buckets = allBuckets();
+        const fromBucket = buckets.find(candidate => candidate.ref === fromSelect.value);
+        const toBucket = buckets.find(candidate => candidate.ref === toSelect.value);
+        day.querySelector('input').min =
+          [fromBucket?.createdDay, toBucket?.createdDay].filter(Boolean).sort().at(-1) || '';
+      };
+      fromSelect.addEventListener('change', setMin);
+      toSelect.addEventListener('change', setMin);
+      setMin();
+
       remove.addEventListener('click', () => {
+        if (!confirm('Delete this transfer? This cannot be undone.')) return;
         if (save({
           ...budget,
           transfers: budget.transfers.filter(candidate => candidate.id !== transfer.id)
         }, document.querySelector('#transaction-message'))) renderTransactions();
       });
-      actions.append(remove);
-      row.append(actions);
-      wrapper.append(row);
+
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        const amountCents = cents(amount.querySelector('input').value);
+        const fromBucketId = fromSelect.value;
+        const toBucketId = toSelect.value;
+        const transferDay = day.querySelector('input').value;
+        const bucketIds = new Set(allBuckets().map(bucket => bucket.ref));
+        const minDay = day.querySelector('input').min;
+
+        if (
+          amountCents === null ||
+          fromBucketId === toBucketId ||
+          !bucketIds.has(fromBucketId) ||
+          !bucketIds.has(toBucketId) ||
+          !validDay(transferDay) ||
+          (minDay && transferDay < minDay) ||
+          transferDay > budgetDay()
+        ) {
+          message.textContent = 'Enter a valid amount, buckets, and date.';
+          return;
+        }
+
+        const budgetWithoutTransfer = {
+          ...budget,
+          transfers: budget.transfers.filter(candidate => candidate.id !== transfer.id)
+        };
+        if (!canTransferFrom(fromBucketId, amountCents, budgetWithoutTransfer, transferDay)) {
+          message.textContent = 'Transfer exceeds the source balance on that date.';
+          return;
+        }
+
+        const updated = {
+          ...transfer,
+          fromBucketId,
+          toBucketId,
+          amountCents,
+          note: note.querySelector('input').value.trim(),
+          day: transferDay
+        };
+
+        if (save({
+          ...budget,
+          transfers: budget.transfers.map(candidate =>
+            candidate.id === transfer.id ? updated : candidate
+          )
+        }, message)) renderTransactions();
+      });
+
       list.append(wrapper);
       continue;
     }
@@ -166,6 +264,7 @@ function renderTransactions() {
     setMin();
 
     remove.addEventListener('click', () => {
+      if (!confirm('Delete this transaction? This cannot be undone.')) return;
       if (save({
         ...budget,
         purchases: budget.purchases.filter(candidate => candidate.id !== transaction.id)
