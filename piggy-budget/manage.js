@@ -338,6 +338,7 @@ const groupDisclosure = addGroupButton && addGroupPanel
 if (groupForm) {
   addGroupCancel?.addEventListener('click', () => {
     groupForm.reset();
+    document.querySelector('#group-message')?.replaceChildren();
     groupDisclosure?.close();
   });
 
@@ -361,6 +362,7 @@ if (groupForm) {
 
     if (save({ ...budget, groups: [...budget.groups, group] }, message)) {
       groupForm.reset();
+      document.querySelector('#group-message')?.replaceChildren();
       groupDisclosure?.close();
       renderSettings();
     }
@@ -387,6 +389,8 @@ if (categoryForm) {
   addCategoryButton.addEventListener('click', refreshCategoryForm);
   addCategoryCancel?.addEventListener('click', () => {
     categoryForm.reset();
+    document.querySelector('#category-message')?.replaceChildren();
+    document.querySelector('#new-category-preview')?.replaceChildren();
     categoryDisclosure?.close();
   });
 
@@ -452,6 +456,8 @@ if (categoryForm) {
 
     if (save({ ...budget, categories: [...budget.categories, category] }, message)) {
       categoryForm.reset();
+      document.querySelector('#category-message')?.replaceChildren();
+      document.querySelector('#new-category-preview')?.replaceChildren();
       categoryDisclosure?.close();
       renderSettings();
     }
@@ -477,6 +483,7 @@ if (goalForm) {
   addGoalButton.addEventListener('click', refreshGoalForm);
   addGoalCancel?.addEventListener('click', () => {
     goalForm.reset();
+    document.querySelector('#goal-message')?.replaceChildren();
     goalDisclosure?.close();
   });
 
@@ -512,6 +519,7 @@ if (goalForm) {
     if (save({ ...budget, goals: [...budget.goals, goal] }, message)) {
       goalForm.reset();
       goalForm.elements.namedItem('icon').value = '🎯';
+      document.querySelector('#goal-message')?.replaceChildren();
       goalDisclosure?.close();
       renderSettings();
     }
