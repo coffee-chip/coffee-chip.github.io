@@ -102,24 +102,24 @@
   --color-success:#77b493;
   --color-warning:#e18a98;
 
-  --pearl-highlight:rgba(255,255,255,.12);
+  --pearl-highlight:rgba(255,255,255,.09);
   --pearl-highlight-clear:rgba(255,255,255,0);
-  --pearl-blue:rgba(95,125,175,.22);
-  --pearl-blue-clear:rgba(95,125,175,0);
-  --pearl-pink:rgba(160,100,140,.18);
-  --pearl-pink-clear:rgba(160,100,140,0);
-  --pearl-gradient-1:#2d2830;
-  --pearl-gradient-2:#2c2936;
-  --pearl-gradient-3:#26303c;
-  --pearl-gradient-4:#342f29;
-  --pearl-gradient-5:#342833;
-  --pearl-inset-highlight:rgba(255,255,255,.16);
-  --pearl-shine-strong:rgba(255,255,255,.13);
-  --pearl-shine-soft:rgba(255,255,255,.05);
-  --pearl-progress-bg:rgba(255,255,255,.08);
-  --pearl-progress-shadow:rgba(0,0,0,.24);
-  --pearl-setting-1:rgba(255,255,255,.045);
-  --pearl-setting-2:rgba(110,140,180,.055)
+  --pearl-blue:color-mix(in srgb,var(--color-accent-alt) 10%,transparent);
+  --pearl-blue-clear:transparent;
+  --pearl-pink:color-mix(in srgb,var(--color-accent) 8%,transparent);
+  --pearl-pink-clear:transparent;
+  --pearl-gradient-1:color-mix(in srgb,var(--color-surface) 94%,var(--color-accent) 6%);
+  --pearl-gradient-2:color-mix(in srgb,var(--color-surface) 93%,var(--color-accent-alt) 7%);
+  --pearl-gradient-3:color-mix(in srgb,var(--color-surface) 95%,var(--color-accent-alt) 5%);
+  --pearl-gradient-4:color-mix(in srgb,var(--color-surface) 96%,var(--color-accent) 4%);
+  --pearl-gradient-5:color-mix(in srgb,var(--color-surface) 93%,var(--color-accent-alt) 7%);
+  --pearl-inset-highlight:rgba(255,255,255,.11);
+  --pearl-shine-strong:rgba(255,255,255,.08);
+  --pearl-shine-soft:rgba(255,255,255,.025);
+  --pearl-progress-bg:rgba(255,255,255,.06);
+  --pearl-progress-shadow:rgba(0,0,0,.18);
+  --pearl-setting-1:color-mix(in srgb,var(--color-surface) 96%,var(--color-accent) 4%);
+  --pearl-setting-2:color-mix(in srgb,var(--color-surface) 96%,var(--color-accent-alt) 4%)
 }
 
 :root[data-color-theme="garnet"][data-appearance="dark"]{
