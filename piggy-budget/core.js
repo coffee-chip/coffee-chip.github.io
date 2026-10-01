@@ -288,6 +288,7 @@ export let budget = load();
 export function setupPage(render) {
   render();
   showStorageWarning();
+  document.documentElement.classList.remove('app-hydrating');
 
   window.addEventListener('storage', event => {
     if (event.key === STORAGE_KEY) {
