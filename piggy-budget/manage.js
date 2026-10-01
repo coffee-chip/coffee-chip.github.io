@@ -27,21 +27,22 @@ function renderSettings() {
     const headerActions = element('div', 'compact-actions');
     const editGroup = iconButton('edit', `Edit ${budgetGroup.name}`);
     const removeGroup = iconButton('remove', `Delete ${budgetGroup.name}`);
-    headerActions.append(
-      element('strong', '', unlimited ? 'No limit' : `${dollars(target)} / ${intervalLabel()}`),
-      editGroup,
-      removeGroup
-    );
+    headerActions.append(editGroup, removeGroup);
     header.append(element('h3', '', budgetGroup.name), headerActions);
     summary.append(header);
 
-    summary.append(element(
-      'p',
-      'allocation-summary',
-      unlimited
-        ? `${dollars(allocated)} allocated · No limit`
-        : `${dollars(allocated)} allocated · ${allocationDifference(allocated, target)}`
-    ));
+    const facts = element('dl', 'category-facts');
+    for (const [term, value] of [
+      ['Total allocation', unlimited ? 'No limit' : `${dollars(target)} / ${intervalLabel()}`],
+      ['Allocated', unlimited
+        ? dollars(allocated)
+        : `${dollars(allocated)} · ${allocationDifference(allocated, target)}`]
+    ]) {
+      const fact = element('div');
+      fact.append(element('dt', '', term), element('dd', '', value));
+      facts.append(fact);
+    }
+    summary.append(facts);
 
     const groupEditForm = element('form', 'edit-form');
     groupEditForm.hidden = true;
