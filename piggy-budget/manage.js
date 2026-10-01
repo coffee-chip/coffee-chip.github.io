@@ -87,7 +87,7 @@ function renderSettings() {
     summary.append(changeTarget, targetForm);
     groupCard.append(summary);
 
-    const members = element('ul', 'settings-list group-members');
+    const members = element('ul', 'collection-list group-members');
     groupCard.append(members);
     list.append(groupCard);
 
