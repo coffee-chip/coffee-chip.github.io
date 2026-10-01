@@ -81,7 +81,7 @@ function renderTransactions() {
         )
       );
 
-      const actions = element('div', 'transaction-actions');
+      const actions = element('div', 'compact-actions');
       const remove = iconButton('remove', 'Remove transfer');
       remove.addEventListener('click', () => {
         if (save({
@@ -115,7 +115,7 @@ function renderTransactions() {
       )
     );
 
-    const actions = element('div', 'transaction-actions');
+    const actions = element('div', 'compact-actions');
     const edit = iconButton('edit', 'Edit transaction');
     const remove = iconButton('remove', 'Remove transaction');
     actions.append(edit, remove);
@@ -152,10 +152,7 @@ function renderTransactions() {
       focus: () => amount.querySelector('input')
     });
     const { container: actions, cancel } = formActions('Save changes');
-    cancel.addEventListener('click', () => {
-      editDisclosure.close();
-      edit.focus();
-    });
+    cancel.addEventListener('click', () => renderTransactions());
 
     const message = element('p', 'form-message');
     form.append(amount, note, day, categoryLabel, refundLabel, actions, message);
