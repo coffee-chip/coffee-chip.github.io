@@ -52,6 +52,10 @@ Use a small reusable vocabulary:
 
 Avoid page-specific action classes unless the layout is genuinely unique.
 
+## Initial rendering
+
+Dynamic page content is hidden while the page module performs its first render. `theme.js` marks the document as `app-hydrating` before CSS paints, and `setupPage()` removes that state immediately after the initial render and storage warning are complete. The header remains visible, so navigation feels immediate without exposing partially constructed cards or forms. A short fail-open timeout prevents the page from remaining hidden if initialization fails.
+
 ## Page spacing
 
 The app shell owns the standard gap below the header via `main` padding (currently 16px). Top-level page components do not add top spacing. Top-level siblings use bottom spacing so the header gap is deterministic and does not depend on CSS margin-collapsing behavior. The final top-level item keeps that bottom spacing; the page shell already provides the outer page padding.
