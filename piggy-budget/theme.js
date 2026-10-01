@@ -1,4 +1,7 @@
 (() => {
+  const root = document.documentElement;
+  root.classList.add('app-hydrating');
+
   const STORAGE_KEY = 'piggy-budget-ui-preferences-v1';
   const COLOR_THEMES = new Set(['garnet', 'amber', 'lapis']);
   const APPEARANCES = new Set(['light', 'dark', 'system']);
@@ -35,7 +38,6 @@
 
   function apply(preferences = read()) {
     const appearance = resolvedAppearance(preferences);
-    const root = document.documentElement;
     root.dataset.colorTheme = preferences.colorTheme;
     root.dataset.appearance = appearance;
     root.style.colorScheme = appearance;
@@ -68,4 +70,6 @@
 
   window.PiggyTheme = { read, write, apply };
   apply();
+
+  window.setTimeout(() => root.classList.remove('app-hydrating'), 2000);
 })();
