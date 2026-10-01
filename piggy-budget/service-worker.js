@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'architecture-1';
+const CACHE_VERSION = 'architecture-2';
 const CACHE_NAME = `piggy-budget-${CACHE_VERSION}`;
 const CACHE_PREFIX = 'piggy-budget-';
 
