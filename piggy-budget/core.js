@@ -190,9 +190,7 @@ export function iconButton(type, label) {
   button.setAttribute('aria-label', label);
   button.title = label;
   if (type === 'edit') {
-    const icon = document.createElement('img');
-    icon.src = './icons/edit.svg';
-    icon.alt = '';
+    const icon = element('span', 'edit-icon-glyph');
     icon.setAttribute('aria-hidden', 'true');
     button.append(icon);
   } else {
