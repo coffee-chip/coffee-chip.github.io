@@ -215,7 +215,7 @@ function renderTransactions() {
 
     const actions = element('div', 'compact-actions');
     const edit = iconButton('edit', 'Edit transaction');
-    const remove = iconButton('remove', 'Remove transaction');
+    const remove = iconButton('remove', 'Delete transaction');
     actions.append(edit, remove);
     row.append(actions);
     wrapper.append(row);
