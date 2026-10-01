@@ -3,7 +3,8 @@ import {
 } from './budget.js';
 import {
   budget, budgetDay, formatDay, element, save, dollars, DEFAULT_ICON,
-  bucketByRef, iconButton, inputLabel, categoryOptions, cents, validDay, setupPage
+  bucketByRef, iconButton, inputLabel, categoryOptions, cents, validDay, setupPage,
+  formActions, disclosure
 } from './core.js';
 
 function renderTransactions() {
@@ -147,15 +148,17 @@ function renderTransactions() {
     refundInput.checked = refund;
     refundLabel.append(refundInput, document.createTextNode('Refund'));
 
-    const buttons = element('div', 'edit-buttons');
-    const saveButton = element('button', '', 'Save changes');
-    saveButton.type = 'submit';
-    const cancel = element('button', 'secondary-button', 'Cancel');
-    cancel.type = 'button';
-    buttons.append(saveButton, cancel);
+    const editDisclosure = disclosure(edit, form, {
+      focus: () => amount.querySelector('input')
+    });
+    const { container: actions, cancel } = formActions('Save changes');
+    cancel.addEventListener('click', () => {
+      editDisclosure.close();
+      edit.focus();
+    });
 
     const message = element('p', 'form-message');
-    form.append(amount, note, day, categoryLabel, refundLabel, buttons, message);
+    form.append(amount, note, day, categoryLabel, refundLabel, actions, message);
     wrapper.append(form);
 
     const setMin = () => {
@@ -164,16 +167,6 @@ function renderTransactions() {
     };
     categorySelect.addEventListener('change', setMin);
     setMin();
-
-    edit.addEventListener('click', () => {
-      form.hidden = !form.hidden;
-      if (!form.hidden) amount.querySelector('input').focus();
-    });
-
-    cancel.addEventListener('click', () => {
-      form.hidden = true;
-      edit.focus();
-    });
 
     remove.addEventListener('click', () => {
       if (save({
