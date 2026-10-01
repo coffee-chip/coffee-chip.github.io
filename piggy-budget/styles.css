@@ -11,7 +11,7 @@
   --color-accent:#a54e68;
   --color-accent-soft:#f5e4e7;
   --color-accent-alt:#8d6eb0;
-  --color-accent-translucent:var(--color-accent-translucent);
+  --color-accent-translucent:rgba(128,55,80,.14);
   --color-border:#eadbd9;
   --color-card-border:#eedcdb;
   --color-hover:var(--color-accent-soft);
@@ -23,26 +23,26 @@
   --color-warning:#9b3447;
   --color-subtle:#766b70;
   --color-shadow-tint:rgba(86,49,61,.08);
-  --color-pearl-border:var(--color-pearl-border);
+  --color-pearl-border:#ead8e7;
 
-  --pearl-highlight:var(--pearl-highlight);
-  --pearl-highlight-clear:var(--pearl-highlight-clear);
-  --pearl-blue:var(--pearl-blue);
-  --pearl-blue-clear:var(--pearl-blue-clear);
-  --pearl-pink:var(--pearl-pink);
-  --pearl-pink-clear:var(--pearl-pink-clear);
-  --pearl-gradient-1:var(--pearl-gradient-1);
-  --pearl-gradient-2:var(--pearl-gradient-2);
-  --pearl-gradient-3:var(--pearl-gradient-3);
-  --pearl-gradient-4:var(--pearl-gradient-4);
-  --pearl-gradient-5:var(--pearl-gradient-5);
-  --pearl-inset-highlight:var(--pearl-inset-highlight);
-  --pearl-shine-strong:var(--pearl-shine-strong);
-  --pearl-shine-soft:var(--pearl-shine-soft);
-  --pearl-progress-bg:var(--pearl-progress-bg);
-  --pearl-progress-shadow:var(--pearl-progress-shadow);
-  --pearl-setting-1:var(--pearl-setting-1);
-  --pearl-setting-2:var(--pearl-setting-2);
+  --pearl-highlight:rgba(255,255,255,.98);
+  --pearl-highlight-clear:rgba(255,255,255,0);
+  --pearl-blue:rgba(214,244,255,.8);
+  --pearl-blue-clear:rgba(214,244,255,0);
+  --pearl-pink:rgba(255,224,246,.82);
+  --pearl-pink-clear:rgba(255,224,246,0);
+  --pearl-gradient-1:#fff8fc;
+  --pearl-gradient-2:#f5eaff;
+  --pearl-gradient-3:#e8f8ff;
+  --pearl-gradient-4:#fff8df;
+  --pearl-gradient-5:#ffeafa;
+  --pearl-inset-highlight:rgba(255,255,255,.95);
+  --pearl-shine-strong:rgba(255,255,255,.5);
+  --pearl-shine-soft:rgba(255,255,255,.16);
+  --pearl-progress-bg:rgba(255,255,255,.58);
+  --pearl-progress-shadow:rgba(80,45,68,.08);
+  --pearl-setting-1:rgba(255,250,253,.72);
+  --pearl-setting-2:rgba(242,249,255,.72);
 
   --shadow-card:0 7px 22px var(--color-shadow-tint);
   --space-page:16px;
@@ -103,7 +103,7 @@
   --color-warning:#e18a98;
 
   --pearl-highlight:rgba(255,255,255,.12);
-  --pearl-highlight-clear:var(--pearl-highlight-clear);
+  --pearl-highlight-clear:rgba(255,255,255,0);
   --pearl-blue:rgba(95,125,175,.22);
   --pearl-blue-clear:rgba(95,125,175,0);
   --pearl-pink:rgba(160,100,140,.18);
@@ -113,7 +113,7 @@
   --pearl-gradient-3:#26303c;
   --pearl-gradient-4:#342f29;
   --pearl-gradient-5:#342833;
-  --pearl-inset-highlight:var(--pearl-shine-soft);
+  --pearl-inset-highlight:rgba(255,255,255,.16);
   --pearl-shine-strong:rgba(255,255,255,.13);
   --pearl-shine-soft:rgba(255,255,255,.05);
   --pearl-progress-bg:rgba(255,255,255,.08);
