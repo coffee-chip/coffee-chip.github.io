@@ -68,6 +68,60 @@ export function element(tag, className = '', content = null) {
   return node;
 }
 
+export function actionButton(label, {
+  style = 'primary',
+  type = 'button',
+  compact = false,
+  icon = false,
+  danger = false,
+  className = ''
+} = {}) {
+  const classes = ['button', `button--${style}`];
+  if (compact) classes.push('button--compact');
+  if (icon) classes.push('button--icon');
+  if (danger) classes.push('button--danger');
+  if (className) classes.push(className);
+  const button = element('button', classes.join(' '), label);
+  button.type = type;
+  return button;
+}
+
+export function formActions(submitLabel, {
+  submitStyle = 'primary',
+  cancelLabel = 'Cancel'
+} = {}) {
+  const container = element('div', 'form-actions');
+  const submit = actionButton(submitLabel, { style: submitStyle, type: 'submit' });
+  const cancel = actionButton(cancelLabel, { style: 'transparent' });
+  cancel.dataset.formCancel = '';
+  container.append(submit, cancel);
+  return { container, submit, cancel };
+}
+
+export function disclosure(trigger, panel, {
+  focus = null,
+  initiallyOpen = false
+} = {}) {
+  const setOpen = open => {
+    panel.hidden = !open;
+    trigger.setAttribute('aria-expanded', String(open));
+    if (open) {
+      const target = typeof focus === 'function' ? focus() : focus;
+      target?.focus();
+    }
+  };
+
+  trigger.setAttribute('aria-expanded', String(initiallyOpen));
+  panel.hidden = !initiallyOpen;
+  trigger.addEventListener('click', () => setOpen(true));
+
+  return {
+    open: () => setOpen(true),
+    close: () => setOpen(false),
+    setOpen
+  };
+}
+
 export function inputLabel(text, name, attributes = {}) {
   const label = element('label', '', text);
   const input = element('input');
@@ -204,8 +258,12 @@ export function startingOptions(select) {
 }
 
 export function iconButton(type, label) {
-  const button = element('button', type === 'edit' ? 'icon-action edit-icon' : 'delete-icon');
-  button.type = 'button';
+  const button = actionButton('', {
+    style: 'transparent',
+    compact: true,
+    icon: true,
+    danger: type === 'remove'
+  });
   button.setAttribute('aria-label', label);
   button.title = label;
   if (type === 'edit') {
