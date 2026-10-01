@@ -1,6 +1,6 @@
 import {
   STORAGE_KEY, INTERVALS, emptyBudget, allocatedForGroup, localDay, addDays, cents,
-  bucketRef, currentAllocation, groupAllocation, dollars
+  bucketRef, groupAllocation, dollars
 } from './budget.js';
 
 export { INTERVALS, cents, bucketRef, dollars };
@@ -8,7 +8,7 @@ export const DEFAULT_ICON = '🐷';
 
 let storageWarning = '';
 
-export function load() {
+function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) return emptyBudget();
@@ -52,7 +52,7 @@ export function save(next, message = { textContent: '' }) {
   }
 }
 
-export function showStorageWarning() {
+function showStorageWarning() {
   const main = document.querySelector('main');
   if (!main || !storageWarning || document.querySelector('#storage-warning')) return;
   const warning = element('p', 'storage-warning', storageWarning);
