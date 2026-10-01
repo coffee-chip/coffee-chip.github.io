@@ -8,7 +8,12 @@ export const INTERVALS = {
 };
 
 export const emptyBudget = () => ({
-  groups: [],
+  groups: [{
+    id: 'general',
+    name: 'General',
+    dailyCents: 0,
+    unlimited: true
+  }],
   categories: [],
   goals: [],
   purchases: [],
