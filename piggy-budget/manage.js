@@ -281,7 +281,7 @@ function renderSettings() {
         focus: () => targetLabel.querySelector('input')
       });
       const { container: actions, cancel } = formActions('Update');
-      cancel.addEventListener('click', () => editDisclosure.close());
+      cancel.addEventListener('click', () => renderSettings());
       const message = element('p', 'form-message');
       form.append(targetLabel, groupLabel, actions, message);
 
