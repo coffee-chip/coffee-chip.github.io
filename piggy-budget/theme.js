@@ -51,7 +51,11 @@
       colorTheme: COLOR_THEMES.has(next?.colorTheme) ? next.colorTheme : current.colorTheme,
       appearance: APPEARANCES.has(next?.appearance) ? next.appearance : current.appearance
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+    } catch (error) {
+      console.warn('Could not save theme preference:', error);
+    }
     apply(preferences);
     window.dispatchEvent(new CustomEvent('piggy-theme-change', { detail: preferences }));
     return preferences;
