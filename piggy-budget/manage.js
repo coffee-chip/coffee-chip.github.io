@@ -5,7 +5,8 @@ import {
 import {
   budget, budgetDay, element, inputLabel, save, cents, dollars, intervalLabel,
   allocationDifference, allocationPreview, nonnegativeCents, groupOptions,
-  startingOptions, singleEmoji, iconButton, setupPage
+  startingOptions, singleEmoji, iconButton, setupPage, actionButton, formActions,
+  disclosure, DEFAULT_ICON
 } from './core.js';
 
 function renderSettings() {
@@ -31,15 +32,15 @@ function renderSettings() {
       `${dollars(allocated)} allocated · ${allocationDifference(allocated, target)}`
     ));
 
-    const changeTarget = element('button', 'text-button', 'Change total allocation');
-    changeTarget.type = 'button';
+    const changeTarget = actionButton('Change total allocation', {
+      style: 'transparent',
+      compact: true
+    });
     const targetForm = element('form', 'edit-form');
     targetForm.hidden = true;
     targetForm.id = `total-${budgetGroup.id}`;
     changeTarget.setAttribute('aria-controls', targetForm.id);
-    changeTarget.addEventListener('click', () => {
-      targetForm.hidden = !targetForm.hidden;
-    });
+
 
     const targetLabel = inputLabel(
       `Total allocation per ${intervalLabel()} ($)`,
@@ -58,10 +59,13 @@ function renderSettings() {
     targetLabel.querySelector('input').addEventListener('input', updateTargetPreview);
     updateTargetPreview();
 
-    const targetSubmit = element('button', 'secondary-button', 'Update total');
-    targetSubmit.type = 'submit';
+    const targetDisclosure = disclosure(changeTarget, targetForm, {
+      focus: () => targetLabel.querySelector('input')
+    });
+    const { container: targetActions, cancel: targetCancel } = formActions('Update total');
+    targetCancel.addEventListener('click', () => targetDisclosure.close());
     const targetMessage = element('p', 'form-message');
-    targetForm.append(targetLabel, targetSubmit, targetPreview, targetMessage);
+    targetForm.append(targetLabel, targetActions, targetPreview, targetMessage);
 
     targetForm.addEventListener('submit', event => {
       event.preventDefault();
@@ -165,16 +169,13 @@ function renderSettings() {
       groupSelect.addEventListener('change', recalc);
       recalc();
 
-      const submit = element('button', 'secondary-button', 'Update');
-      submit.type = 'submit';
-      const message = element('p', 'form-message');
-      form.append(allocationLabel, groupLabel, preview, submit, message);
-
-      edit.addEventListener('click', () => {
-        form.hidden = !form.hidden;
-        edit.setAttribute('aria-expanded', String(!form.hidden));
-        if (!form.hidden) allocationLabel.querySelector('input').focus();
+      const editDisclosure = disclosure(edit, form, {
+        focus: () => allocationLabel.querySelector('input')
       });
+      const { container: actions, cancel } = formActions('Update');
+      cancel.addEventListener('click', () => editDisclosure.close());
+      const message = element('p', 'form-message');
+      form.append(allocationLabel, groupLabel, preview, actions, message);
 
       form.addEventListener('submit', event => {
         event.preventDefault();
@@ -276,16 +277,13 @@ function renderSettings() {
       groupOptions(groupSelect, goal.groupId);
       groupLabel.append(groupSelect);
 
-      const submit = element('button', 'secondary-button', 'Update');
-      submit.type = 'submit';
-      const message = element('p', 'form-message');
-      form.append(targetLabel, groupLabel, submit, message);
-
-      edit.addEventListener('click', () => {
-        form.hidden = !form.hidden;
-        edit.setAttribute('aria-expanded', String(!form.hidden));
-        if (!form.hidden) targetLabel.querySelector('input').focus();
+      const editDisclosure = disclosure(edit, form, {
+        focus: () => targetLabel.querySelector('input')
       });
+      const { container: actions, cancel } = formActions('Update');
+      cancel.addEventListener('click', () => editDisclosure.close());
+      const message = element('p', 'form-message');
+      form.append(targetLabel, groupLabel, actions, message);
 
       form.addEventListener('submit', event => {
         event.preventDefault();
@@ -330,12 +328,15 @@ function renderSettings() {
 const groupForm = document.querySelector('#group-form');
 const addGroupButton = document.querySelector('#add-group');
 const addGroupPanel = document.querySelector('#add-group-panel');
+const addGroupCancel = document.querySelector('#group-cancel');
+const groupDisclosure = addGroupButton && addGroupPanel
+  ? disclosure(addGroupButton, addGroupPanel, {
+      focus: () => groupForm?.elements.namedItem('name')
+    })
+  : null;
 
 if (groupForm) {
-  addGroupButton.addEventListener('click', () => {
-    addGroupPanel.hidden = !addGroupPanel.hidden;
-    if (!addGroupPanel.hidden) groupForm.elements.namedItem('name').focus();
-  });
+  addGroupCancel?.addEventListener('click', () => groupDisclosure?.close());
 
   groupForm.addEventListener('submit', event => {
     event.preventDefault();
@@ -357,7 +358,7 @@ if (groupForm) {
 
     if (save({ ...budget, groups: [...budget.groups, group] }, message)) {
       groupForm.reset();
-      addGroupPanel.hidden = true;
+      groupDisclosure?.close();
       renderSettings();
     }
   });
@@ -366,6 +367,12 @@ if (groupForm) {
 const categoryForm = document.querySelector('#category-form');
 const addCategoryButton = document.querySelector('#add-category');
 const addCategoryPanel = document.querySelector('#add-category-panel');
+const addCategoryCancel = document.querySelector('#category-cancel');
+const categoryDisclosure = addCategoryButton && addCategoryPanel
+  ? disclosure(addCategoryButton, addCategoryPanel, {
+      focus: () => categoryForm?.elements.namedItem('name')
+    })
+  : null;
 
 function refreshCategoryForm() {
   if (!categoryForm) return;
@@ -374,17 +381,12 @@ function refreshCategoryForm() {
 }
 
 if (categoryForm) {
-  addCategoryButton.addEventListener('click', () => {
-    addCategoryPanel.hidden = !addCategoryPanel.hidden;
-    if (!addCategoryPanel.hidden) {
-      refreshCategoryForm();
-      categoryForm.elements.namedItem('name').focus();
-    }
-  });
+  addCategoryButton.addEventListener('click', refreshCategoryForm);
+  addCategoryCancel?.addEventListener('click', () => categoryDisclosure?.close());
 
   if (location.hash === '#add-category') {
-    addCategoryPanel.hidden = false;
     refreshCategoryForm();
+    categoryDisclosure?.open();
   }
 
   const preview = () => {
@@ -444,7 +446,7 @@ if (categoryForm) {
 
     if (save({ ...budget, categories: [...budget.categories, category] }, message)) {
       categoryForm.reset();
-      addCategoryPanel.hidden = true;
+      categoryDisclosure?.close();
       renderSettings();
     }
   });
@@ -453,6 +455,12 @@ if (categoryForm) {
 const goalForm = document.querySelector('#goal-form');
 const addGoalButton = document.querySelector('#add-goal');
 const addGoalPanel = document.querySelector('#add-goal-panel');
+const addGoalCancel = document.querySelector('#goal-cancel');
+const goalDisclosure = addGoalButton && addGoalPanel
+  ? disclosure(addGoalButton, addGoalPanel, {
+      focus: () => goalForm?.elements.namedItem('name')
+    })
+  : null;
 
 function refreshGoalForm() {
   if (!goalForm) return;
@@ -460,13 +468,8 @@ function refreshGoalForm() {
 }
 
 if (goalForm) {
-  addGoalButton.addEventListener('click', () => {
-    addGoalPanel.hidden = !addGoalPanel.hidden;
-    if (!addGoalPanel.hidden) {
-      refreshGoalForm();
-      goalForm.elements.namedItem('name').focus();
-    }
-  });
+  addGoalButton.addEventListener('click', refreshGoalForm);
+  addGoalCancel?.addEventListener('click', () => goalDisclosure?.close());
 
   goalForm.addEventListener('submit', event => {
     event.preventDefault();
@@ -500,7 +503,7 @@ if (goalForm) {
     if (save({ ...budget, goals: [...budget.goals, goal] }, message)) {
       goalForm.reset();
       goalForm.elements.namedItem('icon').value = '🎯';
-      addGoalPanel.hidden = true;
+      goalDisclosure?.close();
       renderSettings();
     }
   });
