@@ -70,6 +70,7 @@ Color and appearance are independent preferences:
 - Appearance: Light, Dark, System.
 - UI preferences are stored separately from budget data and are not part of budget backups.
 - `theme.js` applies the saved preferences before the stylesheet paints. System appearance follows `prefers-color-scheme` and updates when the OS preference changes.
+- The in-app header mark and browser favicon follow the selected color theme. The installed PWA home-screen icon remains a stable install-time asset; mobile platforms do not reliably support recoloring an already-installed icon when an in-app preference changes.
 
 Shared colors, radii, shadows, and spacing live in semantic CSS custom properties. General UI must consume those variables instead of hard-coded theme colors.
 
