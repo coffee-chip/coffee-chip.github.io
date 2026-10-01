@@ -23,9 +23,11 @@
     <main class="manage-main">
       <section class="settings-list-section manage-list-section">
         <ul id="settings-categories" class="settings-list"></ul>
-        <button type="button" id="add-group" class="button button--primary create-action">+ Add group</button>
-        <button type="button" id="add-category" class="button button--primary create-action">+ Add category</button>
-        <button type="button" id="add-goal" class="button button--primary create-action">+ Add goal</button>
+        <div class="action-group create-actions">
+          <button type="button" id="add-group" class="button button--primary">+ Add group</button>
+          <button type="button" id="add-category" class="button button--primary">+ Add category</button>
+          <button type="button" id="add-goal" class="button button--primary">+ Add goal</button>
+        </div>
         <p id="category-status" class="form-message" role="status"></p>
       </section>
       <section class="panel form-panel" id="add-group-panel" hidden>
