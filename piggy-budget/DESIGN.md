@@ -42,7 +42,7 @@ Use `actionButton()`, `formActions()`, and `iconButton()` when creating controls
 Use a small reusable vocabulary:
 
 - `.action-group` — ordinary peer actions.
-- `.page-actions` — page-level action group spacing.
+- `.launch-actions` — actions that reveal a separate following card; provides spacing between the trigger group and that card.
 - `.card-actions` — actions inside a card.
 - `.compact-actions` — icon/compact controls in a dense row.
 - `.form-actions` — submit/cancel controls.
@@ -52,7 +52,7 @@ Avoid page-specific action classes unless the layout is genuinely unique.
 
 ## Page spacing
 
-The app shell owns the standard gap below the header via `main` padding (currently 16px). Top-level page components do not add top spacing. Top-level siblings use bottom spacing so the header gap is deterministic and does not depend on CSS margin-collapsing behavior.
+The app shell owns the standard gap below the header via `main` padding (currently 16px). Top-level page components do not add top spacing. Top-level siblings use bottom spacing so the header gap is deterministic and does not depend on CSS margin-collapsing behavior. The final top-level item keeps that bottom spacing; the page shell already provides the outer page padding.
 
 Margin collapsing can still occur naturally inside ordinary block content, but it is not used as the page-spacing contract because padding, borders, flex, and grid contexts change when margins collapse.
 
