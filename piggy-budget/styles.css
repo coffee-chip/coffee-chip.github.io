@@ -50,7 +50,7 @@
 }
 .button:hover:not(:disabled),.button-link:hover{background:var(--button-hover-bg);color:var(--button-hover-fg);border-color:var(--button-hover-border)}
 .button:active:not(:disabled),.button-link:active{transform:translateY(1px)}
-.
+.button:disabled{opacity:.5;cursor:not-allowed}
 .button--primary{}
 .button--secondary{
   --button-bg:var(--color-surface);
