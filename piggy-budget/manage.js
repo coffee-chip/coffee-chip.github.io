@@ -63,7 +63,7 @@ function renderSettings() {
       focus: () => targetLabel.querySelector('input')
     });
     const { container: targetActions, cancel: targetCancel } = formActions('Update total');
-    targetCancel.addEventListener('click', () => targetDisclosure.close());
+    targetCancel.addEventListener('click', () => renderSettings());
     const targetMessage = element('p', 'form-message');
     targetForm.append(targetLabel, targetActions, targetPreview, targetMessage);
 
@@ -120,7 +120,7 @@ function renderSettings() {
 
       const edit = iconButton('edit', `Edit ${category.name}`);
       const remove = iconButton('remove', `Delete ${category.name}`);
-      const headerActions = element('div', 'setting-header-actions');
+      const headerActions = element('div', 'compact-actions');
       headerActions.append(edit, remove);
       rowHeader.append(heading, headerActions);
       item.append(rowHeader);
@@ -173,7 +173,7 @@ function renderSettings() {
         focus: () => allocationLabel.querySelector('input')
       });
       const { container: actions, cancel } = formActions('Update');
-      cancel.addEventListener('click', () => editDisclosure.close());
+      cancel.addEventListener('click', () => renderSettings());
       const message = element('p', 'form-message');
       form.append(allocationLabel, groupLabel, preview, actions, message);
 
@@ -249,7 +249,7 @@ function renderSettings() {
 
       const edit = iconButton('edit', `Edit ${goal.name}`);
       const remove = iconButton('remove', `Delete ${goal.name}`);
-      const headerActions = element('div', 'setting-header-actions');
+      const headerActions = element('div', 'compact-actions');
       headerActions.append(edit, remove);
       rowHeader.append(heading, headerActions);
       item.append(rowHeader);
@@ -336,7 +336,10 @@ const groupDisclosure = addGroupButton && addGroupPanel
   : null;
 
 if (groupForm) {
-  addGroupCancel?.addEventListener('click', () => groupDisclosure?.close());
+  addGroupCancel?.addEventListener('click', () => {
+    groupForm.reset();
+    groupDisclosure?.close();
+  });
 
   groupForm.addEventListener('submit', event => {
     event.preventDefault();
@@ -382,7 +385,10 @@ function refreshCategoryForm() {
 
 if (categoryForm) {
   addCategoryButton.addEventListener('click', refreshCategoryForm);
-  addCategoryCancel?.addEventListener('click', () => categoryDisclosure?.close());
+  addCategoryCancel?.addEventListener('click', () => {
+    categoryForm.reset();
+    categoryDisclosure?.close();
+  });
 
   if (location.hash === '#add-category') {
     refreshCategoryForm();
@@ -469,7 +475,10 @@ function refreshGoalForm() {
 
 if (goalForm) {
   addGoalButton.addEventListener('click', refreshGoalForm);
-  addGoalCancel?.addEventListener('click', () => goalDisclosure?.close());
+  addGoalCancel?.addEventListener('click', () => {
+    goalForm.reset();
+    goalDisclosure?.close();
+  });
 
   goalForm.addEventListener('submit', event => {
     event.preventDefault();
