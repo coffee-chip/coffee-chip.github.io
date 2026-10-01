@@ -58,7 +58,23 @@ The app shell owns the standard gap below the header via `main` padding (current
 
 Margin collapsing can still occur naturally inside ordinary block content, but it is not used as the page-spacing contract because padding, borders, flex, and grid contexts change when margins collapse.
 
-## Design tokens
+## Themes and design tokens
 
+Color and appearance are independent preferences:
 
-Shared colors, radii, shadows, and spacing live in `:root` as semantic CSS custom properties. General UI should use tokens instead of raw color values. Specialized decorative effects, such as the pearlescent goal backgrounds, may keep local colors when they are not part of the general application palette.
+- Color themes: Garnet, Amber, Lapis.
+- Appearance: Light, Dark, System.
+- UI preferences are stored separately from budget data and are not part of budget backups.
+- `theme.js` applies the saved preferences before the stylesheet paints. System appearance follows `prefers-color-scheme` and updates when the OS preference changes.
+
+Shared colors, radii, shadows, and spacing live in semantic CSS custom properties. General UI must consume those variables instead of hard-coded theme colors.
+
+Theme-facing color variables include the core surface/text palette plus:
+
+- `--color-accent-soft`
+- `--color-accent-alt`
+- `--color-accent-translucent`
+- `--color-shadow-tint`
+- `--color-pearl-border`
+
+The pearlescent goal material also uses dedicated `--pearl-*` variables. Those variables describe the material treatment rather than a specific page, and dark appearance provides an appropriately darker pearl treatment.
