@@ -45,7 +45,7 @@ export function currentDaily(category) {
   return category.changes[category.changes.length - 1].dailyCents;
 }
 
-export function intervalCentsFromDaily(dailyCents, interval) {
+function intervalCentsFromDaily(dailyCents, interval) {
   return dailyCents * INTERVALS[interval].days;
 }
 
@@ -74,7 +74,7 @@ export function allocatedForGroup(categories, groupId, interval, replacement = n
   );
 }
 
-export function transferDeltaFor(ref, transfers, today = localDay()) {
+function transferDeltaFor(ref, transfers, today = localDay()) {
   return transfers.reduce((total, transfer) => {
     if (transfer.day > today) return total;
     if (transfer.fromBucketId === ref) return total - transfer.amountCents;
