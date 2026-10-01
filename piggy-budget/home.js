@@ -71,7 +71,7 @@ function renderHome() {
       refundLabel.append(refund, document.createTextNode('Refund (add this amount back)'));
       form.append(refundLabel);
 
-      const { container: actions, cancel } = formActions('Record transaction');
+      const { container: formActionBar, cancel } = formActions('Record transaction');
       cancel.addEventListener('click', () => {
         form.reset();
         form.querySelector('.form-message')?.replaceChildren();
@@ -79,7 +79,7 @@ function renderHome() {
       });
       const message = element('p', 'form-message');
       message.role = 'status';
-      form.append(actions, message);
+      form.append(formActionBar, message);
 
       form.addEventListener('submit', event => {
         event.preventDefault();
