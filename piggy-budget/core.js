@@ -203,14 +203,16 @@ export function allBuckets() {
       type: 'category',
       id: category.id,
       name: category.name,
-      icon: category.icon || DEFAULT_ICON
+      icon: category.icon || DEFAULT_ICON,
+      createdDay: category.createdDay
     })),
     ...budget.goals.map(goal => ({
       ref: bucketRef('goal', goal.id),
       type: 'goal',
       id: goal.id,
       name: goal.name,
-      icon: goal.icon || '🎯'
+      icon: goal.icon || '🎯',
+      createdDay: goal.createdDay
     }))
   ];
 }
