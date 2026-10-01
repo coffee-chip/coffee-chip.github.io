@@ -21,7 +21,7 @@
       <section aria-label="Categories and goals">
         <div id="category-list" class="category-list"></div>
         <div class="home-actions">
-          <button type="button" id="transfer-toggle" class="secondary-button" aria-expanded="false" aria-controls="transfer-panel">Transfer budget money</button>
+          <button type="button" id="transfer-toggle" class="button button--secondary" aria-expanded="false" aria-controls="transfer-panel">Transfer budget money</button>
         </div>
         <section class="panel transfer-panel" id="transfer-panel" aria-labelledby="transfer-title" hidden>
           <h2 id="transfer-title">Transfer budget money</h2>
@@ -32,7 +32,7 @@
               <label>Amount ($)<input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
               <label>Description (optional)<input name="note" maxlength="100" placeholder="Move budget"></label>
             </div>
-            <button type="submit">Transfer</button><p id="transfer-message" class="form-message" role="status"></p>
+            <div class="form-actions"><button type="submit" class="button button--primary">Transfer</button><button type="button" id="transfer-cancel" class="button button--transparent">Cancel</button></div><p id="transfer-message" class="form-message" role="status"></p>
           </form>
         </section>
       </section>
