@@ -3,7 +3,7 @@ import {
 } from './budget.js';
 import {
   budget, budgetDay, element, inputLabel, save, DEFAULT_ICON, cents, dollars,
-  bucketOptions, allBuckets, setupPage
+  bucketOptions, allBuckets, setupPage, actionButton, formActions, disclosure
 } from './core.js';
 
 function renderHome() {
@@ -37,9 +37,7 @@ function renderHome() {
       card.append(top);
 
       const actions = element('div', 'category-actions');
-      const shake = element('button', '', 'Shake this piggy');
-      shake.type = 'button';
-      shake.ariaExpanded = 'false';
+      const shake = actionButton('Shake this piggy', { style: 'primary' });
 
       const history = element('a', 'history-link', 'View history');
       history.href = `./transactions.html?category=${encodeURIComponent(category.id)}`;
@@ -49,11 +47,8 @@ function renderHome() {
       const form = element('form', 'spend-form');
       form.hidden = true;
       form.id = `record-${category.id}`;
-      shake.setAttribute('aria-controls', form.id);
-      shake.addEventListener('click', () => {
-        form.hidden = !form.hidden;
-        shake.ariaExpanded = String(!form.hidden);
-        if (!form.hidden) form.elements.namedItem('amount').focus();
+      const formDisclosure = disclosure(shake, form, {
+        focus: () => form.elements.namedItem('amount')
       });
 
       form.append(inputLabel('Amount ($)', 'amount', {
@@ -76,11 +71,11 @@ function renderHome() {
       refundLabel.append(refund, document.createTextNode('Refund (add this amount back)'));
       form.append(refundLabel);
 
-      const submit = element('button', '', 'Record transaction');
-      submit.type = 'submit';
+      const { container: actions, cancel } = formActions('Record transaction');
+      cancel.addEventListener('click', () => formDisclosure.close());
       const message = element('p', 'form-message');
       message.role = 'status';
-      form.append(submit, message);
+      form.append(actions, message);
 
       form.addEventListener('submit', event => {
         event.preventDefault();
@@ -163,6 +158,15 @@ function renderHome() {
 const transferToggle = document.querySelector('#transfer-toggle');
 const transferPanel = document.querySelector('#transfer-panel');
 const transferForm = document.querySelector('#transfer-form');
+const transferCancel = document.querySelector('#transfer-cancel');
+const transferDisclosure = transferToggle && transferPanel
+  ? disclosure(transferToggle, transferPanel, {
+      focus: () => transferForm?.elements.namedItem('fromBucketId')
+    })
+  : null;
+if (transferCancel && transferDisclosure) {
+  transferCancel.addEventListener('click', () => transferDisclosure.close());
+}
 
 function refreshTransferForm() {
   if (!transferForm) return;
@@ -173,7 +177,7 @@ function refreshTransferForm() {
   const buckets = allBuckets();
   transferToggle.disabled = buckets.length < 2;
   if (buckets.length < 2) {
-    transferPanel.hidden = true;
+    transferDisclosure?.close();
     return;
   }
   if (to.value === from.value) {
@@ -182,11 +186,6 @@ function refreshTransferForm() {
 }
 
 if (transferForm) {
-  transferToggle.addEventListener('click', () => {
-    transferPanel.hidden = !transferPanel.hidden;
-    if (!transferPanel.hidden) transferForm.elements.namedItem('fromBucketId').focus();
-  });
-
   transferForm.addEventListener('submit', event => {
     event.preventDefault();
     const data = new FormData(transferForm);
@@ -222,7 +221,11 @@ if (transferForm) {
       createdAt: new Date().toISOString()
     };
 
-    if (save({ ...budget, transfers: [...budget.transfers, transfer] }, message)) renderPage();
+    if (save({ ...budget, transfers: [...budget.transfers, transfer] }, message)) {
+      transferForm.reset();
+      transferDisclosure?.close();
+      renderPage();
+    }
   });
 }
 
