@@ -54,7 +54,7 @@ Avoid page-specific action classes unless the layout is genuinely unique.
 
 ## Initial rendering
 
-Dynamic page content is hidden while the page module performs its first render. `theme.js` marks the document as `app-hydrating` before CSS paints, and `setupPage()` removes that state immediately after the initial render and storage warning are complete. The header remains visible, so navigation feels immediate without exposing partially constructed cards or forms. A short fail-open timeout prevents the page from remaining hidden if initialization fails.
+Dynamic page content is hidden while the page module performs its first render. `bootstrap.js` marks the document as `app-hydrating` before CSS paints, and `setupPage()` removes that state immediately after the initial render and storage warning are complete. The header remains visible, so navigation feels immediate without exposing partially constructed cards or forms. A short fail-open timeout prevents the page from remaining hidden if initialization fails.
 
 ## Page spacing
 
@@ -62,24 +62,10 @@ The app shell owns the standard gap below the header via `main` padding (current
 
 Margin collapsing can still occur naturally inside ordinary block content, but it is not used as the page-spacing contract because padding, borders, flex, and grid contexts change when margins collapse.
 
-## Themes and design tokens
+## Design tokens
 
-Color and appearance are independent preferences:
+Piggy Budget uses a single Garnet color system. Shared colors, radii, shadows, and spacing live in semantic CSS custom properties. General UI must consume those variables instead of hard-coded component colors.
 
-- Color themes: Garnet, Amber, Lapis.
-- Appearance: Light, Dark, System.
-- UI preferences are stored separately from budget data and are not part of budget backups.
-- `theme.js` applies the saved preferences before the stylesheet paints. System appearance follows `prefers-color-scheme` and updates when the OS preference changes.
-- The in-app header mark and browser favicon follow the selected color theme. The installed PWA home-screen icon remains a stable install-time asset; mobile platforms do not reliably support recoloring an already-installed icon when an in-app preference changes.
+The palette includes core surface/text colors plus supporting variables such as `--color-accent-soft`, `--color-accent-alt`, `--color-accent-translucent`, `--color-shadow-tint`, and `--color-pearl-border`.
 
-Shared colors, radii, shadows, and spacing live in semantic CSS custom properties. General UI must consume those variables instead of hard-coded theme colors.
-
-Theme-facing color variables include the core surface/text palette plus:
-
-- `--color-accent-soft`
-- `--color-accent-alt`
-- `--color-accent-translucent`
-- `--color-shadow-tint`
-- `--color-pearl-border`
-
-The pearlescent goal material also uses dedicated `--pearl-*` variables. Those variables describe the material treatment rather than a specific page, and dark appearance provides an appropriately darker pearl treatment.
+The pearlescent goal material uses dedicated `--pearl-*` variables so its decorative treatment remains centralized without implying multiple application themes.
