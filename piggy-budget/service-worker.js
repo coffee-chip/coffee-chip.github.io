@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'architecture-13';
+const CACHE_VERSION = 'architecture-14';
 const CACHE_NAME = `piggy-budget-${CACHE_VERSION}`;
 const CACHE_PREFIX = 'piggy-budget-';
 
@@ -9,7 +9,7 @@ const APP_FILES = [
   './manage-categories.html',
   './transactions.html',
   './styles.css',
-  './theme.js',
+  './bootstrap.js',
   './core.js',
   './home.js',
   './manage.js',
@@ -18,8 +18,6 @@ const APP_FILES = [
   './budget.js',
   './manifest.webmanifest',
   './icons/icon.svg',
-  './icons/icon-amber.svg',
-  './icons/icon-lapis.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/settings.svg',
