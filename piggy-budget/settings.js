@@ -113,28 +113,6 @@ function downloadBackup() {
   URL.revokeObjectURL(url);
 }
 
-function renderAppearanceSetting() {
-  const colorSelect = document.querySelector('#color-theme');
-  const appearanceSelect = document.querySelector('#appearance-mode');
-  const theme = window.PiggyTheme?.read?.();
-  if (!theme) return;
-  if (colorSelect) colorSelect.value = theme.colorTheme;
-  if (appearanceSelect) appearanceSelect.value = theme.appearance;
-}
-
-const colorThemeSelect = document.querySelector('#color-theme');
-const appearanceModeSelect = document.querySelector('#appearance-mode');
-
-colorThemeSelect?.addEventListener('change', () => {
-  window.PiggyTheme?.write?.({ colorTheme: colorThemeSelect.value });
-  renderAppearanceSetting();
-});
-
-appearanceModeSelect?.addEventListener('change', () => {
-  window.PiggyTheme?.write?.({ appearance: appearanceModeSelect.value });
-  renderAppearanceSetting();
-});
-
 function renderIntervalSetting() {
   const select = document.querySelector('#budget-interval');
   if (!select) return;
@@ -207,7 +185,6 @@ function renderSimulation() {
 }
 
 function renderPage() {
-  renderAppearanceSetting();
   renderIntervalSetting();
   renderSimulation();
 }
